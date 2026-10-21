@@ -21,6 +21,31 @@ npm test             # unit tests
 The dev server needs Node (the AIS relay is a WebSocket server). Static hosting
 alone cannot run `/ws/ais` or `/api/overpass`.
 
+### After a workspace restore
+
+A restored Cloud workspace keeps the tracked files but loses `node_modules`, the
+Playwright browser cache and every running process, and its preview hostname
+changes. `scripts/dev-setup.sh` restores all of that, and it will not report the
+server healthy until it answers a request carrying the current preview host:
+
+```bash
+./scripts/dev-setup.sh --host pv-…-….style.dev   # current preview hostname
+./scripts/dev-setup.sh --stop                    # stop the server it started
+```
+
+It installs from `package-lock.json` only when the install tree is missing or
+older than the lockfile, installs Chromium when Playwright cannot resolve a
+binary, restores the shared libraries and fonts into `.browser-deps/` only when
+`ldd` reports them missing, and then launches Chromium once to prove text
+renders — the wordmark checks measure an empty box when it does not. It reuses
+or starts the dev server on port 3000, checks that it listens on `0.0.0.0`, and
+probes `/` with the preview `Host` header: a 403 there means the hostname is
+stale, not that the server is down. `--port`, `--no-browser`, `--no-server` and
+`--force` (reinstall dependencies) are the other flags. Port, host and PID are
+kept in the git-ignored `.dev-server.env` and `.dev-server.pid`, so a re-run
+only needs `--host` when the hostname has changed. `npm run setup -- --host …`
+is the same thing.
+
 ### Environment
 
 `AISSTREAM_API_KEY` belongs in `.env.local` (git-ignored) and is read only by

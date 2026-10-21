@@ -5,6 +5,7 @@
   "type": "module",
   "description": "LEEWARD - Maritime Navigation, Planning and Tracking chartplotter",
   "scripts": {
+    "setup": "bash scripts/dev-setup.sh",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",

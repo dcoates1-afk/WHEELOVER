@@ -20,6 +20,16 @@ PACKAGES=(
   libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxrender1 libxkbcommon0
   libasound2t64 libdbus-1-3 libx11-6 libxcb1 libxext6 libxi6 libxtst6
   libglib2.0-0t64 fonts-dejavu-core fonts-dejavu-mono
+  # Chromium 156 (Playwright 1.64) links cups, cairo and pango, and pango
+  # pulls fontconfig, harfbuzz, freetype and their own dependencies. Earlier
+  # Chromium builds did not, so a list that stops at the X/NSS libraries leaves
+  # the browser unable to start. apt-get download resolves no dependencies, so
+  # they are all named here.
+  libcups2t64 libavahi-common3 libavahi-client3
+  libcairo2 libpixman-1-0 libxcb-render0 libxcb-shm0
+  libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0
+  libfontconfig1 libfreetype6 libharfbuzz0b libgraphite2-3 libfribidi0
+  libthai0 libdatrie1 libpng16-16t64 libbrotli1 libexpat1 libbz2-1.0 libuuid1
 )
 
 mkdir -p "$PREFIX/debs" "$PREFIX/apt/lists/partial" "$PREFIX/apt/archives/partial" "$FONTDIR"

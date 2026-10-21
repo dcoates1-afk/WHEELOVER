@@ -1,0 +1,18 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const context = await browser.newContext({ viewport: { width: 430, height: 900 }, deviceScaleFactor: 2 });
+const page = await context.newPage();
+await page.goto('http://127.0.0.1:3000?lat=50.76&lon=-1.2&z=11', { waitUntil: 'domcontentloaded' });
+await page.evaluate(() => localStorage.clear());
+await page.reload({ waitUntil: 'domcontentloaded' });
+await page.waitForSelector('.leaflet-container');
+await page.waitForTimeout(3000);
+await page.locator('.menu-button').click();
+await page.waitForTimeout(400);
+await page.screenshot({ path: 'artifacts/depth-menu-bases.png' });
+await page.locator('.menu-row', { hasText: 'Depth contours' }).first().click();
+await page.waitForTimeout(300);
+await page.locator('.menu-panel').evaluate((el) => el.querySelector('.menu-body').scrollTo(0, 540));
+await page.waitForTimeout(300);
+await page.screenshot({ path: 'artifacts/depth-menu-overlays.png' });
+await browser.close();

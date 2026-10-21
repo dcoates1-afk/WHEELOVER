@@ -16,3 +16,8 @@ scripts/browser-env.sh
 
 # Local source archives written here for backup hand-off
 backup/
+
+# Dev-server state written by scripts/dev-setup.sh
+.dev-server.log
+.dev-server.pid
+.dev-server.env

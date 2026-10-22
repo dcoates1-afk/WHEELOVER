@@ -23,11 +23,16 @@ Both development and production need a persistent Node server (the AIS relay is 
 WebSocket server). Static hosting alone cannot run `/ws/ais` or `/api/overpass`.
 The production server serves `dist/`, the existing Overpass/depth proxies and
 `/ws/ais` from one process; deploy with `npm ci && npm run build`, then `npm start`.
+The npm package is `wheel-over`; LEEWARD/MARNAV remain only as legacy names for
+importing device preferences and cached positions from earlier builds.
 Set `AISSTREAM_API_KEY` as a private runtime environment variable on the host.
 Do not add it to `VITE_*`, source code, or a client-side `.env` file: the server
 uses it to open one upstream feed shared by the browser clients.
 
 ### After a workspace restore
+
+Set `WHEELOVER_PREVIEW_HOST` (or pass `--host`) to authorize the current dev
+preview hostname, and use `WHEELOVER_PORT` or `--port` to choose a port.
 
 A restored Cloud workspace keeps the tracked files but loses `node_modules`, the
 Playwright browser cache and every running process, and its preview hostname
@@ -190,7 +195,7 @@ steals a map tap.
   berth, calling-in point, wreck, dangerous wreck, hazard, marina and the rest. Switching a class off removes it from the chart at once, before
   declutter runs, so hidden marks never eat into the marker budget; the
   `shown of total` line and the chips are the same source of truth. Choices
-  persist in `leeward:chart-prefs`, and **Show every mark class** resets them.
+  persist in `wheel-over:chart-prefs` (previous `leeward:` and `marnav:` settings are still imported), and **Show every mark class** resets them.
 - Zoom declutter hides minor marks until they are useful; **Show all marks**
   overrides it, and the menu always reports `shown of total` so nothing is
   silently dropped.
@@ -255,7 +260,7 @@ cannot be redistributed; their entries record why.
 - **AIS names arrive sooner.** The relay subscribes to Class A and Class B
   position reports, both static formats (`ShipStaticData`, `StaticDataReport`)
   and long-range broadcasts, keeps static records for hours regardless of chart
-  scope, and the browser caches them in `leeward:ais-static` for 30 days — so a
+  scope, and the browser caches them in `wheel-over:ais-static` for 30 days — so a
   target that has been seen before shows its name on the first snapshot instead
   of a bare MMSI. A target heard for the first time can still be unnamed until
   its next six-minute static slot; the hover card and sheet say so explicitly.
@@ -288,8 +293,8 @@ cannot be redistributed; their entries record why.
 ## Display themes
 
 Under *Chart detail* the menu offers Day, Night and Red, persisted in
-`leeward:chart-prefs`. Earlier builds used a different storage prefix; those
-saved settings are still read once and rewritten under the new keys:
+`wheel-over:chart-prefs`. Earlier builds used `leeward:` and `marnav:` storage
+prefixes; those saved settings are still read and rewritten under the new keys:
 
 - **Night** dims the chart and panels while symbols keep their colours.
 - **Red** is for dark adaptation. Tiles keep their channels and lose only the
@@ -314,10 +319,10 @@ GPS is a persisted binary setting:
 
 The position panel is opt-in from the menu and shows coordinates, SOG, COG,
 accuracy and a compass rose. Turning off GPS from the menu also clears the
-on-chart vessel marker. `leeward:gps-mode` in `localStorage` remembers the choice.
+on-chart vessel marker. `wheel-over:gps-mode` in `localStorage` remembers the choice.
 
 **The chart opens on the vessel.** With GPS on, the last fix is cached in
-`leeward:last-fix` (30-day expiry, validated on read) so a cold start lands in the
+`wheel-over:last-fix` (30-day expiry, validated on read) so a cold start lands in the
 right place immediately; the first live fix then recentres once at harbour zoom.
 That automatic move is cancelled by a deep link, by any pan or zoom, or after it
 has run once — a chart that keeps jumping away from where the navigator put it

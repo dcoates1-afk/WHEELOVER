@@ -64,7 +64,7 @@ const VIEWS = {
 async function openChart(browser, view, prefs = LANE_PREFS) {
   const context = await browser.newContext({ viewport: { width: 1000, height: 760 } });
   await context.addInitScript((value) => {
-    localStorage.setItem('leeward:chart-prefs', JSON.stringify(value));
+    localStorage.setItem('wheel-over:chart-prefs', JSON.stringify(value));
   }, prefs);
   const page = await context.newPage();
   const errors = [];

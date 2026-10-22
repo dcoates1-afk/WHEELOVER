@@ -164,7 +164,7 @@ export async function fetchCurrentEvents(
   const end = new Date(begin.getTime() + days * 24 * 60 * 60 * 1000);
   const params = new URLSearchParams({
     product: 'currents_predictions',
-    application: 'LEEWARD',
+    application: 'WHEELOVER',
     begin_date: noaaDate(begin),
     end_date: noaaDate(end),
     station: stationId,

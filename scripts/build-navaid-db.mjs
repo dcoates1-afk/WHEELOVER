@@ -48,7 +48,7 @@ async function fetchRegion(region) {
     try {
       const response = await fetch(mirror, {
         method: 'POST',
-        headers: { 'User-Agent': 'leeward-navaid-build/1.0', 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 'User-Agent': 'wheel-over-navaid-build/1.0', 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
         signal: AbortSignal.timeout(150_000),
       });

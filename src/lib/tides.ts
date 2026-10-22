@@ -92,7 +92,7 @@ export async function fetchNoaaTideEvents(
   const end = new Date(begin.getTime() + days * 24 * 60 * 60 * 1000);
   const params = new URLSearchParams({
     product: 'predictions',
-    application: 'LEEWARD',
+    application: 'WHEELOVER',
     begin_date: noaaDate(begin),
     end_date: noaaDate(end),
     datum: 'MLLW',

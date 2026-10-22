@@ -38,6 +38,19 @@ describe('cached position', () => {
     expect(parseLastFix(JSON.stringify({ lat: 50, lon: -1, at: NOW + 10 * 60_000 }), NOW)).toBeNull();
   });
 
+  it('imports fixes from previous prefixes and writes to WHEELOVER storage', () => {
+    const leewardFix = JSON.stringify({ lat: 50.7612, lon: -1.2012, at: NOW });
+    expect(readLastFix(fakeStorage({ 'leeward:last-fix': leewardFix }), NOW)).toEqual({
+      lat: 50.7612,
+      lon: -1.2012,
+      at: NOW,
+    });
+    const storage = fakeStorage({ 'marnav:last-fix': leewardFix });
+    expect(readLastFix(storage, NOW)).toEqual({ lat: 50.7612, lon: -1.2012, at: NOW });
+    writeLastFix(storage, { lat: 50.8, lon: -1.3, timestamp: NOW });
+    expect(storage.getItem(LAST_FIX_KEY)).toContain('50.8');
+  });
+
   it('round-trips through storage and tolerates blocked storage', () => {
     const storage = fakeStorage();
     writeLastFix(storage, { lat: 50.7612, lon: -1.2012, timestamp: NOW });

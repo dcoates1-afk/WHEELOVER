@@ -1,5 +1,5 @@
 /**
- * LEEWARD shared chart core.
+ * WHEELOVER shared chart core.
  *
  * Plain ESM so the browser app, the vitest suite and the offline database
  * builder all run the *same* classification code. If ingest and rendering

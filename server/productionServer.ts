@@ -10,7 +10,7 @@ import { createOverpassHandler } from './overpassProxy';
 const root = resolve(process.cwd(), 'dist');
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || '0.0.0.0';
-const log = (message: string) => console.info(`[leeward] ${message}`);
+const log = (message: string) => console.info(`[WHEELOVER] ${message}`);
 const aisKey = process.env.AISSTREAM_API_KEY ?? '';
 const relay = createAisRelay({ apiKey: aisKey, log });
 const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
@@ -144,7 +144,7 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 server.on('error', (error) => {
-  console.error(`[leeward] HTTP server error: ${error.message}`);
+  console.error(`[WHEELOVER] HTTP server error: ${error.message}`);
   process.exitCode = 1;
 });
 
@@ -160,7 +160,7 @@ function shutdown() {
   wss.close();
   server.close((error) => {
     if (error) {
-      console.error(`[leeward] shutdown failed: ${error.message}`);
+      console.error(`[WHEELOVER] shutdown failed: ${error.message}`);
       process.exitCode = 1;
     }
   });

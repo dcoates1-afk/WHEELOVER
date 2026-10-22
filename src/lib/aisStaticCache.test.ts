@@ -83,6 +83,25 @@ describe('AIS static cache', () => {
     expect(record?.savedAt).toBe(1_000);
   });
 
+  it('imports static data from previous prefixes and writes to WHEELOVER storage', () => {
+    const leewardStorage = new MemoryStorage();
+    leewardStorage.setItem('leeward:ais-static', JSON.stringify({
+      '316001240': { name: 'LEEWARDED', savedAt: 1_000 },
+    }));
+    expect(readAisStaticCache(leewardStorage, 2_000).get(316001240)?.name).toBe('LEEWARDED');
+
+    const storage = new MemoryStorage();
+    storage.setItem('marnav:ais-static', JSON.stringify({
+      '316001241': { name: 'LEGACY', savedAt: 1_000 },
+    }));
+    expect(readAisStaticCache(storage, 2_000).get(316001241)?.name).toBe('LEGACY');
+    writeAisStaticCache(storage, new Map([[316001241, {
+      name: 'WHEELOVER', shipType: null, typeCode: null, destination: null, callSign: null,
+      imo: null, draught: null, length: null, beam: null, eta: null, transponder: null, savedAt: 2_000,
+    }]]));
+    expect(storage.getItem(AIS_STATIC_STORAGE_KEY)).toContain('WHEELOVER');
+  });
+
   it('ignores junk, bad MMSIs and stale records', () => {
     const storage = new MemoryStorage();
     storage.setItem(AIS_STATIC_STORAGE_KEY, 'not json');

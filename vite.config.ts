@@ -9,15 +9,14 @@ import { marnavServer } from './server/marnavServer';
  * to the hostname baked in at build time.
  */
 const PREVIEW_HOST =
-  process.env.LEEWARD_PREVIEW_HOST ||
-  process.env.MARNAV_PREVIEW_HOST ||
+  process.env.WHEELOVER_PREVIEW_HOST ||
   'pv-4e1b47965a0a-05f65da5-7a5d-4af7-b152-2ed6510895f4.style.dev';
 
 const ALLOWED_HOSTS = Array.from(new Set([PREVIEW_HOST, 'localhost', '127.0.0.1']));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const port = Number(env.LEEWARD_PORT || env.MARNAV_PORT || 3000);
+  const port = Number(env.WHEELOVER_PORT || 3000);
 
   return {
     plugins: [react(), marnavServer({ aisKey: env.AISSTREAM_API_KEY ?? '' })],

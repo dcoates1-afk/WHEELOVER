@@ -23,8 +23,8 @@ STATE_FILE="$ROOT/.dev-server.env"
 LOG_FILE="$ROOT/.dev-server.log"
 PID_FILE="$ROOT/.dev-server.pid"
 
-HOST="${LEEWARD_PREVIEW_HOST:-}"
-PORT="${LEEWARD_PORT:-}"
+HOST="${WHEELOVER_PREVIEW_HOST:-}"
+PORT="${WHEELOVER_PORT:-}"
 START_SERVER=1
 SETUP_BROWSER=1
 FORCE_INSTALL=0
@@ -64,8 +64,8 @@ state_value() {
   [ -f "$STATE_FILE" ] || return 0
   sed -n "s/^$1=//p" "$STATE_FILE" | tail -n 1
 }
-[ -n "$PORT" ] || PORT="$(state_value LEEWARD_PORT)"
-[ -n "$HOST" ] || HOST="$(state_value LEEWARD_PREVIEW_HOST)"
+[ -n "$PORT" ] || PORT="$(state_value WHEELOVER_PORT)"
+[ -n "$HOST" ] || HOST="$(state_value WHEELOVER_PREVIEW_HOST)"
 PORT="${PORT:-3000}"
 # Accept a pasted URL as well as a bare hostname.
 HOST="${HOST#https://}"
@@ -255,7 +255,7 @@ setup_browser() {
     import { chromium } from 'playwright';
     const browser = await chromium.launch();
     const page = await browser.newPage();
-    await page.setContent('<div style=\"font:16px sans-serif\">LEEWARD</div>');
+    await page.setContent('<div style=\"font:16px sans-serif\">WHEELOVER</div>');
     const height = await page.evaluate(() => document.body.firstElementChild.getBoundingClientRect().height);
     await browser.close();
     if (!(height > 0)) {
@@ -313,10 +313,10 @@ else
   rm -f "$PID_FILE"
   : >"$LOG_FILE"
   if command -v setsid >/dev/null 2>&1; then
-    LEEWARD_PORT="$PORT" LEEWARD_PREVIEW_HOST="$HOST" \
+    WHEELOVER_PORT="$PORT" WHEELOVER_PREVIEW_HOST="$HOST" \
       setsid nohup npm run dev >>"$LOG_FILE" 2>&1 </dev/null &
   else
-    LEEWARD_PORT="$PORT" LEEWARD_PREVIEW_HOST="$HOST" \
+    WHEELOVER_PORT="$PORT" WHEELOVER_PREVIEW_HOST="$HOST" \
       nohup npm run dev >>"$LOG_FILE" 2>&1 </dev/null &
   fi
   server_pid=$!
@@ -394,8 +394,8 @@ fi
 
 # Remember the port/host so the next restore only needs --host if it changed.
 {
-  printf 'LEEWARD_PORT=%s\n' "$PORT"
-  printf 'LEEWARD_PREVIEW_HOST=%s\n' "$HOST"
+  printf 'WHEELOVER_PORT=%s\n' "$PORT"
+  printf 'WHEELOVER_PREVIEW_HOST=%s\n' "$HOST"
 } >"$STATE_FILE"
 
 if ! grep -q '^AISSTREAM_API_KEY=.' "$ROOT/.env.local" 2>/dev/null &&

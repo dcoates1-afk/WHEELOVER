@@ -12,7 +12,7 @@ export function marnavServer(options: { aisKey: string }): Plugin {
   return {
     name: 'marnav-server',
     configureServer(server) {
-      const log = (message: string) => server.config.logger.info(`[leeward] ${message}`);
+      const log = (message: string) => server.config.logger.info(`[WHEELOVER] ${message}`);
 
       server.middlewares.use('/api/overpass', createOverpassHandler(log));
       server.middlewares.use('/api/depth', createDepthHandler(log));

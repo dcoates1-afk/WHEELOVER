@@ -14,8 +14,8 @@ export interface CachedFix {
   at: number;
 }
 
-export const LAST_FIX_KEY = 'leeward:last-fix';
-const LEGACY_LAST_FIX_KEY = 'marnav:last-fix';
+export const LAST_FIX_KEY = 'wheel-over:last-fix';
+const LEGACY_LAST_FIX_KEYS = ['leeward:last-fix', 'marnav:last-fix'] as const;
 export const LAST_FIX_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 type ReadableStorage = Pick<Storage, 'getItem'> | null | undefined;
@@ -46,7 +46,10 @@ export function parseLastFix(raw: string | null | undefined, now = Date.now()): 
 export function readLastFix(storage: ReadableStorage, now = Date.now()): CachedFix | null {
   if (!storage) return null;
   try {
-    return parseLastFix(storage.getItem(LAST_FIX_KEY) ?? storage.getItem(LEGACY_LAST_FIX_KEY), now);
+    const raw =
+      storage.getItem(LAST_FIX_KEY) ??
+      LEGACY_LAST_FIX_KEYS.map((key) => storage.getItem(key)).find((value) => value !== null);
+    return parseLastFix(raw, now);
   } catch {
     return null;
   }

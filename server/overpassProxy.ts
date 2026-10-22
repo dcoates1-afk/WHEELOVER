@@ -67,7 +67,7 @@ async function fetchMirror(mirror: string, query: string): Promise<CacheEntry> {
   const response = await fetch(mirror, {
     method: 'POST',
     headers: {
-      'User-Agent': 'leeward/1.0 (offline chart cache)',
+      'User-Agent': 'wheel-over/1.0 (offline chart cache)',
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({ data: query }),

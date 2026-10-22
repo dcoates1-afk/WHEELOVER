@@ -27,7 +27,7 @@ description?.setAttribute('content', isAppRoute
   ? 'WHEELOVER — Maritime Navigation and Planning. Explore nautical charts, navigation aids, live AIS, tides and marine weather.'
   : 'Know your course. Own your passage. A thoughtful chartplotter for curious sailors: charts, planning, traffic and conditions.');
 
-import.meta.env.DEV && console.info(`[wheelover] ${isAppRoute ? 'chart app' : 'product website'} loaded`);
+import.meta.env.DEV && console.info(`[WHEELOVER] ${isAppRoute ? 'chart app' : 'product website'} loaded`);
 
 // Keep the app available at /app while the root URL presents the product site.
 // (The HTML root remains shared to preserve this Vite single-page setup.)

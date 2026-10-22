@@ -27,9 +27,9 @@ export interface ChartPreferences {
   hiddenPoiGroups: string[];
 }
 
-export const CHART_STORAGE_KEY = 'leeward:chart-prefs';
-/** Settings saved before the app was renamed still load on this device. */
-const LEGACY_CHART_STORAGE_KEY = 'marnav:chart-prefs';
+export const CHART_STORAGE_KEY = 'wheel-over:chart-prefs';
+/** Preferences from earlier LEEWARD/MARNAV builds remain available after the rename. */
+const LEGACY_CHART_STORAGE_KEYS = ['leeward:chart-prefs', 'marnav:chart-prefs'] as const;
 
 export const DEFAULT_PREFERENCES: ChartPreferences = {
   base: 'osm',
@@ -89,7 +89,9 @@ export function sanitizePreferences(value: unknown): ChartPreferences {
 export function readChartPreferences(storage: Pick<Storage, 'getItem'> | null | undefined): ChartPreferences {
   if (!storage) return defaults();
   try {
-    const raw = storage.getItem(CHART_STORAGE_KEY) ?? storage.getItem(LEGACY_CHART_STORAGE_KEY);
+    const raw =
+      storage.getItem(CHART_STORAGE_KEY) ??
+      LEGACY_CHART_STORAGE_KEYS.map((key) => storage.getItem(key)).find((value) => value !== null);
     if (!raw) return defaults();
     return sanitizePreferences(JSON.parse(raw));
   } catch {

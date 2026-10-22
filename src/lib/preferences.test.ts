@@ -118,7 +118,14 @@ describe('chart preferences', () => {
     expect(sanitizePreferences({ hiddenPoiGroups: 'all' }).hiddenPoiGroups).toEqual([]);
   });
 
-  it('reads settings saved under the previous key prefix', () => {
+  it('imports settings saved under both previous prefixes and persists to WHEELOVER storage', () => {
+    const leewardStorage = fakeStorage({
+      'leeward:chart-prefs': JSON.stringify({ base: 'relief', theme: 'red' }),
+    });
+    const fromLeeward = readChartPreferences(leewardStorage);
+    expect(fromLeeward.base).toBe('relief');
+    expect(fromLeeward.theme).toBe('red');
+
     const storage = fakeStorage({
       'marnav:chart-prefs': JSON.stringify({ base: 'satellite', theme: 'night' }),
     });
@@ -126,7 +133,7 @@ describe('chart preferences', () => {
     expect(loaded.base).toBe('satellite');
     expect(loaded.theme).toBe('night');
     writeChartPreferences(storage, loaded);
-    expect(storage.getItem('leeward:chart-prefs')).toContain('satellite');
+    expect(storage.getItem('wheel-over:chart-prefs')).toContain('satellite');
   });
 
   it('survives blocked storage', () => {
@@ -152,8 +159,12 @@ describe('GPS preference', () => {
     expect(parseGpsMode(null)).toBe('on');
   });
 
-  it('reads a choice saved under the previous key prefix', () => {
-    expect(readGpsMode(fakeStorage({ 'marnav:gps-mode': 'off' }))).toBe('off');
+  it('reads choices from previous prefixes and writes to WHEELOVER storage', () => {
+    expect(readGpsMode(fakeStorage({ 'leeward:gps-mode': 'off' }))).toBe('off');
+    const storage = fakeStorage({ 'marnav:gps-mode': 'off' });
+    expect(readGpsMode(storage)).toBe('off');
+    writeGpsMode(storage, 'on');
+    expect(storage.getItem('wheel-over:gps-mode')).toBe('on');
   });
 
   it('persists the choice and tolerates missing storage', () => {

@@ -6,7 +6,7 @@
 #
 # Extracts the shared libraries Chromium needs (libnss3, libnspr4, libatk*, libx*)
 # into .browser-deps/ and copies DejaVu fonts into the user font path, so text —
-# including the LEEWARD wordmark the UI checks measure — actually renders.
+# including the WHEELOVER wordmark the UI checks measure — actually renders.
 # Re-run after a workspace restore; nothing outside the workspace is changed.
 set -euo pipefail
 

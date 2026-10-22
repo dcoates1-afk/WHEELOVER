@@ -762,7 +762,7 @@ async function run() {
   }
   const cachedStatics = await page.evaluate(() => {
     try {
-      const raw = localStorage.getItem('leeward:ais-static');
+      const raw = localStorage.getItem('wheel-over:ais-static');
       return raw ? Object.keys(JSON.parse(raw)).length : 0;
     } catch {
       return 0;

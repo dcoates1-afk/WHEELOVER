@@ -8,8 +8,8 @@ import type { AisVessel } from './ais';
  * cache carries them across reloads and chart moves so a name appears at once.
  */
 
-export const AIS_STATIC_STORAGE_KEY = 'leeward:ais-static';
-const LEGACY_AIS_STATIC_STORAGE_KEY = 'marnav:ais-static';
+export const AIS_STATIC_STORAGE_KEY = 'wheel-over:ais-static';
+const LEGACY_AIS_STATIC_STORAGE_KEYS = ['leeward:ais-static', 'marnav:ais-static'] as const;
 const MAX_ENTRIES = 2500;
 const KEEP_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -65,7 +65,9 @@ export function readAisStaticCache(
   if (!storage) return cache;
   let parsed: unknown;
   try {
-    const raw = storage.getItem(AIS_STATIC_STORAGE_KEY) ?? storage.getItem(LEGACY_AIS_STATIC_STORAGE_KEY);
+    const raw =
+      storage.getItem(AIS_STATIC_STORAGE_KEY) ??
+      LEGACY_AIS_STATIC_STORAGE_KEYS.map((key) => storage.getItem(key)).find((value) => value !== null);
     if (!raw) return cache;
     parsed = JSON.parse(raw);
   } catch {

@@ -84,7 +84,7 @@ export function ColregsPanel() {
       </ul>
 
       <p className="menu-note disclaimer">
-        This guide is a study aid bundled offline with LEEWARD ({COLREGS.length} entries). It is not a substitute for the
+        This guide is a study aid bundled offline with WHEELOVER ({COLREGS.length} entries). It is not a substitute for the
         official convention or local notices to mariners. UK mariners rely on MGN 335 for COLREGs guidance.
       </p>
     </div>

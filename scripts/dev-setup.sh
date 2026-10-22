@@ -109,7 +109,7 @@ http_get() {
   return 0
 }
 
-# The chart itself, not just any 200: the document must be LEEWARD's index.
+# The chart itself, not just any 200: the document must be WHEELOVER's index.
 # The two markers are checked separately because the title precedes the root
 # element, so a single ordered pattern would never match.
 is_app_response() {
@@ -118,7 +118,7 @@ is_app_response() {
     *) return 1 ;;
   esac
   case "$HTTP_BODY" in
-    *LEEWARD*) return 0 ;;
+    *WHEELOVER*) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -354,7 +354,7 @@ if [ -n "$HOST" ]; then
   if http_get "http://127.0.0.1:$PORT/" "$HOST"; then
     case "$HTTP_CODE" in
       200)
-        is_app_response || fail "preview host $HOST got a 200 that is not the LEEWARD index"
+        is_app_response || fail "preview host $HOST got a 200 that is not the WHEELOVER index"
         echo "==> preview host: $HOST accepted"
         ;;
       *)
@@ -383,13 +383,13 @@ if [ "$SETUP_BROWSER" -eq 1 ]; then
       await page.goto(process.env.CHECK_URL, { waitUntil: 'load', timeout: 30000 });
       await page.waitForSelector('#root > *', { timeout: 20000 });
       const title = await page.title();
-      if (!title.includes('LEEWARD')) throw new Error('unexpected title: ' + title);
+      if (!title.includes('WHEELOVER')) throw new Error('unexpected title: ' + title);
       if (errors.length) throw new Error('uncaught page error: ' + errors[0]);
     } finally {
       await browser.close();
     }
   " || fail "the chart did not mount in Chromium; see $LOG_FILE and the page error above"
-  echo "==> app: React mounted, chart document titled LEEWARD"
+  echo "==> app: React mounted, chart document titled WHEELOVER"
 fi
 
 # Remember the port/host so the next restore only needs --host if it changed.

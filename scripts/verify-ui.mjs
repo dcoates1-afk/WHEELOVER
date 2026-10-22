@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Browser verification for LEEWARD.
+ * Browser verification for WHEELOVER.
  *
  *   node scripts/verify-ui.mjs [baseUrl]
  *
@@ -332,7 +332,7 @@ async function run() {
   });
   check(
     'app name floats at the top centre',
-    brandInfo.text === 'LEEWARD' && Math.abs(brandInfo.offset) <= 3,
+    brandInfo.text === 'WHEELOVER' && Math.abs(brandInfo.offset) <= 3,
     `${brandInfo.text} offset ${brandInfo.offset}px`,
   );
   check(

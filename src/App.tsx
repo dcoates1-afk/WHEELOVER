@@ -441,8 +441,8 @@ export default function App() {
 
       {preferences.theme === 'red' && <div className="red-tint" aria-hidden="true" />}
 
-      <h1 className="chart-brand" aria-label="LEEWARD - Maritime Navigation, Planning and Tracking">
-        LEEWARD
+      <h1 className="chart-brand" aria-label="WHEELOVER — Maritime Navigation and Planning">
+        WHEELOVER
       </h1>
 
       <ZoomControls

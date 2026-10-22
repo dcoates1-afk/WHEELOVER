@@ -3,11 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "LEEWARD - Maritime Navigation, Planning and Tracking chartplotter",
+  "description": "WHEELOVER — Maritime Navigation and Planning",
   "scripts": {
     "setup": "bash scripts/dev-setup.sh",
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && npm run build:server",
+    "build:server": "node scripts/build-server.mjs",
+    "start": "node --env-file-if-exists=.env.local build/server.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "preview": "vite preview",
@@ -19,7 +21,8 @@
   "dependencies": {
     "leaflet": "^1.9.4",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.20",
@@ -28,10 +31,10 @@
     "@types/react-dom": "^19.1.7",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.7.0",
+    "esbuild": "^0.28.2",
     "playwright": "^1.64.1",
     "typescript": "^5.9.2",
     "vite": "^7.1.3",
-    "vitest": "^3.2.4",
-    "ws": "^8.18.3"
+    "vitest": "^3.2.4"
   }
 }

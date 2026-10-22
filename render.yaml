@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: wheel-over
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.1
+      - key: AISSTREAM_API_KEY
+        sync: false

@@ -1,6 +1,6 @@
-# LEEWARD - Maritime Navigation, Planning and Tracking
+# WHEELOVER — Maritime Navigation and Planning
 
-A mobile-first marine navigation chartplotter: a full-screen Leaflet chart, an
+WHEELOVER is a mobile-first marine navigation chartplotter: a full-screen Leaflet chart, an
 offline-capable NAVAID database, live AIS traffic, a searchable COLREGs guide and
 wind, wave, tide and current dashboards. One control (top-right) opens every
 setting; the
@@ -14,12 +14,18 @@ centre-on-me button — no docks, drawers or extra panels unless you open them.
 ```bash
 npm install
 npm run dev          # http://localhost:3000
-npm run build        # typecheck + production bundle
+npm run build        # typecheck + browser bundle + production Node server
+npm start            # serve dist/ plus /api/* and the shared AIS WebSocket relay
 npm test             # unit tests
 ```
 
-The dev server needs Node (the AIS relay is a WebSocket server). Static hosting
-alone cannot run `/ws/ais` or `/api/overpass`.
+Both development and production need a persistent Node server (the AIS relay is a
+WebSocket server). Static hosting alone cannot run `/ws/ais` or `/api/overpass`.
+The production server serves `dist/`, the existing Overpass/depth proxies and
+`/ws/ais` from one process; deploy with `npm ci && npm run build`, then `npm start`.
+Set `AISSTREAM_API_KEY` as a private runtime environment variable on the host.
+Do not add it to `VITE_*`, source code, or a client-side `.env` file: the server
+uses it to open one upstream feed shared by the browser clients.
 
 ### After a workspace restore
 
@@ -56,12 +62,14 @@ AISSTREAM_API_KEY=your-key-here
 ```
 
 The browser never receives the key: it opens `/ws/ais`, and the server holds the
-upstream AISStream connection. Without a key the relay serves clearly-labelled
+upstream AISStream connection. For local production testing, `npm start` reads
+`.env.local`; hosted deployments must set the same variable in their runtime
+secret/environment settings. Without a key the relay serves clearly-labelled
 **simulated** traffic so the station still works offline.
 
 ## What is in the chart
 
-A bare **LEEWARD** wordmark floats top-centre over the chart, filled with a
+A bare **WHEELOVER** wordmark floats top-centre over the chart, filled with a
 blue-to-white gradient and held together by a dark drop shadow the way a chart
 label is drawn. It has no plate or border, so it reads over pale NOAA paper,
 OSM and satellite imagery alike, and it is `pointer-events: none`, so it never
@@ -441,7 +449,9 @@ desktop install already has the libraries and fonts and does not need this.
   published station table when the exact turn matters.
 - **The COLREGs view is a study aid**, not the legal text. Check the official
   convention, national modifications and local notices to mariners.
-- The AIS key in `.env.local` should be rotated before any public deployment.
+- Keep the shared AIS key in the production server's private environment settings,
+  never in the browser bundle. Confirm AISStream permits public multi-user relay
+  use before launch; the key being shared does not remove service rate limits.
 
 ## Attribution
 

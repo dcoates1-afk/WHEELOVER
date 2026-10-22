@@ -180,9 +180,9 @@ export function LayerControl({
           <section className="menu-panel" role="dialog" aria-modal="true" aria-label="Menu">
             <header className="menu-head">
               <div>
-                <p className="eyebrow">LEEWARD</p>
+                <p className="eyebrow">WHEELOVER</p>
                 <h2>Menu</h2>
-                <p className="menu-tagline">Maritime Navigation, Planning and Tracking</p>
+                <p className="menu-tagline">Maritime Navigation and Planning</p>
               </div>
               <button type="button" className="icon-button" onClick={() => onOpen(false)} aria-label="Close menu">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">

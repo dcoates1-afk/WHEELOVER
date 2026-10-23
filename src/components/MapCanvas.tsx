@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import L from 'leaflet';
 import lanes from '../data/lanes.json';
+import type { MarineFeature } from '../lib/marineDb';
 import { ialaRegion, quickInfo, symbolFor } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
 import { vesselCourse, vesselIconSize, vesselIconSvg, vesselIsMoving, vesselTooltipHtml } from '../lib/aisVessel';
@@ -63,6 +64,7 @@ export interface MapCanvasProps {
   onMapClick: (lat: number, lon: number) => void;
   fix: GeoFix | null;
   aisVessels: AisVessel[];
+  marineFeatures: { ferries: MarineFeature[]; tss: MarineFeature[] } | null;
 }
 
 const US_REGIONS: [number, number, number, number][] = [
@@ -188,6 +190,12 @@ function createExportChart(options: ExportChartOptions): L.GridLayer {
  * OSM land and dark satellite water.
  */
 export const LANE_ATTRIBUTION = 'Ferry routes & TSS: OpenStreetMap (ODbL)';
+
+function featureBounds(path: [number, number][]): [number, number, number, number] {
+  const lats = path.map(([lat]) => lat);
+  const lons = path.map(([, lon]) => lon);
+  return [Math.min(...lats), Math.min(...lons), Math.max(...lats), Math.max(...lons)];
+}
 
 function ferryStyle(): L.PolylineOptions {
   return {
@@ -335,27 +343,6 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     const ais = L.layerGroup();
     const pois = L.layerGroup();
     const depthLabels = L.layerGroup();
-
-    for (const ferry of lanes.ferries) {
-      const line = L.polyline(ferry.path as [number, number][], ferryStyle());
-      line.bindTooltip(`Ferry route · ${ferry.name}`, { sticky: true, className: 'marnav-tip' });
-      ferries.addLayer(line);
-    }
-    for (const feature of lanes.tss) {
-      const path = feature.path as [number, number][];
-      const closed =
-        path.length > 3 &&
-        path[0][0] === path[path.length - 1][0] &&
-        path[0][1] === path[path.length - 1][1];
-      const layer = closed
-        ? L.polygon(path, tssStyle(feature.type))
-        : L.polyline(path, tssStyle(feature.type));
-      layer.bindTooltip(`Traffic separation scheme · ${feature.name}`, {
-        sticky: true,
-        className: 'marnav-tip',
-      });
-      tss.addLayer(layer);
-    }
 
     seaRef.current = sea;
     depthLabelsRef.current = depthLabels;
@@ -570,6 +557,30 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       if (overlays.ferries || overlays.tss) control.addAttribution(LANE_ATTRIBUTION);
     }
   }, [overlays]);
+
+  // Worldwide marine overlays are viewport-fed, not bundled into the app.
+  useEffect(() => {
+    const ferries = groupsRef.current.ferries;
+    const tss = groupsRef.current.tss;
+    if (!ferries || !tss) return;
+    ferries.clearLayers();
+    tss.clearLayers();
+    const fallbackFerries: MarineFeature[] = lanes.ferries.map((feature, index) => ({ ...feature, id: `fallback-ferry-${index}`, type: 'ferry_route', path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }));
+    const fallbackTss: MarineFeature[] = lanes.tss.map((feature, index) => ({ ...feature, id: `fallback-tss-${index}`, path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }));
+    const source = props.marineFeatures ?? { ferries: fallbackFerries, tss: fallbackTss };
+    for (const feature of source.ferries) {
+      const line = L.polyline(feature.path, ferryStyle());
+      line.bindTooltip(`Ferry route · ${feature.name}`, { sticky: true, className: 'marnav-tip' });
+      ferries.addLayer(line);
+    }
+    for (const feature of source.tss) {
+      const path = feature.path;
+      const closed = path.length > 3 && path[0][0] === path[path.length - 1][0] && path[0][1] === path[path.length - 1][1];
+      const layer = closed ? L.polygon(path, tssStyle(feature.type)) : L.polyline(path, tssStyle(feature.type));
+      layer.bindTooltip(`Traffic separation scheme · ${feature.name}`, { sticky: true, className: 'marnav-tip' });
+      tss.addLayer(layer);
+    }
+  }, [props.marineFeatures]);
 
   // NAVAID markers.
   useEffect(() => {

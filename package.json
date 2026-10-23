@@ -15,6 +15,9 @@
     "preview": "vite preview",
     "db:build": "node scripts/build-navaid-db.mjs",
     "lanes:build": "node scripts/prepare-lanes.mjs",
+    "marine:build": "node scripts/build-marine-db.mjs",
+    "marine:verify": "node scripts/verify-marine-db.mjs",
+    "marine:test-pipeline": "node scripts/test-marine-pipeline.mjs",
     "currents:build": "node scripts/build-current-stations.mjs",
     "tides:build": "node scripts/build-tide-stations.mjs"
   },

@@ -34,6 +34,7 @@ import { navaidDatabase, regionForPoint } from './lib/navaidDb';
 import { ialaRegion } from './lib/navaids';
 import type { NavaidManifest } from './lib/navaidDb';
 import { queryNavaids } from './lib/overpass';
+import { loadMarineData, type MarineFeature } from './lib/marineDb';
 import { POI_MIN_ZOOM, queryPois } from './lib/pois';
 import type { Poi } from './lib/pois';
 import type { StationTab } from './lib/station';
@@ -112,7 +113,9 @@ export default function App() {
   ]);
   const [noaaCovered, setNoaaCovered] = useState(false);
   const [marks, setMarks] = useState<Navaid[]>(() => navaidDatabase.seed());
+  const [worldwideNavaids, setWorldwideNavaids] = useState<Navaid[] | null>(null);
   const [pois, setPois] = useState<Poi[]>([]);
+  const [marineFeatures, setMarineFeatures] = useState<{ ferries: MarineFeature[]; tss: MarineFeature[] } | null>(null);
   const [markSource, setMarkSource] = useState<{ live: boolean; cached: boolean }>({ live: false, cached: true });
   const [db, setDb] = useState<DbReport>({ manifest: null, checkedAt: null });
   const [checking, setChecking] = useState(false);
@@ -264,6 +267,29 @@ export default function App() {
     };
   }, [view, db.manifest, reloadKey]);
 
+  // Ferry routes and TSS load from the versioned archive by visible bounds.
+  const marineRequestId = useRef(0);
+  useEffect(() => {
+    const id = ++marineRequestId.current;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void loadMarineData(view.bounds, { signal: controller.signal })
+        .then((features) => {
+          if (id === marineRequestId.current) {
+            setMarineFeatures({ ferries: features.ferries, tss: features.tss });
+            if (features.navaids.length > 0) setWorldwideNavaids(features.navaids);
+          }
+        })
+        .catch(() => {
+          // Keep the checked-in regional bundle until a generated archive is available.
+        });
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [view.bounds]);
+
   // Public places follow the viewport and only load once a harbour-scale view
   // is on screen. A stale answer for an older view is discarded by request id.
   const poiRequestId = useRef(0);
@@ -306,8 +332,8 @@ export default function App() {
   // Pair the front and rear lights of each transit before declutter, so both
   // ends carry the leading line's bearing even if only one survives on screen.
   const chartedMarks = useMemo(
-    () => annotateTransits(filterNavaidsByGroups(marks, preferences.hiddenGroups)),
-    [marks, preferences.hiddenGroups],
+    () => annotateTransits(filterNavaidsByGroups(worldwideNavaids ?? marks, preferences.hiddenGroups)),
+    [marks, worldwideNavaids, preferences.hiddenGroups],
   );
 
   const marksInView = useMemo(() => {
@@ -421,6 +447,7 @@ export default function App() {
         marks={visibleMarks}
         pois={pois}
         zoom={view.zoom}
+        marineFeatures={marineFeatures}
         onSelectMark={(mark) => {
           setSelectedVessel(null);
           setSelectedMark(mark);

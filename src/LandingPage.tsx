@@ -75,7 +75,7 @@ export default function LandingPage() {
   return (
     <main className="site-home">
       <header className="home-header">
-        <a className="home-brand" href="#top" aria-label="WHEELOVER home"><img className="home-logo" src="/images/leeward-logo.png" alt="" /><span>WHEELOVER</span></a>
+        <a className="home-brand" href="#top" aria-label="WHEELOVER home"><img className="home-logo" src="/images/wheelover-icon.webp" alt="" /><span>WHEELOVER</span></a>
         <nav className="home-nav" aria-label="Main navigation"><a href="#features">Features</a><a href="#platforms">Get the app</a><a href="#about">Our approach</a><a href="#support">Support</a></nav>
         <a className="home-nav-cta" href="/app">Open chart <span aria-hidden="true">↗</span></a>
       </header>
@@ -90,7 +90,7 @@ export default function LandingPage() {
       <section className="home-safety"><div className="safety-icon">!</div><div><span className="section-kicker">A NOTE ON NAVIGATION</span><p>WHEELOVER is a planning and situational-awareness aid, not a certified navigation system. Always use official charts, notices and your own judgement.</p></div></section>
       <section className="home-support" id="support" aria-labelledby="support-title"><div className="support-copy"><div className="section-kicker">KEEP THIS PROJECT AFLOAT <span>—</span> 04</div><h2 id="support-title">Enjoy WHEELOVER?<br /><em>Help it chart ahead.</em></h2><p>WHEELOVER is an independent project, built to make useful marine information easier to explore. If it’s helpful to you, an optional contribution helps support its ongoing development. The app remains free to use.</p></div><a className="button-primary support-button" href="https://paypal.me/DouglasCoates230" target="_blank" rel="noopener noreferrer"><span className="button-icon" aria-hidden="true">↗</span> Donate via PayPal</a></section>
       <section className="home-contact" id="contact"><div><div className="section-kicker">HELP SHAPE WHAT COMES NEXT <span>—</span> 05</div><h2>Good ideas travel.<br /><em>Send yours our way.</em></h2><p>Found an issue, or have an idea for a future build? We’d love to hear what would make your time on the water better.</p></div><ContactCard /></section>
-      <footer className="home-footer"><a className="home-brand" href="#top"><img className="home-logo" src="/images/leeward-logo.png" alt="" /><span>WHEELOVER</span></a><span className="footer-note">Know your course. Own your passage.</span><a href="#support" className="footer-link">Support the project ↗</a><a href="/app" className="footer-link">Open web app ↗</a><span className="footer-copy">© {new Date().getFullYear()} WHEELOVER</span></footer>
+      <footer className="home-footer"><a className="home-brand" href="#top"><img className="home-logo" src="/images/wheelover-icon.webp" alt="" /><span>WHEELOVER</span></a><span className="footer-note">Know your course. Own your passage.</span><a href="#support" className="footer-link">Support the project ↗</a><a href="/app" className="footer-link">Open web app ↗</a><span className="footer-copy">© {new Date().getFullYear()} WHEELOVER</span></footer>
     </main>
   );
 }

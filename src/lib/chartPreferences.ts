@@ -34,7 +34,7 @@ const LEGACY_CHART_STORAGE_KEYS = ['leeward:chart-prefs', 'marnav:chart-prefs'] 
 export const DEFAULT_PREFERENCES: ChartPreferences = {
   base: 'osm',
   overlays: {
-    openseamap: true,
+    openseamap: false,
     navaids: true,
     ferries: false,
     tss: false,

@@ -26,6 +26,7 @@ function mark(overrides: Partial<Navaid> & { category: NavaidCategory }): Navaid
     height: overrides.height ?? null,
     range: overrides.range ?? null,
     path: overrides.path ?? null,
+    paths: overrides.paths ?? null,
     transitBearing: overrides.transitBearing ?? null,
     transitDistanceM: overrides.transitDistanceM ?? null,
     transitPartner: overrides.transitPartner ?? null,
@@ -143,6 +144,7 @@ describe('classification', () => {
     expect(classifyTags({ 'seamark:type': 'anchorage_area' })?.category).toBe('anchorage');
     expect(classifyTags({ 'seamark:type': 'anchor_berth' })?.category).toBe('anchor_berth');
     expect(classifyTags({ 'seamark:type': 'calling-in_point' })?.category).toBe('calling_in_point');
+    expect(classifyTags({ 'seamark:type': 'communication_area' })?.category).toBe('communication_area');
   });
 });
 
@@ -175,15 +177,16 @@ describe('normalisation', () => {
       type: 'way',
       id: 256521658,
       center: { lat: 49.0262, lon: -123.6586 },
-      tags: {
-        'seamark:type': 'calling-in_point',
-        'seamark:name': '13 - West Porlier Pass',
-        'seamark:calling-in_point:channel': '11A',
-        'seamark:calling-in_point:traffic_flow': 'two-way',
+      tags: {      'seamark:type': 'calling-in_point',
+      'seamark:name': '13 - West Porlier Pass',
+      'seamark:calling-in_point:channel': '11A',
+      'seamark:calling-in_point:traffic_flow': 'two-way',
+      'seamark:calling-in_point:callsign': 'PORT RADIO',
       },
     }) as Navaid;
     expect(calling.category).toBe('calling_in_point');
     expect(calling.channel).toBe('11A');
+    expect(calling.callsign).toBe('PORT RADIO');
     expect(calling.name).toBe('13 - West Porlier Pass');
 
     const berth = normalizeElement({
@@ -203,6 +206,21 @@ describe('normalisation', () => {
     expect(berth.description).toContain('10 m minimum depth');
     expect(berth.description).toContain('170 m radius');
     expect(berth.description).toContain('tanker');
+  });
+
+  it('keeps reporting-area boundary geometry from multipath relations', () => {
+    const area = normalizeElement({
+      type: 'relation',
+      id: 991,
+      tags: { 'seamark:type': 'communication_area', name: 'Harbour VTS Sector' },
+      geometryPaths: [
+        [{ lat: 49, lon: -124 }, { lat: 50, lon: -124 }, { lat: 50, lon: -123 }, { lat: 49, lon: -124 }],
+        [{ lat: 49.2, lon: -123.8 }, { lat: 49.3, lon: -123.7 }],
+      ],
+    }) as Navaid;
+    expect(area.category).toBe('communication_area');
+    expect(area.paths).toHaveLength(2);
+    expect(area.lat).toBe(49.5);
   });
 
   it('keeps the line geometry of a calling-in point, with the icon at its midpoint', () => {
@@ -379,11 +397,19 @@ describe('zoom declutter', () => {
     expect(all).toHaveLength(2);
   });
 
-  it('filters marks outside the viewport', () => {
+  it('filters marks outside the viewport but includes a reporting area whose boundary crosses it', () => {
     const inside = mark({ category: 'lateral_port', lat: 50.8, lon: -1.2 });
     const outside = mark({ category: 'lateral_port', lat: 51.5, lon: -1.2 });
-    const visible = selectVisibleNavaids([inside, outside], { zoom: 14, bounds, showAll: true }) as Navaid[];
-    expect(visible).toHaveLength(1);
+    const area = mark({
+      category: 'communication_area',
+      lat: 51.3,
+      lon: -1.2,
+      paths: [[[50.7, -1.7], [50.7, -1.6], [51.3, -1.6], [51.3, -1.7]]],
+    });
+    const visible = selectVisibleNavaids([inside, outside, area], { zoom: 14, bounds, showAll: true }) as Navaid[];
+    expect(visible.map(({ id }) => id)).toContain(area.id);
+    expect(visible.map(({ id }) => id)).toContain(inside.id);
+    expect(visible.map(({ id }) => id)).not.toContain(outside.id);
   });
 
   it('caps dense scenes by priority', () => {

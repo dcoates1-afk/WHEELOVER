@@ -76,6 +76,12 @@ export const NAVAID_GROUPS: NavaidGroup[] = [
     symbol: 'calling_in_point',
     categories: ['calling_in_point'],
   },
+  {
+    id: 'communication_area',
+    label: 'Reporting / communication area',
+    symbol: 'communication_area',
+    categories: ['communication_area'],
+  },
   { id: 'wreck', label: 'Wreck', symbol: 'wreck', categories: ['wreck'] },
   { id: 'hazard', label: 'Hazard', symbol: 'hazard', categories: ['hazard'] },
   { id: 'hazard_danger', label: 'Dangerous wreck', symbol: 'hazard_danger', categories: ['hazard_danger'] },

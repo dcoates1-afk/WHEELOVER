@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, relative, resolve, sep } from 'node:path';
+import { serveArchiveFile } from './archiveServer';
 import { WebSocketServer } from 'ws';
 import { createAisRelay } from './aisRelay';
 import { createDepthHandler } from './depthProxy';
@@ -16,6 +17,8 @@ const relay = createAisRelay({ apiKey: aisKey, log });
 const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
 const overpassHandler = createOverpassHandler(log);
 const depthHandler = createDepthHandler(log);
+const contourDir = process.env.WHEELOVER_CONTOUR_DATA_DIR ? resolve(process.env.WHEELOVER_CONTOUR_DATA_DIR) : null;
+const marineDir = process.env.WHEELOVER_MARINE_DATA_DIR ? resolve(process.env.WHEELOVER_MARINE_DATA_DIR) : null;
 
 const mimeTypes: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
@@ -114,6 +117,16 @@ async function handleHttp(req: IncomingMessage, res: ServerResponse) {
   }
   if (url.pathname === '/api/depth') {
     await depthHandler(req, res);
+    return;
+  }
+  if (url.pathname.startsWith('/contours/') && contourDir) {
+    await serveArchiveFile(contourDir, req, res, url.pathname.slice('/contours'.length), (file) =>
+      file.toLowerCase().endsWith('.fgb') ? 'application/flatgeobuf' : 'application/json; charset=utf-8',
+    );
+    return;
+  }
+  if (url.pathname.startsWith('/marine-db/') && marineDir) {
+    await serveArchiveFile(marineDir, req, res, url.pathname.slice('/marine-db'.length), () => 'application/json; charset=utf-8');
     return;
   }
   await serveStatic(req, res, url.pathname);

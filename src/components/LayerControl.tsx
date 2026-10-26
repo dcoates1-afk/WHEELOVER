@@ -9,6 +9,7 @@ import { NAVAID_GROUPS, isGroupHidden, toggleGroup } from '../lib/navaidGroups';
 import { POI_GROUPS, isPoiGroupHidden, togglePoiGroup } from '../lib/poiGroups';
 import { poiIconSvg } from '../lib/pois';
 import { formatBytes } from '../lib/noaaChart';
+import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 
 export interface MarkStats {
   shown: number;
@@ -272,10 +273,12 @@ export function LayerControl({
                   checked={preferences.overlays.contours}
                   onChange={(value) => setOverlay('contours', value)}
                 />
-                {preferences.overlays.contours && !noaaCovered && (
+                {preferences.overlays.contours && (
                   <p className="menu-note">
-                    Outside US waters contours come from GEBCO's global 15″ grid, so they are an overview
-                    rather than a harbour survey.
+                    {noaaCovered
+                      ? 'US zoom 9+ uses NOAA charted contours; worldwide/local vector detail is only available where its source files are installed.'
+                      : 'Global contours come from the GEBCO grid (15″ base resolution); high-zoom lines can look crisp but cannot add survey detail.'}{' '}
+                    Interpolated display aid only—not for navigation. Source/datum seams can occur.
                   </p>
                 )}
                 <ToggleRow
@@ -327,7 +330,7 @@ export function LayerControl({
                 />
                 <ToggleRow
                   label="NAVAIDs from database"
-                  hint="Buoys, beacons, lights, ranges, hazards"
+                  hint="Aids to navigation, calling-in points and mapped reporting areas"
                   checked={preferences.overlays.navaids}
                   onChange={(value) => setOverlay('navaids', value)}
                 />
@@ -343,6 +346,27 @@ export function LayerControl({
                   checked={preferences.overlays.tss}
                   onChange={(value) => setOverlay('tss', value)}
                 />
+                {preferences.overlays.navaids && (
+                  <>
+                    <p className="menu-note">
+                      Reporting overlays include the mapped systems and partial lines shown on the chart; the researched index also records systems whose chartlets, datum or exact coordinates are not sufficiently verified to draw. Boundary lines are not always reporting areas. Not for navigation or compliance—check current requirements with the responsible authority.
+                    </p>
+                    <details className="legend reporting-coverage">
+                      <summary>Reporting system coverage &amp; sources</summary>
+                      <ul>
+                        {SHIP_REPORTING_SYSTEMS.coverageNotes.map((entry) => (
+                          <li key={entry.systemId}>
+                            <strong>{entry.system}</strong>
+                            <p>{entry.status}</p>
+                            <p>{entry.datum} · verified {entry.verifiedAsOf}</p>
+                            <p>{entry.note}</p>
+                            <a href={entry.sourceUrl} target="_blank" rel="noreferrer">{entry.sourceCitation}</a>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </>
+                )}
                 {(preferences.overlays.ferries || preferences.overlays.tss) && (
                   <p className="menu-note">
                     Routes are community-mapped OpenStreetMap data drawn in their own layer: ferries as dashed cyan

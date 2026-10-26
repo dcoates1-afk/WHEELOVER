@@ -9,6 +9,7 @@ const FORM_LABELS: Partial<Record<NavaidCategory, string>> = {
   transit_front: 'Transit light — front (lower)',
   transit_rear: 'Transit light — rear (higher)',
   calling_in_point: 'Radio reporting line',
+  communication_area: 'Vessel reporting / communications area',
   anchor_berth: 'Designated berth',
   anchorage: 'Anchorage ground',
   wreck: 'Charted wreck',
@@ -95,6 +96,7 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
           <Row label="Form" value={form} />
           <Row label="Light character" value={mark.light} />
           <Row label="VHF channel" value={mark.channel ? `Ch ${mark.channel}` : null} />
+          <Row label="Radio callsign" value={mark.callsign} />
           <Row label="Transit role" value={transitRole} />
           <Row label="Lines up on" value={transitBearing} />
           <Row label="Pair distance" value={transitGap} />

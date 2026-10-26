@@ -54,6 +54,7 @@ const PRIORITY = {
   // Calling-in points are harbour-control reporting lines, so they matter as
   // much as a buoy when planning an approach through a narrow pass.
   calling_in_point: 76,
+  communication_area: 72,
   // Anchorage grounds outrank generic hazards: they are where a passage ends
   // for the night, so dropping them in a dense harbour is the wrong trade.
   anchorage: 74,
@@ -99,6 +100,7 @@ const MIN_ZOOM = {
   notice: 14,
   facility: 14,
   calling_in_point: 11,
+  communication_area: 11,
   wreck: 12,
   anchorage: 12,
   anchor_berth: 12,
@@ -220,6 +222,9 @@ export function classifyTags(tags) {
   }
   if (type === 'calling_in_point' || type === 'calling-in_point') {
     return { ...base, category: 'calling_in_point', priority: PRIORITY.calling_in_point };
+  }
+  if (type === 'communication_area') {
+    return { ...base, category: 'communication_area', priority: PRIORITY.communication_area };
   }
 
   if (AREA_TYPES.has(type)) return null;
@@ -440,9 +445,27 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
     : [];
   const drawnAsLine = path.length >= 2;
   const midpoint = drawnAsLine ? path[Math.floor(path.length / 2)] : null;
+  const relationPaths = Array.isArray(element.members)
+    ? element.members.flatMap((member) => Array.isArray(member?.geometry) ? [member.geometry] : [])
+    : null;
+  const sourcePaths = Array.isArray(element.geometryPaths) ? element.geometryPaths : relationPaths;
+  const paths = sourcePaths
+    ? sourcePaths
+        .map((part) => Array.isArray(part)
+          ? part.filter((point) => typeof point?.lat === 'number' && typeof point?.lon === 'number').map((point) => [point.lat, point.lon])
+          : [])
+        .filter((part) => part.length > 1)
+    : null;
+  const allGeometry = paths?.flat() ?? path;
+  const areaMidpoint = allGeometry.length > 0 && type === 'communication_area'
+    ? [
+        (Math.min(...allGeometry.map(([lat]) => lat)) + Math.max(...allGeometry.map(([lat]) => lat))) / 2,
+        (Math.min(...allGeometry.map(([, lon]) => lon)) + Math.max(...allGeometry.map(([, lon]) => lon))) / 2,
+      ]
+    : allGeometry.length > 0 ? allGeometry[Math.floor(allGeometry.length / 2)] : null;
 
-  const lat = element.lat ?? element.center?.lat ?? midpoint?.[0];
-  const lon = element.lon ?? element.center?.lon ?? midpoint?.[1];
+  const lat = element.lat ?? element.center?.lat ?? (type === 'communication_area' ? areaMidpoint?.[0] : midpoint?.[0]);
+  const lon = element.lon ?? element.center?.lon ?? (type === 'communication_area' ? areaMidpoint?.[1] : midpoint?.[1]);
   if (typeof lat !== 'number' || typeof lon !== 'number') return null;
 
   const kind = element.type || 'node';
@@ -472,12 +495,14 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
     height: firstTag(tags, [`seamark:${type}:height`, 'seamark:light:height', 'height']),
     range: firstTag(tags, ['seamark:light:range']),
     path: drawnAsLine ? path : null,
+    paths,
     // Filled in by annotateTransits once the other end of the transit is known.
     transitBearing: null,
     transitDistanceM: null,
     transitPartner: null,
     transitPartnerName: null,
     channel: firstTag(tags, [`seamark:${type}:channel`, 'seamark:radio_station:channel']),
+    callsign: firstTag(tags, [`seamark:${type}:callsign`, 'seamark:radio_station:callsign']),
     description:
       firstTag(tags, ['description', 'note']) ??
       berthDetail(type, tags) ??
@@ -594,9 +619,16 @@ export function selectVisibleNavaids(navaids, options) {
   const [south, west, north, east] = bounds;
   const centre = options.center ?? [(south + north) / 2, (west + east) / 2];
 
-  const inView = navaids.filter(
-    (n) => n.lat >= south && n.lat <= north && n.lon >= west && n.lon <= east,
-  );
+  const inView = navaids.filter((n) => {
+    if (n.category === 'communication_area' && Array.isArray(n.paths)) {
+      return n.paths.some((path) => {
+        const lats = path.map(([lat]) => lat);
+        const lons = path.map(([, lon]) => lon);
+        return Math.min(...lats) <= north && Math.max(...lats) >= south && Math.min(...lons) <= east && Math.max(...lons) >= west;
+      });
+    }
+    return n.lat >= south && n.lat <= north && n.lon >= west && n.lon <= east;
+  });
   const visible = showAll ? inView : inView.filter((n) => zoom >= minZoomFor(n.category));
   if (visible.length <= limit) return visible;
 
@@ -638,6 +670,7 @@ export const CATEGORY_LABELS = {
   anchorage: 'Anchorage',
   anchor_berth: 'Anchor berth',
   calling_in_point: 'Calling-in point',
+  communication_area: 'Vessel reporting / communication area',
   notice: 'Notice mark',
   gate: 'Gate / start-finish mark',
   other: 'Mark',

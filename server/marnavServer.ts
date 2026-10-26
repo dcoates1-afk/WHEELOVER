@@ -1,14 +1,22 @@
+import { resolve } from 'node:path';
+import type { IncomingMessage } from 'node:http';
 import type { Plugin } from 'vite';
 import { WebSocketServer } from 'ws';
 import { createAisRelay } from './aisRelay';
-import { createOverpassHandler } from './overpassProxy';
 import { createDepthHandler } from './depthProxy';
+import { createOverpassHandler } from './overpassProxy';
+import { serveArchiveFile } from './archiveServer';
 
 /**
- * Dev/preview server glue: the Overpass proxy at /api/overpass and the AIS
- * relay at /ws/ais. The AIS key stays in this process.
+ * Dev/preview server glue: Overpass/depth proxies, local data archives and
+ * the AIS relay. Private API keys stay in this process.
  */
 export function marnavServer(options: { aisKey: string }): Plugin {
+  const configuredMarineDir = process.env.WHEELOVER_MARINE_DATA_DIR;
+  const marineDir = configuredMarineDir ? resolve(configuredMarineDir) : null;
+  const configuredContourDir = process.env.WHEELOVER_CONTOUR_DATA_DIR;
+  const contourDir = configuredContourDir ? resolve(configuredContourDir) : null;
+
   return {
     name: 'marnav-server',
     configureServer(server) {
@@ -16,11 +24,25 @@ export function marnavServer(options: { aisKey: string }): Plugin {
 
       server.middlewares.use('/api/overpass', createOverpassHandler(log));
       server.middlewares.use('/api/depth', createDepthHandler(log));
+      server.middlewares.use('/marine-db', (req, res, next) => {
+        if (!marineDir) return next();
+        const path = (req.url ?? '/').split('?')[0] || '/';
+        const requested = path === '/' ? '/manifest.json' : path;
+        void serveArchiveFile(marineDir, req, res, requested, () => 'application/json; charset=utf-8');
+      });
+      server.middlewares.use('/contours', (req, res, next) => {
+        if (!contourDir) return next();
+        const path = (req.url ?? '/').split('?')[0] || '/';
+        const requested = path === '/' ? '/manifest.json' : path;
+        void serveArchiveFile(contourDir, req, res, requested, (file) =>
+          file.toLowerCase().endsWith('.fgb') ? 'application/flatgeobuf' : 'application/json; charset=utf-8',
+        );
+      });
 
       const relay = createAisRelay({ apiKey: options.aisKey, log });
       const wss = new WebSocketServer({ noServer: true });
 
-      const onUpgrade = (req: import('node:http').IncomingMessage, socket: import('node:stream').Duplex, head: Buffer) => {
+      const onUpgrade = (req: IncomingMessage, socket: import('node:stream').Duplex, head: Buffer) => {
         let pathname = '/';
         try {
           pathname = new URL(req.url ?? '/', 'http://localhost').pathname;

@@ -22,6 +22,7 @@ export const RELIEF_ATTRIBUTION = 'Relief &copy; Esri, NOAA, USGS';
 export const CONTOUR_ATTRIBUTION = 'Depth contours: GEBCO 2023 via NOAA (global), NOAA ENC (US)';
 export const ENC_DEPTH_ATTRIBUTION = 'Depth contours: NOAA ENC (public domain)';
 export const SOUNDING_ATTRIBUTION = 'Charted soundings: NOAA ENC (public domain)';
+export const REPORTING_SYSTEM_ATTRIBUTION = 'Ship-reporting boundaries: 15 CFR part 922, Appendix E (eCFR); IMO MSC.279(85)';
 
 export type EncDepthOverlay = 'contours' | 'soundings';
 
@@ -78,3 +79,5 @@ export function encDepthTileUrl(tile: TileCoord, overlay: EncDepthOverlay): stri
 export const CONTOUR_TILE_URL =
   'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/GEBCO_contours/MapServer/tile/{z}/{y}/{x}';
 export const CONTOUR_MAX_NATIVE_ZOOM = 10;
+export const CONTOUR_SOURCE_NOTICE =
+  'Contours generated from GEBCO’s global 15-arc-second terrain grid (nominally ~463 m north–south at the equator; actual source detail varies). Smoothed model contours, not chart-grade or for navigation. Vertical references may vary by region.';

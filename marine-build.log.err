@@ -1,0 +1,22 @@
+. : File C:\Users\dcoat\miniforge3\shell\condabin\conda-hook.ps1 cannot be loaded because running scripts is disabled 
+on this system. For more information, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170.
+At line:1 char:3
++ . C:\Users\dcoat\miniforge3\shell\condabin\conda-hook.ps1; conda acti ...
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : SecurityError: (:) [], PSSecurityException
+    + FullyQualifiedErrorId : UnauthorizedAccess
+conda : The term 'conda' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:60
++ ... :\Users\dcoat\miniforge3\shell\condabin\conda-hook.ps1; conda activat ...
++                                                             ~~~~~
+    + CategoryInfo          : ObjectNotFound: (conda:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+Required tool 'osmium' is missing from PATH.
+At C:\Users\dcoat\Documents\WHEELOVER\scripts\build-worldwide-marine.ps1:33 char:65
++ ... tlyContinue)) { throw "Required tool '$Tool' is missing from PATH." }
++                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Required tool '...sing from PATH.:String) [], RuntimeException
+    + FullyQualifiedErrorId : Required tool 'osmium' is missing from PATH.
+ 

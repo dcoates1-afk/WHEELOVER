@@ -26,6 +26,7 @@ export type NavaidCategory =
   | 'anchorage'
   | 'anchor_berth'
   | 'calling_in_point'
+  | 'communication_area'
   | 'notice'
   | 'gate'
   | 'other';
@@ -45,11 +46,14 @@ export interface Navaid {
   height: string | null;
   range: string | null;
   path: [number, number][] | null;
+  /** Separate geometry paths, used for multipart reporting areas when present. */
+  paths?: [number, number][][] | null;
   transitBearing: number | null;
   transitDistanceM: number | null;
   transitPartner: string | null;
   transitPartnerName: string | null;
   channel: string | null;
+  callsign?: string | null;
   description: string | null;
   lit: boolean | null;
   priority: number;

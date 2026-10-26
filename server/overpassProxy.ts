@@ -41,6 +41,9 @@ export function buildOverpassQuery([south, west, north, east]: Bounds): string {
     '[out:json][timeout:60];',
     '(',
     `node["seamark:type"](${box});`,
+    // Reporting/communication areas are normally polygons, not point aids.
+    `way["seamark:type"="communication_area"](${box});`,
+    `relation["seamark:type"="communication_area"](${box});`,
     // Calling-in points are lines, so they are fetched separately with geometry
     // instead of collapsing to a centre point like the other ways.
     `way["seamark:type"](${box})["seamark:type"!="calling-in_point"];`,
@@ -49,6 +52,9 @@ export function buildOverpassQuery([south, west, north, east]: Bounds): string {
     ');',
     'out center tags;',
     `way["seamark:type"="calling-in_point"](${box});`,
+    'out geom;',
+    `way["seamark:type"="communication_area"](${box});`,
+    `relation["seamark:type"="communication_area"](${box});`,
     'out geom;',
   ].join('');
 }

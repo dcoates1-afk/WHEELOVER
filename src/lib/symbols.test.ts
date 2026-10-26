@@ -101,6 +101,13 @@ describe('anchor and calling-in symbols', () => {
     expect(spec.label).toBe('Calling-in point');
   });
 
+  it('draws a reporting area with a radio-area symbol and chart-scale visibility', () => {
+    const symbol = symbolFor('communication_area', 'A');
+    expect(symbol.svg).toContain('#3dd6ff');
+    expect(symbol.label).toBe('Vessel reporting / communication area');
+    expect(minZoomFor('communication_area')).toBeLessThanOrEqual(12);
+  });
+
   it('shows calling-in points before anchorages and berths at chart scale', () => {
     expect(minZoomFor('calling_in_point')).toBeLessThanOrEqual(12);
     expect(minZoomFor('anchor_berth')).toBeLessThanOrEqual(12);
@@ -127,6 +134,7 @@ describe('anchor and calling-in symbols', () => {
       transitPartner: null,
       transitPartnerName: null,
       channel: '11A',
+      callsign: 'PORT RADIO',
       description: null,
       lit: false,
       priority: 76,
@@ -134,7 +142,7 @@ describe('anchor and calling-in symbols', () => {
       updated: null,
       region: null,
     };
-    expect(quickInfo(calling, 'B')).toContain('Calling-in point · 13 - West Porlier Pass · VHF Ch 11A');
+    expect(quickInfo(calling, 'B')).toContain('Calling-in point · 13 - West Porlier Pass · VHF Ch 11A · Call PORT RADIO');
   });
 });
 
@@ -207,6 +215,7 @@ describe('quick info', () => {
       transitPartner: null,
       transitPartnerName: null,
       channel: null,
+      callsign: null,
       description: null,
       lit: true,
       priority: 100,

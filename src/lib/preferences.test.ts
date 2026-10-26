@@ -63,6 +63,13 @@ describe('chart preferences', () => {
     expect('depth' in old.overlays).toBe(false);
   });
 
+  it('defaults OpenSeaMap seamarks off while preserving explicit saved choices', () => {
+    expect(DEFAULT_PREFERENCES.overlays.openseamap).toBe(false);
+    expect(sanitizePreferences({}).overlays.openseamap).toBe(false);
+    expect(sanitizePreferences({ overlays: { openseamap: true } }).overlays.openseamap).toBe(true);
+    expect(sanitizePreferences({ overlays: { openseamap: false } }).overlays.openseamap).toBe(false);
+  });
+
   it('fills missing overlay keys from an older saved preference', () => {
     const old = sanitizePreferences({ base: 'noaa', overlays: { tss: true } });
     expect(old.overlays.contours).toBe(false);
@@ -70,7 +77,7 @@ describe('chart preferences', () => {
     expect(old.overlays.depthLabels).toBe(false);
     expect(old.overlays.pois).toBe(false);
     expect(old.overlays.tss).toBe(true);
-    expect(old.overlays.openseamap).toBe(true);
+    expect(old.overlays.openseamap).toBe(false);
   });
 
   it('defaults the display theme to day and rejects unknown themes', () => {

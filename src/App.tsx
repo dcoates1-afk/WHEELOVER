@@ -270,6 +270,7 @@ export default function App() {
   // Ferry routes and TSS load from the versioned archive by visible bounds.
   const marineRequestId = useRef(0);
   useEffect(() => {
+    setMarineFeatures(null);
     const id = ++marineRequestId.current;
     const controller = new AbortController();
     const timer = setTimeout(() => {

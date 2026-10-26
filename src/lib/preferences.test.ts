@@ -31,7 +31,7 @@ describe('chart preferences', () => {
     expect(sanitizePreferences({ base: 'nope', overlays: { navaids: 'yes' } })).toEqual(DEFAULT_PREFERENCES);
   });
 
-  it('accepts every chart base and defaults the new overlays off', () => {
+  it('accepts every chart base, enables marine routes, and keeps new depth overlays off', () => {
     for (const base of ['nautical', 'relief', 'noaa', 'rnc'] as const) {
       expect(sanitizePreferences({ base }).base).toBe(base);
     }
@@ -40,6 +40,8 @@ describe('chart preferences', () => {
     expect(DEFAULT_PREFERENCES.overlays.soundings).toBe(false);
     expect(DEFAULT_PREFERENCES.overlays.depthLabels).toBe(false);
     expect(DEFAULT_PREFERENCES.overlays.pois).toBe(false);
+    expect(DEFAULT_PREFERENCES.overlays.ferries).toBe(true);
+    expect(DEFAULT_PREFERENCES.overlays.tss).toBe(true);
     expect(
       sanitizePreferences({ overlays: { contours: true, soundings: true, depthLabels: true, pois: true } })
         .overlays,
@@ -77,6 +79,7 @@ describe('chart preferences', () => {
     expect(old.overlays.depthLabels).toBe(false);
     expect(old.overlays.pois).toBe(false);
     expect(old.overlays.tss).toBe(true);
+    expect(old.overlays.ferries).toBe(true);
     expect(old.overlays.openseamap).toBe(false);
   });
 
@@ -85,6 +88,23 @@ describe('chart preferences', () => {
     expect(sanitizePreferences({ theme: 'laser' }).theme).toBe('day');
     expect(sanitizePreferences({ theme: 'night' }).theme).toBe('night');
     expect(sanitizePreferences({ theme: 'red' }).theme).toBe('red');
+  });
+
+  it('enables marine routes for existing pre-schema preferences but preserves versioned choices', () => {
+    const olderPreferences = fakeStorage({
+      'wheel-over:chart-prefs': JSON.stringify({
+        base: 'osm',
+        overlays: { ferries: false, tss: false, navaids: true },
+      }),
+    });
+    expect(readChartPreferences(olderPreferences).overlays).toMatchObject({ ferries: true, tss: true });
+
+    const upgraded = readChartPreferences(olderPreferences);
+    upgraded.overlays.ferries = false;
+    upgraded.overlays.tss = true;
+    writeChartPreferences(olderPreferences, upgraded);
+    expect(readChartPreferences(olderPreferences).overlays).toMatchObject({ ferries: false, tss: true });
+    expect(JSON.parse(olderPreferences.getItem('wheel-over:chart-prefs')!).schema).toBe(2);
   });
 
   it('keeps valid values and persists them', () => {
@@ -98,7 +118,7 @@ describe('chart preferences', () => {
     expect(sanitized.base).toBe('satellite');
     expect(sanitized.overlays.tss).toBe(true);
     expect(sanitized.overlays.navaids).toBe(false);
-    expect(sanitized.overlays.ferries).toBe(false);
+    expect(sanitized.overlays.ferries).toBe(true);
     expect(sanitized.showAllMarks).toBe(true);
     expect(sanitized.theme).toBe('red');
 

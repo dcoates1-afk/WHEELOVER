@@ -65,7 +65,41 @@ for (const file of ['tss.json', 'tss-channel.json', 'tss-ny.json']) {
     const signature = `${type}:${path.map(([lat, lon]) => `${lat},${lon}`).join(';')}`;
     if (seenTss.has(signature)) continue;
     seenTss.add(signature);
-    tss.push({ type, name: nameOf(element, typeLabel(type)), path });
+    const tags = element.tags ?? {};
+    const details = {};
+    for (const key of [
+      'operator',
+      'ref',
+      'seamark:separation_scheme:category',
+      'seamark:separation_scheme:traffic_flow',
+      'seamark:separation_scheme:lane_count',
+      'seamark:separation_scheme:lane_width',
+      'seamark:separation_scheme:orientation',
+      'seamark:separation_scheme:category_of_separation',
+      'seamark:separation_boundary:category',
+      'seamark:separation_lane:traffic_flow',
+      'seamark:separation_lane:category',
+      'seamark:separation_zone:category',
+      'seamark:information',
+      'source',
+    ]) {
+      if (typeof tags[key] === 'string' && tags[key].trim()) details[key] = tags[key].trim();
+    }
+    const osmType = element.type === 'relation' ? 'relation' : element.type === 'node' ? 'node' : 'way';
+    tss.push({
+      id: `tss:${osmType[0]}${element.id}`,
+      type,
+      name: nameOf(element, typeLabel(type)),
+      ...(Object.keys(details).length ? { details } : {}),
+      sourceUrl: `https://www.openstreetmap.org/${osmType}/${element.id}`,
+      path,
+    });
+  }
+}
+
+for (const feature of tss) {
+  if (!feature.id || !feature.sourceUrl || !Array.isArray(feature.path) || feature.path.length < 2) {
+    throw new Error(`Invalid TSS source feature: ${feature.name}`);
   }
 }
 

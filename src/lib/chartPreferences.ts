@@ -28,6 +28,7 @@ export interface ChartPreferences {
 }
 
 export const CHART_STORAGE_KEY = 'wheel-over:chart-prefs';
+const CHART_PREFERENCES_SCHEMA = 2;
 /** Preferences from earlier LEEWARD/MARNAV builds remain available after the rename. */
 const LEGACY_CHART_STORAGE_KEYS = ['leeward:chart-prefs', 'marnav:chart-prefs'] as const;
 
@@ -36,8 +37,8 @@ export const DEFAULT_PREFERENCES: ChartPreferences = {
   overlays: {
     openseamap: false,
     navaids: true,
-    ferries: false,
-    tss: false,
+    ferries: true,
+    tss: true,
     ais: true,
     contours: false,
     soundings: false,
@@ -93,7 +94,17 @@ export function readChartPreferences(storage: Pick<Storage, 'getItem'> | null | 
       storage.getItem(CHART_STORAGE_KEY) ??
       LEGACY_CHART_STORAGE_KEYS.map((key) => storage.getItem(key)).find((value) => value !== null);
     if (!raw) return defaults();
-    return sanitizePreferences(JSON.parse(raw));
+    const saved: unknown = JSON.parse(raw);
+    const preferences = sanitizePreferences(saved);
+    const schema = saved && typeof saved === 'object' ? (saved as { schema?: unknown }).schema : undefined;
+    if (typeof schema !== 'number' || schema < CHART_PREFERENCES_SCHEMA) {
+      // Older builds saved the overlays off by default, so those stored false
+      // values were not an intentional choice. Show both route layers once;
+      // schema 2 preferences preserve explicit on/off choices from then on.
+      preferences.overlays.ferries = true;
+      preferences.overlays.tss = true;
+    }
+    return preferences;
   } catch {
     return defaults();
   }
@@ -105,7 +116,7 @@ export function writeChartPreferences(
 ): void {
   if (!storage) return;
   try {
-    storage.setItem(CHART_STORAGE_KEY, JSON.stringify(preferences));
+    storage.setItem(CHART_STORAGE_KEY, JSON.stringify({ ...preferences, schema: CHART_PREFERENCES_SCHEMA }));
   } catch {
     // Storage blocked: preferences still apply for this session.
   }

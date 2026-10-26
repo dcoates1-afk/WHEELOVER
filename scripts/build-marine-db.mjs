@@ -188,9 +188,42 @@ function addFeature(feature) {
   if (!bounds) { dropped += 1; return; }
   const layer = isFerry ? 'ferries' : 'tss';
   const type = isFerry ? 'ferry_route' : seamark;
-  const name = String(tags.name ?? tags.ref ?? tags['seamark:name'] ?? `${type} · ${properties.osm_id ?? feature.id ?? 'unnamed'}`);
+  const readableType = type.replace(/_/g, ' ').replace(/^./, (letter) => letter.toUpperCase());
+  const sourceIdentity = String(properties['@id'] ?? feature.id ?? '');
+  const sourceIdentityMatch = sourceIdentity.match(/^([nwr])(\d+)$/);
+  const name = String(tags.name ?? tags.ref ?? tags['seamark:name'] ?? readableType);
   const id = String(properties['@id'] ?? properties.osm_id ?? feature.id ?? `${type}:${createHash('sha1').update(JSON.stringify(paths)).digest('hex').slice(0, 16)}`);
-  addToCells(layer, { id: `${layer}:${id}`, type, name, bounds, path: paths.flat() });
+  const details = {};
+  for (const key of [
+    'operator',
+    'ref',
+    'seamark:separation_scheme:category',
+    'seamark:separation_scheme:traffic_flow',
+    'seamark:separation_scheme:lane_count',
+    'seamark:separation_scheme:lane_width',
+    'seamark:separation_scheme:orientation',
+    'seamark:separation_scheme:category_of_separation',
+    'seamark:separation_boundary:category',
+    'seamark:separation_lane:traffic_flow',
+    'seamark:separation_lane:category',
+    'seamark:separation_zone:category',
+    'seamark:information',
+    'source',
+  ]) {
+    const value = tags[key];
+    if (typeof value === 'string' && value.trim()) details[key] = value.trim();
+  }
+  addToCells(layer, {
+    id: `${layer}:${id}`,
+    type,
+    name,
+    bounds,
+    path: paths.flat(),
+    ...(Object.keys(details).length ? { details } : {}),
+    ...(sourceIdentityMatch ? {
+      sourceUrl: `https://www.openstreetmap.org/${sourceIdentityMatch[1] === 'r' ? 'relation' : sourceIdentityMatch[1] === 'w' ? 'way' : 'node'}/${sourceIdentityMatch[2]}`,
+    } : {}),
+  });
 }
 
 async function* readUtf8Lines(path) {

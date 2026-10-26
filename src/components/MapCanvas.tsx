@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import L from 'leaflet';
 import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
-import type { MarineFeature } from '../lib/marineDb';
+import { describeTssFeature, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import { ialaRegion, quickInfo, symbolFor } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
 import { vesselCourse, vesselIconSize, vesselIconSvg, vesselIsMoving, vesselTooltipHtml } from '../lib/aisVessel';
@@ -50,6 +50,16 @@ export interface MapHandle {
 
 const TRANSPARENT_TILE =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+function escapePopupText(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character]!);
+}
 
 export interface MapCanvasProps {
   preferences: ChartPreferences;
@@ -786,27 +796,43 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
 
   // Worldwide marine overlays are viewport-fed, not bundled into the app.
   useEffect(() => {
+    const map = mapRef.current;
     const ferries = groupsRef.current.ferries;
     const tss = groupsRef.current.tss;
-    if (!ferries || !tss) return;
+    if (!map || !ferries || !tss) return;
     ferries.clearLayers();
     tss.clearLayers();
     const fallbackFerries: MarineFeature[] = lanes.ferries.map((feature, index) => ({ ...feature, id: `fallback-ferry-${index}`, type: 'ferry_route', path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }));
-    const fallbackTss: MarineFeature[] = lanes.tss.map((feature, index) => ({ ...feature, id: `fallback-tss-${index}`, path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }));
+    const fallbackTss: MarineFeature[] = lanes.tss.map((feature, index) => ({ ...feature, id: feature.id ?? `fallback-tss-${index}`, type: feature.type ?? 'separation_zone', name: feature.name || 'Traffic separation scheme', path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }) as MarineFeature);
     const source = props.marineFeatures ?? { ferries: fallbackFerries, tss: fallbackTss };
     for (const feature of source.ferries) {
       const line = L.polyline(feature.path, ferryStyle());
       line.bindTooltip(`Ferry route · ${feature.name}`, { sticky: true, className: 'marnav-tip' });
       ferries.addLayer(line);
     }
+    if (props.preferences.overlays.ferries && source.ferries.length > 0 && !map.hasLayer(ferries)) {
+      ferries.addTo(map);
+    }
     for (const feature of source.tss) {
       const path = feature.path;
       const closed = path.length > 3 && path[0][0] === path[path.length - 1][0] && path[0][1] === path[path.length - 1][1];
       const layer = closed ? L.polygon(path, tssStyle(feature.type)) : L.polyline(path, tssStyle(feature.type));
-      layer.bindTooltip(`Traffic separation scheme · ${feature.name}`, { sticky: true, className: 'marnav-tip' });
+      const info = describeTssFeature(feature);
+      layer.bindTooltip(`${info.title} · ${info.type}`, { sticky: true, className: 'marnav-tip' });
+      const rows = info.details.map(([label, value]) => `<div><strong>${escapePopupText(label)}:</strong> ${escapePopupText(value)}</div>`).join('');
+      const sourceLink = info.sourceUrl
+        ? `<a href="${escapePopupText(info.sourceUrl)}" target="_blank" rel="noopener noreferrer">OpenStreetMap feature details ↗</a>`
+        : 'OpenStreetMap';
+      layer.bindPopup(
+        `<strong>${escapePopupText(info.title)}</strong><br><span>${escapePopupText(info.type)}</span>${rows ? `<hr>${rows}` : ''}<hr><small>${sourceLink}<br>${TSS_SOURCE_ATTRIBUTION}</small>`,
+        { className: 'reporting-system-popup', maxWidth: 340 },
+      );
       tss.addLayer(layer);
     }
-  }, [props.marineFeatures]);
+    if (props.preferences.overlays.tss && source.tss.length > 0 && !map.hasLayer(tss)) {
+      tss.addTo(map);
+    }
+  }, [props.marineFeatures, props.preferences.overlays.ferries, props.preferences.overlays.tss]);
 
   // NAVAID markers.
   useEffect(() => {

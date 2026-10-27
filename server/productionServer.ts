@@ -17,7 +17,7 @@ const relay = createAisRelay({ apiKey: aisKey, log });
 const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
 const overpassHandler = createOverpassHandler(log);
 const depthHandler = createDepthHandler(log);
-const contourDir = process.env.WHEELOVER_CONTOUR_DATA_DIR ? resolve(process.env.WHEELOVER_CONTOUR_DATA_DIR) : null;
+const contourDir = process.env.WHEELOVER_CONTOUR_DATA_DIR ? resolve(process.env.WHEELOVER_CONTOUR_DATA_DIR) : resolve(root, 'contours');
 const marineDir = process.env.WHEELOVER_MARINE_DATA_DIR ? resolve(process.env.WHEELOVER_MARINE_DATA_DIR) : null;
 
 const mimeTypes: Record<string, string> = {

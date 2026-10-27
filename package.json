@@ -19,7 +19,9 @@
     "marine:verify": "node scripts/verify-marine-db.mjs",
     "marine:test-pipeline": "node scripts/test-marine-pipeline.mjs",
     "currents:build": "node scripts/build-current-stations.mjs",
-    "tides:build": "node scripts/build-tide-stations.mjs"
+    "contours:pilot": "node scripts/build-gebco-pilot.mjs",
+    "tides:build": "node scripts/build-tide-stations.mjs",
+    "contours:test": "node scripts/test-contour-archive.mjs"
   },
   "dependencies": {
     "flatgeobuf": "^4.6.1",

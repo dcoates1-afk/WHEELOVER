@@ -15,7 +15,7 @@ export function marnavServer(options: { aisKey: string }): Plugin {
   const configuredMarineDir = process.env.WHEELOVER_MARINE_DATA_DIR;
   const marineDir = configuredMarineDir ? resolve(configuredMarineDir) : null;
   const configuredContourDir = process.env.WHEELOVER_CONTOUR_DATA_DIR;
-  const contourDir = configuredContourDir ? resolve(configuredContourDir) : null;
+  const contourDir = configuredContourDir ? resolve(configuredContourDir) : resolve(process.cwd(), 'public', 'contours');
 
   return {
     name: 'marnav-server',

@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-27T13:36:03.530923+00:00",
+  "bounds": [
+    49.8,
+    -2.0000000000000018,
+    50.99999999999999,
+    -0.8000000000000091
+  ],
+  "coverageBounds": [
+    [
+      49.8,
+      -2.0000000000000018,
+      50,
+      -0.8000000000000091
+    ],
+    [
+      50,
+      -2.0000000000000018,
+      50.99999999999999,
+      -0.8000000000000091
+    ]
+  ],
+  "shardDegrees": 10,
+  "contourLevelsMetres": [
+    2.0,
+    4.0,
+    5.0,
+    10.0,
+    15.0,
+    20.0,
+    25.0,
+    50.0,
+    75.0,
+    100.0,
+    150.0,
+    200.0,
+    300.0,
+    400.0,
+    500.0,
+    750.0,
+    1000.0,
+    1500.0,
+    2000.0,
+    3000.0,
+    4000.0,
+    5000.0,
+    6000.0,
+    8000.0,
+    10000.0,
+    12000.0
+  ],
+  "sources": [
+    {
+      "id": "gebco-2026-pilot",
+      "name": "GEBCO_2026",
+      "attribution": "GEBCO Bathymetric Compilation Group 2026 (2026). GEBCO_2026 Grid, 15 arc-second intervals. doi:10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa",
+      "datum": "Generally assumed mean sea level; source datum may differ in shallow regions"
+    }
+  ],
+  "shards": [
+    {
+      "path": "gebco-2026/gebco-2026_170_130.fgb",
+      "bounds": [
+        49.8,
+        -2.0000000000000018,
+        50,
+        -0.8000000000000091
+      ],
+      "count": 51,
+      "totalBytes": 31312,
+      "source": "GEBCO_2026",
+      "sourceId": "gebco-2026-pilot",
+      "attribution": "GEBCO Bathymetric Compilation Group 2026 (2026). GEBCO_2026 Grid, 15 arc-second intervals. doi:10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa",
+      "datum": "Generally assumed mean sea level; source datum may differ in shallow regions",
+      "resolutionDegrees": 0.0041666666666666415,
+      "contourProperty": "elev_m"
+    },
+    {
+      "path": "gebco-2026/gebco-2026_170_140.fgb",
+      "bounds": [
+        50,
+        -2.0000000000000018,
+        50.99999999999999,
+        -0.8000000000000091
+      ],
+      "count": 779,
+      "totalBytes": 240856,
+      "source": "GEBCO_2026",
+      "sourceId": "gebco-2026-pilot",
+      "attribution": "GEBCO Bathymetric Compilation Group 2026 (2026). GEBCO_2026 Grid, 15 arc-second intervals. doi:10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa",
+      "datum": "Generally assumed mean sea level; source datum may differ in shallow regions",
+      "resolutionDegrees": 0.0041666666666666415,
+      "contourProperty": "elev_m"
+    }
+  ],
+  "notice": "Interpolated GEBCO grid contours are model display aids, not chart-grade and not for navigation or safety at sea. Source coverage and vertical datum vary; do not use for navigation.",
+  "processing": {
+    "source": "GEBCO_2026 source-grid sample points",
+    "contourEngine": "contourpy marching squares",
+    "sourceResampling": "none",
+    "windowResolutionDegrees": 0.0041666666666666415
+  }
+}

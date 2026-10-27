@@ -1,6 +1,9 @@
 param(
   [string]$PlanetUrl = "https://planet.openstreetmap.org/pbf/planet-latest.osm.pbf",
   [string]$WorkDir = "$env:USERPROFILE\WHEELOVER\data-worldwide",
+  [string]$PlanetPath = "",
+  [switch]$SkipReplicationBootstrap,
+  [switch]$AdoptCompletedFilter,
   [string]$ArchiveOutDir = "$PSScriptRoot\..\public\marine-db",
   [string]$GdalConfig = "$PSScriptRoot\osmconf-marine.ini"
 )
@@ -8,13 +11,16 @@ $ErrorActionPreference = "Stop"
 $WorkDir = [System.IO.Path]::GetFullPath($WorkDir)
 $ArchiveOutDir = [System.IO.Path]::GetFullPath($ArchiveOutDir)
 $GdalConfig = [System.IO.Path]::GetFullPath($GdalConfig)
-if (-not $WorkDir.StartsWith("$env:USERPROFILE\", [System.StringComparison]::OrdinalIgnoreCase)) {
-  throw "WorkDir must be inside your Windows user profile. Got $WorkDir"
-}
 New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
-$Planet = Join-Path $WorkDir "planet-latest.osm.pbf"
+$Planet = if ($PlanetPath) { [System.IO.Path]::GetFullPath($PlanetPath) } else { Join-Path $WorkDir "planet-latest.osm.pbf" }
+if ($Planet -ne (Join-Path $WorkDir "planet-latest.osm.pbf")) { throw "PlanetPath must be WorkDir\\planet-latest.osm.pbf because replication updates use fixed candidate and rollback paths." }
 $PlanetPartial = "$Planet.partial"
 $PlanetMd5 = "$Planet.md5"
+if (-not $Planet.StartsWith("$WorkDir\", [System.StringComparison]::OrdinalIgnoreCase)) {
+  throw "PlanetPath must be inside WorkDir so the update pipeline can keep its candidate and rollback files together. Got $Planet"
+}
+$PlanetParent = [System.IO.Path]::GetDirectoryName($Planet)
+if (-not (Test-Path -LiteralPath $PlanetParent)) { throw "Planet directory does not exist: $PlanetParent" }
 $Filtered = Join-Path $WorkDir "marine-filtered.osm.pbf"
 $GeoJsonSeq = Join-Path $WorkDir "marine.geojsonseq"
 $FilteredWays = Join-Path $WorkDir "marine-lines.geojsonseq"
@@ -30,6 +36,7 @@ if (-not (Test-Path $GdalConfig)) { throw "Missing GDAL config: $GdalConfig" }
 
 # Download a resumable partial; only promote it after verifying the official MD5.
 if (-not (Test-Path $Planet)) {
+  if (Test-Path $PlanetPath) { throw "Specified planet PBF is missing: $Planet" }
   $ChecksumDownload = "$PlanetMd5.download"
   Invoke-WebRequest -Uri "$PlanetUrl.md5" -OutFile $ChecksumDownload
   if (Test-Path $PlanetPartial) {
@@ -53,8 +60,12 @@ if (-not (Test-Path $Planet)) {
 
 # Bootstrap the PBF's replication metadata once, then catch up later with diffs.
 $UpdateScript = Join-Path $PSScriptRoot "update-worldwide-marine.ps1"
-& $UpdateScript -WorkDir $WorkDir -ReplicationUrl "https://planet.openstreetmap.org/replication/day/"
-if ($LASTEXITCODE -ne 0) { throw "Planet replication update failed ($LASTEXITCODE)." }
+if (-not $SkipReplicationBootstrap) {
+  & $UpdateScript -WorkDir $WorkDir -ReplicationUrl "https://planet.openstreetmap.org/replication/day/"
+  if ($LASTEXITCODE -ne 0) { throw "Planet replication update failed ($LASTEXITCODE)." }
+} else {
+  Write-Warning "Skipping replication updates; the archive will represent the downloaded planet snapshot, not current OSM state."
+}
 
 # The filtered PBF and every derived extract are tied to the current PBF's size
 # and write time. A changed planet forces a rebuild instead of reusing stale data.
@@ -65,6 +76,19 @@ if ((Test-Path $Filtered) -and (Test-Path $MarineSource)) {
   $SourceRecord = Get-Content -Raw $MarineSource | ConvertFrom-Json
   $ReuseFiltered = $SourceRecord.version -eq 1 -and $SourceRecord.planetFingerprint -eq $PlanetFingerprint
 }
+if (-not $ReuseFiltered -and $AdoptCompletedFilter) {
+  if (-not (Test-Path $Filtered)) { throw "Cannot adopt completed filter; missing $Filtered" }
+  if (Test-Path $MarineSource) { throw "Cannot adopt a filter with an existing source record that does not match the current planet." }
+  Write-Host "Validating the completed filtered PBF and recording its source; the full-planet scan will not be repeated."
+  & osmium fileinfo --extended $Filtered
+  if ($LASTEXITCODE -ne 0) { throw "Completed filtered PBF failed validation; preserve all inputs and intermediates." }
+  node $PipelineCli write-source $MarineSource $PlanetFingerprint
+  if ($LASTEXITCODE -ne 0) { throw "Could not record the completed filtered PBF's source fingerprint." }
+  foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $MergedGeoJsonSeq)) {
+    if (Test-Path $Stale) { Remove-Item -LiteralPath $Stale -Force }
+  }
+  $ReuseFiltered = $true
+}
 if (-not $ReuseFiltered) {
   Write-Host "Filtering marine features for this snapshot (full planet scan; may take hours)."
   $PartialFiltered = "$Filtered.partial.osm.pbf"
@@ -73,7 +97,7 @@ if (-not $ReuseFiltered) {
     "nwr/seamark" "nwr/seamark:*" "n/man_made=lighthouse" "route=ferry"
   if ($LASTEXITCODE -ne 0) { throw "osmium tags-filter failed ($LASTEXITCODE); original planet is unchanged." }
   Move-Item -LiteralPath $PartialFiltered -Destination $Filtered
-  node $PipelineCli write-journal $MarineSource (ConvertTo-Json -Compress @{ version=1; planetFingerprint=$PlanetFingerprint })
+  node $PipelineCli write-source $MarineSource $PlanetFingerprint
   if ($LASTEXITCODE -ne 0) { throw "Could not record the filtered data's source fingerprint." }
   foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $MergedGeoJsonSeq)) {
     if (Test-Path $Stale) { Remove-Item -LiteralPath $Stale -Force }

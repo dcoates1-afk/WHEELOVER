@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CONTOUR_MAX_NATIVE_ZOOM,
   CONTOUR_TILE_URL,
+  CONTOUR_SOURCE_NOTICE,
   ENC_CONTOUR_LAYERS,
   ENC_CONTOUR_MIN_ZOOM,
   ENC_SOUNDING_LAYERS,
@@ -84,6 +85,13 @@ describe('NOAA raster base', () => {
 });
 
 describe('global contour fallback', () => {
+  it('documents source resolution and warns the contours are not chart-grade', () => {
+    expect(CONTOUR_SOURCE_NOTICE).toContain('15-arc-second');
+    expect(CONTOUR_SOURCE_NOTICE).toContain('not chart-grade');
+    expect(CONTOUR_SOURCE_NOTICE).toContain('463 m');
+    expect(CONTOUR_SOURCE_NOTICE).toContain('Vertical references may vary');
+  });
+
   it('uses transparent GEBCO contour tiles with a 10-level native cap', () => {
     expect(CONTOUR_TILE_URL).toContain('GEBCO_contours');
     expect(CONTOUR_TILE_URL).toContain('/tile/{z}/{y}/{x}');

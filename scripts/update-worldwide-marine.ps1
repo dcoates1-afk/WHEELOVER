@@ -1,10 +1,12 @@
 param(
   [string]$WorkDir = "$env:USERPROFILE\WHEELOVER\data-worldwide",
-  [string]$ReplicationUrl = "https://planet.openstreetmap.org/replication/day/"
+  [string]$ReplicationUrl = "https://planet.openstreetmap.org/replication/day/",
+  [switch]$SkipReplicationBootstrap
 )
 $ErrorActionPreference = "Stop"
 $WorkDir = [System.IO.Path]::GetFullPath($WorkDir)
 $Planet = Join-Path $WorkDir "planet-latest.osm.pbf"
+$BuildLockPath = Join-Path $WorkDir "marine-build-lock.json"
 $Candidate = Join-Path $WorkDir "planet-candidate.osm.pbf"
 $Previous = Join-Path $WorkDir "planet-previous.osm.pbf"
 $JournalPath = Join-Path $WorkDir "promotion-journal.json"
@@ -14,6 +16,11 @@ $PipelineCli = Join-Path $PSScriptRoot "marine-pipeline-cli.mjs"
 $PathsJson = ConvertTo-Json -Compress @{ planet=$Planet; candidate=$Candidate; previous=$Previous; journal=$JournalPath; bootstrapMarker=$BootstrapMarker }
 
 if (-not (Test-Path $Planet)) { throw "Missing $Planet. Run build-worldwide-marine.ps1 first." }
+if (Test-Path $BuildLockPath) { throw "Marine archive build lock exists at $BuildLockPath; refusing concurrent planet update." }
+if ($SkipReplicationBootstrap -and -not (Test-Path $BootstrapMarker)) {
+  Write-Warning "Skipping replication bootstrap; archive will represent the downloaded planet snapshot, not current OSM state."
+  exit 0
+}
 if (-not (Get-Command pyosmium-up-to-date -ErrorAction SilentlyContinue)) { throw "Install Pyosmium: py -m pip install pyosmium" }
 if (-not (Get-Command osmium -ErrorAction SilentlyContinue)) { throw "Install Osmium Tool and add osmium.exe to PATH." }
 

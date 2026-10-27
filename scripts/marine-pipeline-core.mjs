@@ -17,6 +17,13 @@ export async function writeJournal(path, journal) {
   await rename(temporary, path);
 }
 
+export async function writeMarineSource(path, planetFingerprint) {
+  if (typeof planetFingerprint !== 'string' || !/^\d+:\d+$/.test(planetFingerprint)) {
+    throw new Error('Invalid planet fingerprint');
+  }
+  await writeJournal(path, { version: 1, planetFingerprint });
+}
+
 async function exists(path) {
   try { await access(path); return true; } catch { return false; }
 }

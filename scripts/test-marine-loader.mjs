@@ -4,7 +4,7 @@ import { readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { validateMarineManifest, loadMarineData } from '../src/lib/marineDb.ts';
+import { describeTssFeature, validateMarineManifest, loadMarineData } from '../src/lib/marineDb.ts';
 
 const dir = mkdtempSync(join(tmpdir(), 'marine-loader-'));
 let server;
@@ -17,6 +17,13 @@ try {
     { type: 'Feature', id: 'n3', properties: { 'seamark:type': 'buoy_lateral', name: 'Visible Buoy', 'seamark:buoy_lateral:category': 'port' }, geometry: { type: 'Point', coordinates: [-0.75, 50.25] } },
     { type: 'Feature', id: 'w4', properties: { route: 'ferry', name: 'Elsewhere Ferry' }, geometry: { type: 'LineString', coordinates: [[100, 0], [101, 1]] } },
   ];
+  features[1].properties = {
+    ...features[1].properties,
+    operator: 'Harbour Authority',
+    ref: 'TSS-1',
+    'seamark:separation_lane:traffic_flow': 'inbound',
+    source: 'survey',
+  };
   writeFileSync(input, features.map((feature) => `${JSON.stringify(feature)}\n`).join(''));
   const build = spawnSync(process.execPath, ['scripts/build-marine-db.mjs', input, '--out', output], { cwd: process.cwd(), stdio: 'inherit' });
   if (build.status !== 0) throw new Error('marine builder failed');
@@ -47,6 +54,12 @@ try {
     const data = await loadMarineData([49, -2, 51, 0], { baseUrl: `${origin}/marine-db/` });
     if (data.ferries.length !== 1 || data.ferries[0].id !== 'ferries:w1') throw new Error('viewport ferry query incorrect');
     if (data.tss.length !== 1 || data.tss[0].id !== 'tss:w2') throw new Error('viewport TSS query incorrect');
+    const tssInfo = describeTssFeature(data.tss[0]);
+    if (tssInfo.title !== 'Visible TSS' || tssInfo.type !== 'separation lane') throw new Error('TSS popup title/type incorrect');
+    if (!tssInfo.details.some(([label, value]) => label === 'Operator' && value === 'Harbour Authority')) throw new Error('TSS operator missing from popup data');
+    if (!tssInfo.details.some(([label, value]) => label === 'Lane traffic flow' && value === 'inbound')) throw new Error('TSS flow missing from popup data');
+    if (!tssInfo.details.some(([label, value]) => label === 'OSM source note' && value === 'survey')) throw new Error('TSS mapped-data citation missing from popup');
+    if (tssInfo.sourceUrl !== 'https://www.openstreetmap.org/way/2') throw new Error(`TSS OSM source link incorrect: ${tssInfo.sourceUrl}`);
     if (data.navaids.length !== 1 || data.navaids[0].id !== 'osm:node/3') throw new Error(`viewport NAVAID query incorrect: ${data.navaids.map(({ id }) => id).join(',')}`);
     console.log(`PASS viewport loader: ${data.navaids.length} NAVAID, ${data.ferries.length} ferry, ${data.tss.length} TSS; unrelated route excluded`);
   } finally {

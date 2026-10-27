@@ -20,6 +20,8 @@ for (const layer of ['navaids', 'ferries', 'tss']) {
     for (const feature of payload.features) {
       if (!feature.id || !feature.name || feature.path.length < 1) throw new Error(`Invalid feature in ${shard.path}`);
       if (layer === 'navaids' && (!feature.navaid || !Number.isFinite(feature.navaid.lat) || !Number.isFinite(feature.navaid.lon))) throw new Error(`Invalid NAVAID payload in ${shard.path}`);
+      if (layer === 'tss' && feature.sourceUrl && !/^https:\/\/www\.openstreetmap\.org\/(node|way|relation)\/\d+$/.test(feature.sourceUrl)) throw new Error(`Invalid TSS source link in ${shard.path}`);
+      if (layer === 'tss' && feature.details && Object.values(feature.details).some((value) => typeof value !== 'string')) throw new Error(`Invalid TSS details in ${shard.path}`);
       if (!feature.path.every(([lat, lon]) => Number.isFinite(lat) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) {
         throw new Error(`Invalid coordinate in ${shard.path}`);
       }

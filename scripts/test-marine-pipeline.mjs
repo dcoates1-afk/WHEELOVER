@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseMd5, promoteCandidate, recoverPromotion } from './marine-pipeline-core.mjs';
+import { parseMd5, promoteCandidate, recoverPromotion, writeMarineSource } from './marine-pipeline-core.mjs';
 
 const md5 = '0123456789abcdef0123456789abcdef';
 assert.equal(parseMd5(`${md5}  planet.osm.pbf\n`, 'planet.osm.pbf'), md5);
@@ -19,6 +19,12 @@ const paths = {
   journal: join(dir, 'promotion-journal.json'),
 };
 try {
+  const sourcePath = join(dir, 'marine-source.json');
+  const planetFingerprint = '95507771401:638964900000000000';
+  await writeMarineSource(sourcePath, planetFingerprint);
+  assert.deepEqual(JSON.parse(await readFile(sourcePath, 'utf8')), { version: 1, planetFingerprint });
+  await assert.rejects(writeMarineSource(sourcePath, '{ invalid json }'), /Invalid planet fingerprint/);
+
   await writeFile(paths.planet, 'old planet');
   await writeFile(paths.previous, 'older backup');
   await writeFile(paths.candidate, 'new planet');

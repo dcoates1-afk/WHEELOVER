@@ -290,6 +290,11 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B'): SymbolSp
       return { svg: svgWrap(anchorBerthSvg()), label };
     case 'calling_in_point':
       return { svg: svgWrap(callingInSvg()), label };
+    case 'communication_area':
+      return {
+        svg: svgWrap(`<path d="M5 10 L11 5 L22 7 L27 14 L23 24 L11 27 L5 20 Z" fill="rgba(61,214,255,.18)" stroke="#3dd6ff" stroke-width="2" stroke-dasharray="3 2"/><path d="M10 16 Q16 9 22 16 M12 19 Q16 15 20 19" fill="none" stroke="#f4f7f8" stroke-width="1.7" stroke-linecap="round"/><circle cx="16" cy="22" r="1.4" fill="#f4f7f8"/>`),
+        label,
+      };
     case 'notice':
       return { svg: svgWrap(outline('<rect x="9" y="6" width="14" height="20" rx="2" fill="{fill}"/>', '#c9a227')), label };
     case 'gate':
@@ -313,6 +318,7 @@ export function quickInfo(navaid: Navaid, region: 'A' | 'B'): string {
     parts.push(`lines up ${String(navaid.transitBearing).padStart(3, '0')}°`);
   }
   if (navaid.channel) parts.push(`VHF Ch ${navaid.channel}`);
+  if (navaid.callsign) parts.push(`Call ${navaid.callsign}`);
   if (navaid.light) parts.push(navaid.light);
   else if (navaid.colour) parts.push(navaid.colour);
   parts.push(ialaRegion(navaid.lat, navaid.lon) === region ? 'Tap for full reference' : 'Tap for full reference');

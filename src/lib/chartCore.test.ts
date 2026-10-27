@@ -26,6 +26,7 @@ function mark(overrides: Partial<Navaid> & { category: NavaidCategory }): Navaid
     height: overrides.height ?? null,
     range: overrides.range ?? null,
     path: overrides.path ?? null,
+    paths: overrides.paths ?? null,
     transitBearing: overrides.transitBearing ?? null,
     transitDistanceM: overrides.transitDistanceM ?? null,
     transitPartner: overrides.transitPartner ?? null,
@@ -65,7 +66,7 @@ describe('classification', () => {
     expect(
       classifyTags({ 'seamark:type': 'buoy_cardinal', 'seamark:buoy_cardinal:category': 'east' })?.category,
     ).toBe('cardinal_east');
-    expect(classifyTags({ 'seamark:type': 'beacon_cardinal' })?.category).toBe('cardinal_north');
+    expect(classifyTags({ 'seamark:type': 'beacon_cardinal' })?.category).toBe('cardinal_unspecified');
   });
 
   it('treats leading beacons and leading-light categories as range marks', () => {
@@ -143,6 +144,7 @@ describe('classification', () => {
     expect(classifyTags({ 'seamark:type': 'anchorage_area' })?.category).toBe('anchorage');
     expect(classifyTags({ 'seamark:type': 'anchor_berth' })?.category).toBe('anchor_berth');
     expect(classifyTags({ 'seamark:type': 'calling-in_point' })?.category).toBe('calling_in_point');
+    expect(classifyTags({ 'seamark:type': 'communication_area' })?.category).toBe('communication_area');
   });
 });
 
@@ -161,12 +163,24 @@ describe('normalisation', () => {
         'seamark:light:group': '2',
         'seamark:light:colour': 'red',
         'seamark:light:period': '10',
+        'seamark:buoy_lateral:system': 'iala-a',
+        'seamark:buoy_lateral:colour': 'red',
+        'seamark:light:1:character': 'Fl',
+        'seamark:light:1:colour': 'red',
+        'seamark:light:1:group': '3',
+        'seamark:light:1:period': '10',
+        'seamark:light:1:sector_start': '045',
+        'seamark:light:1:sector_end': '090',
       },
     }) as Navaid;
 
     expect(navaid.id).toBe('osm:node/42');
     expect(navaid.category).toBe('lateral_port');
     expect(navaid.light).toBe('Fl(2) red 10s');
+    expect(navaid.lightCharacter).toBe('Fl');
+    expect(navaid.buoyageSystem).toBe('iala-a');
+    expect(navaid.colour).toBe('red');
+    expect(navaid.lightSectors).toEqual([{ sector: 1, character: 'Fl', colour: 'red', group: '3', period: '10', start: '045', end: '090' }]);
     expect(navaid.source).toBe('osm');
   });
 
@@ -175,15 +189,16 @@ describe('normalisation', () => {
       type: 'way',
       id: 256521658,
       center: { lat: 49.0262, lon: -123.6586 },
-      tags: {
-        'seamark:type': 'calling-in_point',
-        'seamark:name': '13 - West Porlier Pass',
-        'seamark:calling-in_point:channel': '11A',
-        'seamark:calling-in_point:traffic_flow': 'two-way',
+      tags: {      'seamark:type': 'calling-in_point',
+      'seamark:name': '13 - West Porlier Pass',
+      'seamark:calling-in_point:channel': '11A',
+      'seamark:calling-in_point:traffic_flow': 'two-way',
+      'seamark:calling-in_point:callsign': 'PORT RADIO',
       },
     }) as Navaid;
     expect(calling.category).toBe('calling_in_point');
     expect(calling.channel).toBe('11A');
+    expect(calling.callsign).toBe('PORT RADIO');
     expect(calling.name).toBe('13 - West Porlier Pass');
 
     const berth = normalizeElement({
@@ -203,6 +218,21 @@ describe('normalisation', () => {
     expect(berth.description).toContain('10 m minimum depth');
     expect(berth.description).toContain('170 m radius');
     expect(berth.description).toContain('tanker');
+  });
+
+  it('keeps reporting-area boundary geometry from multipath relations', () => {
+    const area = normalizeElement({
+      type: 'relation',
+      id: 991,
+      tags: { 'seamark:type': 'communication_area', name: 'Harbour VTS Sector' },
+      geometryPaths: [
+        [{ lat: 49, lon: -124 }, { lat: 50, lon: -124 }, { lat: 50, lon: -123 }, { lat: 49, lon: -124 }],
+        [{ lat: 49.2, lon: -123.8 }, { lat: 49.3, lon: -123.7 }],
+      ],
+    }) as Navaid;
+    expect(area.category).toBe('communication_area');
+    expect(area.paths).toHaveLength(2);
+    expect(area.lat).toBe(49.5);
   });
 
   it('keeps the line geometry of a calling-in point, with the icon at its midpoint', () => {
@@ -241,7 +271,62 @@ describe('normalisation', () => {
     }) as Navaid;
     expect(wreck.category).toBe('wreck');
     expect(wreck.name).toBe('Alchemist');
-    expect(wreck.description).toBe('Submerged');
+    expect(wreck.wreckBoatingEffect).toContain('not considered dangerous to surface navigation');
+    expect(wreck.wreckBoatingEffect).toContain('not a clearance or safe-passage guarantee');
+    expect(wreck.description).toContain('Chart source classifies this wreck');
+    expect(wreck.description).toContain('Charted water level: submerged');
+  });
+
+  it('does not infer a steady light when the source has no character code', () => {
+    const light = normalizeElement({
+      type: 'node',
+      id: 18,
+      lat: 50.7,
+      lon: -1.3,
+      tags: { 'seamark:type': 'light_minor', 'seamark:light:colour': 'white' },
+    }) as Navaid;
+    expect(light.lightCharacter).toBeNull();
+    expect(light.light).toBeNull();
+    expect(light.lit).toBe(true);
+  });
+
+  it('retains wreck identity, boating-risk context, and community dive details', () => {
+    const wreck = normalizeElement({
+      type: 'way',
+      id: 204,
+      center: { lat: 50.7, lon: -1.2 },
+      tags: {
+        name: 'Example Wreck',
+        historic: 'wreck',
+        'wreck:type': 'cargo_ship',
+        'wreck:date_sunk': '1944-06-01',
+        'wreck:depth': '18',
+        'wreck:clearance': '12',
+        'wreck:length': '75',
+        'wreck:width': '11',
+        'sport': 'scuba_diving',
+        'scuba_diving:depth': '16',
+        'scuba_diving:maxdepth': '20',
+        'scuba_diving:entry': 'boat',
+        'scuba_diving:hazard': 'netting',
+        'scuba_diving:drift': 'yes',
+      },
+    }) as Navaid;
+    expect(wreck.name).toBe('Example Wreck');
+    expect(wreck.wreckType).toBe('cargo_ship');
+    expect(wreck.wreckDateSunk).toBe('1944-06-01');
+    expect(wreck.wreckReportedDepth).toBe('18');
+    expect(wreck.wreckClearance).toBe('12');
+    expect(wreck.wreckLength).toBe('75');
+    expect(wreck.wreckWidth).toBe('11');
+    expect(wreck.diveSite).toBe(true);
+    expect(wreck.diveDepth).toBe('16');
+    expect(wreck.diveMaxDepth).toBe('20');
+    expect(wreck.diveEntry).toBe('boat');
+    expect(wreck.diveHazard).toBe('netting');
+    expect(wreck.driftDive).toBe(true);
+    expect(wreck.description).toContain('typical dive depth 16 m');
+    expect(wreck.description).toContain('not current safety advice');
   });
 
   it('leaves point marks without a path', () => {
@@ -379,11 +464,19 @@ describe('zoom declutter', () => {
     expect(all).toHaveLength(2);
   });
 
-  it('filters marks outside the viewport', () => {
+  it('filters marks outside the viewport but includes a reporting area whose boundary crosses it', () => {
     const inside = mark({ category: 'lateral_port', lat: 50.8, lon: -1.2 });
     const outside = mark({ category: 'lateral_port', lat: 51.5, lon: -1.2 });
-    const visible = selectVisibleNavaids([inside, outside], { zoom: 14, bounds, showAll: true }) as Navaid[];
-    expect(visible).toHaveLength(1);
+    const area = mark({
+      category: 'communication_area',
+      lat: 51.3,
+      lon: -1.2,
+      paths: [[[50.7, -1.7], [50.7, -1.6], [51.3, -1.6], [51.3, -1.7]]],
+    });
+    const visible = selectVisibleNavaids([inside, outside, area], { zoom: 14, bounds, showAll: true }) as Navaid[];
+    expect(visible.map(({ id }) => id)).toContain(area.id);
+    expect(visible.map(({ id }) => id)).toContain(inside.id);
+    expect(visible.map(({ id }) => id)).not.toContain(outside.id);
   });
 
   it('caps dense scenes by priority', () => {

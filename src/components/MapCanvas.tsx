@@ -1,11 +1,13 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import L from 'leaflet';
 import lanes from '../data/lanes.json';
-import type { MarineFeature } from '../lib/marineDb';
+import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
+import { describeTssFeature, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import { ialaRegion, quickInfo, symbolFor } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
 import { vesselCourse, vesselIconSize, vesselIconSvg, vesselIsMoving, vesselTooltipHtml } from '../lib/aisVessel';
 import { loadNoaaTile, noaaTileUrl, tileBounds } from '../lib/noaaChart';
+import { contourManifestCoversBounds, loadContoursForBounds, readContourManifest, type ContourManifest } from '../lib/marineContours';
 import {
   CONTOUR_ATTRIBUTION,
   CONTOUR_MAX_NATIVE_ZOOM,
@@ -15,6 +17,7 @@ import {
   NAUTICAL_ATTRIBUTION,
   NOAA_RASTER_ATTRIBUTION,
   RELIEF_ATTRIBUTION,
+  REPORTING_SYSTEM_ATTRIBUTION,
   SOUNDING_ATTRIBUTION,
   SOUNDING_MIN_ZOOM,
   encDepthTileUrl,
@@ -47,6 +50,16 @@ export interface MapHandle {
 
 const TRANSPARENT_TILE =
   'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+function escapePopupText(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character]!);
+}
 
 export interface MapCanvasProps {
   preferences: ChartPreferences;
@@ -245,7 +258,10 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   const seaRef = useRef<L.TileLayer | null>(null);
   const depthSyncRef = useRef<(() => void) | null>(null);
   const depthLabelsRef = useRef<L.LayerGroup | null>(null);
-  const groupsRef = useRef<Partial<Record<'navaids' | 'ferries' | 'tss' | 'ais' | 'pois', L.LayerGroup>>>({});
+  const contourVectorsRef = useRef<L.LayerGroup | null>(null);
+  const contourCoverageRef = useRef(false);
+  const contourRequestRef = useRef<AbortController | null>(null);
+  const groupsRef = useRef<Partial<Record<'navaids' | 'ferries' | 'tss' | 'ais' | 'pois' | 'reportingSystems', L.LayerGroup>>>({});
   const vesselRef = useRef<L.Marker | null>(null);
   const aisMarkersRef = useRef(
     new Map<number, { marker: L.Marker; vessel: AisVessel; iconHtml: string; label: string }>(),
@@ -305,6 +321,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     // Depth is an overlay, not a base. Contours and soundings get their own
     // panes so they sit above the chart and below the seamark raster and marks.
     map.createPane('contours').style.zIndex = '260';
+    map.createPane('contour-vectors').style.zIndex = '265';
     map.createPane('soundings').style.zIndex = '270';
     map.createPane('depth-labels').style.zIndex = '280';
     // Routes sit above every chart layer and below the marks, so a ferry line
@@ -329,6 +346,8 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       pane: 'contours',
       opacity: 0.9,
     });
+    const localContourVectors = L.layerGroup();
+    contourVectorsRef.current = localContourVectors;
     const soundings = createExportChart({
       urlFor: (tile) => encDepthTileUrl(tile, 'soundings'),
       covered: isUsWaters,
@@ -342,11 +361,12 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     const tss = L.layerGroup();
     const ais = L.layerGroup();
     const pois = L.layerGroup();
+    const reportingSystems = L.layerGroup();
     const depthLabels = L.layerGroup();
 
     seaRef.current = sea;
     depthLabelsRef.current = depthLabels;
-    groupsRef.current = { navaids, ferries, tss, ais, pois };
+    groupsRef.current = { navaids, ferries, tss, ais, pois, reportingSystems };
 
     // ENC contours replace GEBCO inside US waters; the global layer would only
     // double-draw the same water with a coarser interval. The choice follows
@@ -364,8 +384,9 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           map.removeLayer(layer);
         }
       };
-      setWanted(gebcoContours, active.contours && !useEnc);
+      setWanted(gebcoContours, active.contours && !useEnc && !contourCoverageRef.current);
       setWanted(encContours, active.contours && useEnc);
+      setWanted(localContourVectors, active.contours && contourCoverageRef.current && !useEnc);
       setWanted(soundings, active.soundings);
     };
     depthSyncRef.current = syncDepth;
@@ -404,6 +425,10 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       vesselRef.current = null;
       aisMarkersRef.current.clear();
       depthLabelsRef.current = null;
+      contourVectorsRef.current = null;
+      contourCoverageRef.current = false;
+      contourRequestRef.current?.abort();
+      contourRequestRef.current = null;
     };
   }, []);
 
@@ -443,6 +468,175 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   useEffect(() => {
     depthSyncRef.current?.();
   }, [overlays.contours, overlays.soundings]);
+
+  // Crisp local vector contours from the locally generated GEBCO/EMODnet archive.
+  // If no archive is installed, or the current view is outside its coverage, the
+  // existing GEBCO tiled fallback remains active.
+  const contoursOn = props.preferences.overlays.contours;
+  useEffect(() => {
+    const map = mapRef.current;
+    const group = contourVectorsRef.current;
+    if (!map || !group) return;
+    let disposed = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let requestId = 0;
+    let manifest: ContourManifest | null = null;
+
+    const refresh = async () => {
+      const current = ++requestId;
+      contourRequestRef.current?.abort();
+      contourRequestRef.current = null;
+      if (!contoursOn) {
+        group.clearLayers();
+        if (map.hasLayer(group)) map.removeLayer(group);
+        contourCoverageRef.current = false;
+        depthSyncRef.current?.();
+        return;
+      }
+      if (!manifest) {
+        contourCoverageRef.current = false;
+        depthSyncRef.current?.();
+        return;
+      }
+      const view = map.getBounds();
+      const bounds: [number, number, number, number] = [
+        Math.max(-90, view.getSouth()),
+        view.getWest(),
+        Math.min(90, view.getNorth()),
+        view.getEast(),
+      ];
+      const clippedView: [number, number, number, number] = [
+        bounds[0],
+        Math.max(-180, bounds[1]),
+        bounds[2],
+        Math.min(180, bounds[3]),
+      ];
+      const hasLocalCoverage =
+        bounds[0] < bounds[2] &&
+        clippedView[1] < clippedView[3] &&
+        contourManifestCoversBounds(manifest, clippedView);
+      contourCoverageRef.current = hasLocalCoverage;
+      if (hasLocalCoverage) {
+        const overlapsNoaa = isUsWaters(bounds[0], clippedView[1]) || isUsWaters(bounds[0], clippedView[3]) ||
+          isUsWaters(bounds[2], clippedView[1]) || isUsWaters(bounds[2], clippedView[3]) ||
+          isUsWaters((bounds[0] + bounds[2]) / 2, (clippedView[1] + clippedView[3]) / 2);
+        if (overlapsNoaa && map.getZoom() >= ENC_CONTOUR_MIN_ZOOM) {
+          contourCoverageRef.current = false;
+          depthSyncRef.current?.();
+          group.clearLayers();
+          if (map.hasLayer(group)) map.removeLayer(group);
+          return;
+        }
+      }
+      depthSyncRef.current?.();
+      if (!hasLocalCoverage) {
+        group.clearLayers();
+        if (map.hasLayer(group)) map.removeLayer(group);
+        return;
+      }
+      const center = map.getCenter();
+      const useEnc = isUsWaters(center.lat, center.lng) && map.getZoom() >= ENC_CONTOUR_MIN_ZOOM;
+      if (useEnc) {
+        group.clearLayers();
+        if (map.hasLayer(group)) map.removeLayer(group);
+        contourCoverageRef.current = false;
+        depthSyncRef.current?.();
+        return;
+      }
+      const controller = new AbortController();
+      contourRequestRef.current = controller;
+      try {
+        const features = await loadContoursForBounds(manifest, clippedView, undefined, controller.signal);
+        if (disposed || current !== requestId || controller.signal.aborted) return;
+        group.clearLayers();
+        for (const feature of features) {
+          const depth = Math.abs(feature.properties.elev_m);
+          const source = String(feature.properties._source ?? 'bathymetry grid');
+          const major = depth <= 30 || Math.round(depth) >= 100 && Math.round(depth) % 100 === 0;
+          const layer = L.geoJSON(feature as GeoJSON.Feature, {
+            pane: 'contour-vectors',
+            style: {
+              color: source.includes('EMODnet') ? '#00b8d4' : '#00b889',
+              // Keep the painted stroke crisp but expand the SVG hit target,
+              // so mouse/touch hover doesn't require pixel-perfect aiming.
+              weight: major ? 2 : 1.5,
+              opacity: 1,
+              lineCap: 'round',
+              lineJoin: 'round',
+              interactive: false,
+              className: 'contour-stroke',
+            },
+          });
+          const hitTarget = L.geoJSON(feature as GeoJSON.Feature, {
+            pane: 'contour-vectors',
+            style: {
+              color: '#000000',
+              weight: 16,
+              opacity: 0,
+              fill: false,
+              interactive: true,
+              className: 'contour-hit-target',
+            },
+          });
+          hitTarget.bindTooltip(`${depth} m`, {
+            sticky: true,
+            direction: 'top',
+            className: 'contour-label',
+          });
+          // A click/tap opens the same concise depth label as a popup too,
+          // since hover tooltips are not a reliable interaction on touchscreens.
+          hitTarget.bindPopup(`${depth} m`, {
+            className: 'contour-depth-popup',
+            closeButton: false,
+            autoPan: false,
+          });
+          group.addLayer(layer);
+          group.addLayer(hitTarget);
+        }
+        if (features.length > 0 && !map.hasLayer(group)) group.addTo(map);
+        if (features.length === 0) contourCoverageRef.current = false;
+        depthSyncRef.current?.();
+      } catch (error) {
+        if (!disposed && current === requestId && !controller.signal.aborted) {
+          group.clearLayers();
+          if (map.hasLayer(group)) map.removeLayer(group);
+          contourCoverageRef.current = false;
+          console.warn('[WHEELOVER] local contour query failed; using GEBCO tile fallback', error);
+          depthSyncRef.current?.();
+        }
+      }
+    };
+
+    const schedule = () => {
+      contourRequestRef.current?.abort();
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => void refresh(), 180);
+    };
+    map.on('moveend zoomend', schedule);
+    void readContourManifest()
+      .then((loaded) => {
+        if (disposed) return;
+        manifest = loaded;
+        void refresh();
+      })
+      .catch(() => {
+        // No local archive is the expected state before the user builds it.
+      });
+    void refresh();
+
+    return () => {
+      disposed = true;
+      requestId += 1;
+      contourRequestRef.current?.abort();
+      contourRequestRef.current = null;
+      if (timer) clearTimeout(timer);
+      map.off('moveend zoomend', schedule);
+      group.clearLayers();
+      if (map.hasLayer(group)) map.removeLayer(group);
+      contourCoverageRef.current = false;
+      depthSyncRef.current?.();
+    };
+  }, [contoursOn]);
 
   // Numeric depth labels, sampled from the seabed grid for the current view.
   // GEBCO answers in one batch; inside EMODnet coverage the finer European DTM
@@ -551,36 +745,94 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     }
     // The lane geometry is OpenStreetMap data, so its credit follows the
     // toggles rather than sitting on the chart when nothing is drawn.
+    const reportingSystems = groupsRef.current.reportingSystems;
+    if (reportingSystems) {
+      if (overlays.navaids) {
+        if (!map.hasLayer(reportingSystems)) reportingSystems.addTo(map);
+      } else if (map.hasLayer(reportingSystems)) {
+        map.removeLayer(reportingSystems);
+      }
+    }
     const control = map.attributionControl;
     if (control) {
       control.removeAttribution(LANE_ATTRIBUTION);
+      control.removeAttribution(REPORTING_SYSTEM_ATTRIBUTION);
       if (overlays.ferries || overlays.tss) control.addAttribution(LANE_ATTRIBUTION);
+      if (overlays.navaids && SHIP_REPORTING_SYSTEMS.features.length > 0) {
+        control.addAttribution(REPORTING_SYSTEM_ATTRIBUTION);
+      }
     }
   }, [overlays]);
 
+  // Curated official ship-reporting geometries. Render only systems and line
+  // positions supported by cited authorities; unknown or unmapped systems are
+  // never inferred or synthesized from OSM features.
+  useEffect(() => {
+    const group = groupsRef.current.reportingSystems;
+    if (!group) return;
+    group.clearLayers();
+    for (const feature of SHIP_REPORTING_SYSTEMS.features) {
+      const role = feature.properties.role;
+      const line = L.geoJSON(feature as GeoJSON.Feature, {
+        pane: 'lanes',
+        style: {
+          color: role === 'outer_boundary' ? '#ffb84d' : role === 'reporting_line' ? '#65e7a5' : role === 'partial_boundary' ? '#f4d35e' : '#ff6f91',
+          weight: role === 'outer_boundary' ? 2.4 : role === 'reporting_line' ? 2 : role === 'partial_boundary' ? 1.8 : 1.8,
+          opacity: 0.95,
+          dashArray: role === 'outer_boundary' ? '12 7' : role === 'reporting_line' ? '3 6' : role === 'partial_boundary' ? '2 6' : '5 5',
+          lineCap: 'round',
+          lineJoin: 'round',
+          interactive: true,
+        },
+      });
+      line.bindTooltip(feature.properties.label, { sticky: true, className: 'marnav-tip' });
+      line.bindPopup(
+        `<strong>${feature.properties.system}</strong><br>${feature.properties.label}<br><small>${feature.properties.sourceCitation} · ${feature.properties.datum} · verified ${feature.properties.verifiedAsOf}</small><br><small>${feature.properties.geometryNote}</small>`,
+        { className: 'reporting-system-popup', maxWidth: 340 },
+      );
+      group.addLayer(line);
+    }
+  }, []);
+
   // Worldwide marine overlays are viewport-fed, not bundled into the app.
   useEffect(() => {
+    const map = mapRef.current;
     const ferries = groupsRef.current.ferries;
     const tss = groupsRef.current.tss;
-    if (!ferries || !tss) return;
+    if (!map || !ferries || !tss) return;
     ferries.clearLayers();
     tss.clearLayers();
     const fallbackFerries: MarineFeature[] = lanes.ferries.map((feature, index) => ({ ...feature, id: `fallback-ferry-${index}`, type: 'ferry_route', path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }));
-    const fallbackTss: MarineFeature[] = lanes.tss.map((feature, index) => ({ ...feature, id: `fallback-tss-${index}`, path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }));
+    const fallbackTss: MarineFeature[] = lanes.tss.map((feature, index) => ({ ...feature, id: feature.id ?? `fallback-tss-${index}`, type: feature.type ?? 'separation_zone', name: feature.name || 'Traffic separation scheme', path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }) as MarineFeature);
     const source = props.marineFeatures ?? { ferries: fallbackFerries, tss: fallbackTss };
     for (const feature of source.ferries) {
       const line = L.polyline(feature.path, ferryStyle());
       line.bindTooltip(`Ferry route · ${feature.name}`, { sticky: true, className: 'marnav-tip' });
       ferries.addLayer(line);
     }
+    if (props.preferences.overlays.ferries && source.ferries.length > 0 && !map.hasLayer(ferries)) {
+      ferries.addTo(map);
+    }
     for (const feature of source.tss) {
       const path = feature.path;
       const closed = path.length > 3 && path[0][0] === path[path.length - 1][0] && path[0][1] === path[path.length - 1][1];
       const layer = closed ? L.polygon(path, tssStyle(feature.type)) : L.polyline(path, tssStyle(feature.type));
-      layer.bindTooltip(`Traffic separation scheme · ${feature.name}`, { sticky: true, className: 'marnav-tip' });
+      const info = describeTssFeature(feature);
+      layer.bindTooltip(`${info.title} · ${info.type}`, { sticky: true, className: 'marnav-tip' });
+      const rows = info.details.map(([label, value]) => `<div><strong>${escapePopupText(label)}:</strong> ${escapePopupText(value)}</div>`).join('');
+      const sourceLink = info.sourceUrl
+        ? `<a href="${escapePopupText(info.sourceUrl)}" target="_blank" rel="noopener noreferrer">OpenStreetMap feature details ↗</a>`
+        : 'OpenStreetMap';
+      layer.bindPopup(
+        `<strong>${escapePopupText(info.title)}</strong><br><span>${escapePopupText(info.type)}</span>${rows ? `<hr>${rows}` : ''}<hr><small>${sourceLink}<br>${TSS_SOURCE_ATTRIBUTION}</small>`,
+        { className: 'reporting-system-popup', maxWidth: 340 },
+      );
       tss.addLayer(layer);
     }
-  }, [props.marineFeatures]);
+    if (props.preferences.overlays.tss && source.tss.length > 0 && !map.hasLayer(tss)) {
+      tss.addTo(map);
+    }
+  }, [props.marineFeatures, props.preferences.overlays.ferries, props.preferences.overlays.tss]);
 
   // NAVAID markers.
   useEffect(() => {
@@ -626,8 +878,9 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     }
 
     for (const mark of props.marks) {
-      // Calling-in points are reporting lines across the channel in OSM, so draw
-      // the line itself and keep the radio icon at its centre for tapping.
+      // Calling-in features may be reporting lines; communication areas may
+      // have one or more mapped boundary paths. Keep these as outlines because
+      // OSM geometry alone does not certify the official system boundary.
       if (mark.path && mark.path.length >= 2) {
         L.polyline(mark.path, {
           className: 'marnav-calling-line',
@@ -637,6 +890,19 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           dashArray: '7 5',
           interactive: false,
         }).addTo(group);
+      }
+      if (mark.category === 'communication_area') {
+        for (const boundary of mark.paths ?? []) {
+          if (boundary.length < 2) continue;
+          L.polyline(boundary, {
+            className: 'marnav-reporting-area',
+            color: '#3dd6ff',
+            weight: 2,
+            opacity: 0.85,
+            dashArray: '5 5',
+            interactive: false,
+          }).addTo(group);
+        }
       }
       const region = ialaRegion(mark.lat, mark.lon);
       const spec = symbolFor(mark.category, region);

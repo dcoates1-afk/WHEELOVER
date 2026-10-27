@@ -46,6 +46,7 @@ const PRIORITY = {
   cardinal_east: 90,
   cardinal_south: 90,
   cardinal_west: 90,
+  cardinal_unspecified: 80,
   preferred_channel_port: 86,
   preferred_channel_starboard: 86,
   lateral_starboard: 84,
@@ -54,6 +55,7 @@ const PRIORITY = {
   // Calling-in points are harbour-control reporting lines, so they matter as
   // much as a buoy when planning an approach through a narrow pass.
   calling_in_point: 76,
+  communication_area: 72,
   // Anchorage grounds outrank generic hazards: they are where a passage ends
   // for the night, so dropping them in a dense harbour is the wrong trade.
   anchorage: 74,
@@ -85,6 +87,7 @@ const MIN_ZOOM = {
   cardinal_east: 11,
   cardinal_south: 11,
   cardinal_west: 11,
+  cardinal_unspecified: 11,
   preferred_channel_port: 11,
   preferred_channel_starboard: 11,
   lateral_starboard: 13,
@@ -99,6 +102,7 @@ const MIN_ZOOM = {
   notice: 14,
   facility: 14,
   calling_in_point: 11,
+  communication_area: 11,
   wreck: 12,
   anchorage: 12,
   anchor_berth: 12,
@@ -221,6 +225,9 @@ export function classifyTags(tags) {
   if (type === 'calling_in_point' || type === 'calling-in_point') {
     return { ...base, category: 'calling_in_point', priority: PRIORITY.calling_in_point };
   }
+  if (type === 'communication_area') {
+    return { ...base, category: 'communication_area', priority: PRIORITY.communication_area };
+  }
 
   if (AREA_TYPES.has(type)) return null;
 
@@ -249,7 +256,7 @@ export function classifyTags(tags) {
 
   if (type.includes('cardinal')) {
     const side = (category || '').replace('cardinal_', '');
-    const key = ['north', 'east', 'south', 'west'].includes(side) ? `cardinal_${side}` : 'cardinal_north';
+    const key = ['north', 'east', 'south', 'west'].includes(side) ? `cardinal_${side}` : 'cardinal_unspecified';
     return { ...base, category: key, priority: PRIORITY[key] };
   }
 
@@ -321,6 +328,46 @@ export function lightText(tags) {
   const period = tags['seamark:light:period'];
   const char = group ? `${character}(${group})` : character;
   return [char, colour, period ? `${period}s` : null].filter(Boolean).join(' ');
+}
+
+/** Summarize only encoded wreck classes; never imply safe clearance from missing data. */
+function wreckBoatingEffect(category, waterLevel) {
+  const effects = {
+    dangerous: 'Chart source classifies this wreck as dangerous to surface navigation; treat it as a hazard.',
+    'non-dangerous': 'Chart source classifies this wreck as not considered dangerous to surface navigation; this is not a clearance or safe-passage guarantee.',
+    distributed_remains: 'Chart source describes distributed remains as an area considered navigable but to avoid for anchoring, grounding, or bottom fishing.',
+    mast_showing: 'A mast is reported visible at the sounding datum recorded by the source.',
+    hull_showing: 'Part of the hull or superstructure is reported visible at the sounding datum recorded by the source.',
+  };
+  const categoryEffect = effects[category] ?? null;
+  const water = waterLevel ? `Mapped water-level effect: ${String(waterLevel).replace(/_/g, ' ')}.` : null;
+  const fallback = !categoryEffect
+    ? 'Wreck reported, but this record does not specify its navigation-danger category or least depth; treat it as an unverified obstruction and consult current official charts and notices.'
+    : null;
+  return [categoryEffect, water, fallback].filter(Boolean).join(' ') || null;
+}
+
+function lightSectorsFromTags(tags) {
+  const sectors = new Map();
+  const fields = {
+    character: 'character',
+    colour: 'colour',
+    group: 'group',
+    period: 'period',
+    sequence: 'sequence',
+    sector_start: 'start',
+    sector_end: 'end',
+    range: 'range',
+  };
+  for (const [key, rawValue] of Object.entries(tags)) {
+    const match = /^seamark:light:(\d+):(character|colour|group|period|sequence|sector_start|sector_end|range)$/.exec(key);
+    if (!match || rawValue === undefined || rawValue === null || String(rawValue).trim() === '') continue;
+    const sector = Number(match[1]);
+    const record = sectors.get(sector) ?? { sector };
+    record[fields[match[2]]] = String(rawValue).trim();
+    sectors.set(sector, record);
+  }
+  return [...sectors.values()].sort((a, b) => a.sector - b.sector);
 }
 
 export function distanceMeters(aLat, aLon, bLat, bLon) {
@@ -410,16 +457,38 @@ function berthDetail(type, tags) {
  * Wreck detail: whether it is awash or submerged, and its charted depth, is the
  * difference between clearing it and hitting it, so it belongs on the sheet.
  */
-function wreckDetail(type, tags) {
-  if (type !== 'wreck') return null;
+function wreckDetail(tags) {
+  const parts = [];
+  const chartCategory = tags['seamark:wreck:category'];
   const water = tags['seamark:wreck:water_level'];
-  const depth = tags['seamark:wreck:depth'];
-  const parts = [
-    water ? water.replace(/_/g, ' ') : null,
-    depth ? `${depth} m charted depth` : null,
-  ].filter(Boolean);
-  if (parts.length === 0) return null;
-  return parts.join(' · ').replace(/^./, (c) => c.toUpperCase());
+  const sounding = tags['seamark:wreck:depth'];
+  const historicDepth = tags['wreck:depth'];
+  const clearance = tags['wreck:clearance'];
+  const length = tags['wreck:length'];
+  const width = tags['wreck:width'];
+  const craftType = tags['wreck:type'];
+  const sunk = tags['wreck:date_sunk'];
+
+  const boatingEffect = wreckBoatingEffect(chartCategory, null);
+  if (boatingEffect) parts.push(boatingEffect);
+  if (water) parts.push(`Charted water level: ${water.replace(/_/g, ' ')}`);
+  if (sounding) parts.push(`${sounding} m charted sounding relative to chart datum`);
+  if (historicDepth) parts.push(`${historicDepth} m reported depth below water surface (community mapped)`);
+  if (clearance) parts.push(`${clearance} m reported clearance to wreck top`);
+  if (length) parts.push(`${length} m reported length`);
+  if (width) parts.push(`${width} m reported width`);
+  if (craftType) parts.push(`Craft type: ${craftType.replace(/_/g, ' ')}`);
+  if (sunk) parts.push(`Reported sinking date: ${sunk}`);
+  if (tags['sport'] === 'scuba_diving' || tags['scuba_diving:divespot'] === 'yes') {
+    const dive = [];
+    if (tags['scuba_diving:depth']) dive.push(`typical dive depth ${tags['scuba_diving:depth']} m`);
+    if (tags['scuba_diving:maxdepth']) dive.push(`maximum reported dive depth ${tags['scuba_diving:maxdepth']} m`);
+    if (tags['scuba_diving:entry']) dive.push(`entry ${tags['scuba_diving:entry']}`);
+    if (tags['scuba_diving:hazard']) dive.push(`reported diver hazard: ${tags['scuba_diving:hazard'].replace(/_/g, ' ')}`);
+    if (tags['scuba_diving:drift'] === 'yes') dive.push('reported drift-diving site');
+    parts.push(`Community dive-site note${dive.length ? `: ${dive.join('; ')}` : ''}; not current safety advice`);
+  }
+  return parts.length ? parts.join(' · ') : null;
 }
 
 /** Turn one Overpass element into a chart mark, or null if it is not one. */
@@ -440,24 +509,60 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
     : [];
   const drawnAsLine = path.length >= 2;
   const midpoint = drawnAsLine ? path[Math.floor(path.length / 2)] : null;
+  const relationPaths = Array.isArray(element.members)
+    ? element.members.flatMap((member) => Array.isArray(member?.geometry) ? [member.geometry] : [])
+    : null;
+  const sourcePaths = Array.isArray(element.geometryPaths) ? element.geometryPaths : relationPaths;
+  const paths = sourcePaths
+    ? sourcePaths
+        .map((part) => Array.isArray(part)
+          ? part.filter((point) => typeof point?.lat === 'number' && typeof point?.lon === 'number').map((point) => [point.lat, point.lon])
+          : [])
+        .filter((part) => part.length > 1)
+    : null;
+  const allGeometry = paths?.flat() ?? path;
+  const areaMidpoint = allGeometry.length > 0 && type === 'communication_area'
+    ? [
+        (Math.min(...allGeometry.map(([lat]) => lat)) + Math.max(...allGeometry.map(([lat]) => lat))) / 2,
+        (Math.min(...allGeometry.map(([, lon]) => lon)) + Math.max(...allGeometry.map(([, lon]) => lon))) / 2,
+      ]
+    : allGeometry.length > 0 ? allGeometry[Math.floor(allGeometry.length / 2)] : null;
 
-  const lat = element.lat ?? element.center?.lat ?? midpoint?.[0];
-  const lon = element.lon ?? element.center?.lon ?? midpoint?.[1];
+  const lat = element.lat ?? element.center?.lat ?? (type === 'communication_area' ? areaMidpoint?.[0] : midpoint?.[0]);
+  const lon = element.lon ?? element.center?.lon ?? (type === 'communication_area' ? areaMidpoint?.[1] : midpoint?.[1]);
   if (typeof lat !== 'number' || typeof lon !== 'number') return null;
 
   const kind = element.type || 'node';
   const id = element.id !== undefined ? `osm:${kind}/${element.id}` : `osm:${kind}/${lat.toFixed(5)}/${lon.toFixed(5)}`;
 
-  const colour = firstTag(tags, [
-    `seamark:${type}:colour`,
-    'seamark:light:colour',
-    'seamark:topmark:colour',
+  // Painted buoy/beacon colour, emitted light colour, and topmark colour are
+  // different facts. Preserve each independently; the IALA chart symbol is
+  // portrayal, not a reliable substitute for the mapped physical colour.
+  const markColourTypes = new Set([
+    'buoy_lateral', 'beacon_lateral', 'buoy_cardinal', 'beacon_cardinal',
+    'buoy_safe_water', 'beacon_safe_water', 'buoy_isolated_danger', 'beacon_isolated_danger',
+    'buoy_special_purpose', 'beacon_special_purpose', 'buoy', 'beacon', 'wreck',
   ]);
-  const shape = firstTag(tags, [
-    `seamark:${type}:shape`,
-    'seamark:topmark:shape',
-    'seamark:topmark',
-  ]);
+  const markColour = markColourTypes.has(type) ? firstTag(tags, [`seamark:${type}:colour`]) : null;
+  const markColourPattern = markColourTypes.has(type) ? firstTag(tags, [`seamark:${type}:colour_pattern`]) : null;
+  const lightCharacter = firstTag(tags, ['seamark:light:character']);
+  const lightColour = firstTag(tags, ['seamark:light:colour']);
+  const topmarkColour = firstTag(tags, ['seamark:topmark:colour']);
+  const buoyageSystem = firstTag(tags, [`seamark:${type}:system`, 'seamark:buoy_lateral:system', 'seamark:beacon_lateral:system']);
+  const shape = firstTag(tags, [`seamark:${type}:shape`]);
+  const topmarkShape = firstTag(tags, ['seamark:topmark:shape', 'seamark:topmark']);
+  const lightCategory = firstTag(tags, ['seamark:light:category']);
+  const lightGroup = firstTag(tags, ['seamark:light:group']);
+  const lightPeriod = firstTag(tags, ['seamark:light:period']);
+  const lightSequence = firstTag(tags, ['seamark:light:sequence']);
+  const verticalDatum = firstTag(tags, [`seamark:${type}:vertical_datum`, 'seamark:light:vertical_datum']);
+  const positionQuality = firstTag(tags, ['seamark:position:quality', 'seamark:quality:position']);
+  const sourceCitation = firstTag(tags, ['source', 'seamark:source']);
+  const sourceDate = firstTag(tags, ['seamark:source:date', 'source:date']);
+  const sourceUrl = element.id !== undefined && ['node', 'way', 'relation'].includes(kind)
+    ? `https://www.openstreetmap.org/${kind}/${element.id}`
+    : null;
+  const wreck = type === 'wreck' || tags.historic === 'wreck' || tags.man_made === 'wreck';
 
   return {
     id,
@@ -465,23 +570,59 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
     lon,
     category: classified.category,
     form: classified.form,
-    name: firstTag(tags, ['seamark:name', 'name', 'ref']),
+    name: firstTag(tags, ['seamark:name', 'name']),
+    markType: type || (tags.man_made === 'lighthouse' ? 'lighthouse' : tags.historic === 'wreck' ? 'historic wreck' : null),
+    markCategory: firstTag(tags, [`seamark:${type}:category`, 'seamark:category']),
     light: lightText(tags),
-    colour,
+    lightCharacter,
+    lightSectors: lightSectorsFromTags(tags),
+    buoyageSystem,
+    wreckBoatingEffect: wreck ? wreckBoatingEffect(tags['seamark:wreck:category'], tags['seamark:wreck:water_level']) : null,
+    colour: markColour,
+    colourPattern: markColourPattern,
+    lightColour,
+    topmarkColour,
     shape,
+    topmarkShape,
+    lightCategory,
+    lightGroup,
+    lightPeriod,
+    lightSequence,
+    verticalDatum,
+    positionQuality,
+    sourceCitation,
+    sourceDate,
+    sourceUrl,
+    wreckType: firstTag(tags, ['wreck:type']),
+    wreckDateSunk: firstTag(tags, ['wreck:date_sunk']),
+    wreckCategory: firstTag(tags, ['seamark:wreck:category']),
+    wreckWaterLevel: firstTag(tags, ['seamark:wreck:water_level']),
+    wreckSoundingDepth: firstTag(tags, ['seamark:wreck:depth']),
+    wreckReportedDepth: firstTag(tags, ['wreck:depth']),
+    wreckClearance: firstTag(tags, ['wreck:clearance']),
+    wreckLength: firstTag(tags, ['wreck:length']),
+    wreckWidth: firstTag(tags, ['wreck:width']),
+    diveSite: tags['sport'] === 'scuba_diving' || tags['scuba_diving:divespot'] === 'yes',
+    diveDepth: firstTag(tags, ['scuba_diving:depth']),
+    diveMaxDepth: firstTag(tags, ['scuba_diving:maxdepth']),
+    diveEntry: firstTag(tags, ['scuba_diving:entry']),
+    diveHazard: firstTag(tags, ['scuba_diving:hazard']),
+    driftDive: tags['scuba_diving:drift'] === 'yes',
     height: firstTag(tags, [`seamark:${type}:height`, 'seamark:light:height', 'height']),
     range: firstTag(tags, ['seamark:light:range']),
     path: drawnAsLine ? path : null,
+    paths,
     // Filled in by annotateTransits once the other end of the transit is known.
     transitBearing: null,
     transitDistanceM: null,
     transitPartner: null,
     transitPartnerName: null,
     channel: firstTag(tags, [`seamark:${type}:channel`, 'seamark:radio_station:channel']),
+    callsign: firstTag(tags, [`seamark:${type}:callsign`, 'seamark:radio_station:callsign']),
     description:
-      firstTag(tags, ['description', 'note']) ??
+      firstTag(tags, ['description', 'note', 'seamark:information', 'information']) ??
       berthDetail(type, tags) ??
-      wreckDetail(type, tags),
+      (type === 'wreck' || tags.historic === 'wreck' || tags.man_made === 'wreck' ? wreckDetail(tags) : null),
     lit: classified.lit,
     priority: classified.priority,
     source,
@@ -594,9 +735,16 @@ export function selectVisibleNavaids(navaids, options) {
   const [south, west, north, east] = bounds;
   const centre = options.center ?? [(south + north) / 2, (west + east) / 2];
 
-  const inView = navaids.filter(
-    (n) => n.lat >= south && n.lat <= north && n.lon >= west && n.lon <= east,
-  );
+  const inView = navaids.filter((n) => {
+    if (n.category === 'communication_area' && Array.isArray(n.paths)) {
+      return n.paths.some((path) => {
+        const lats = path.map(([lat]) => lat);
+        const lons = path.map(([, lon]) => lon);
+        return Math.min(...lats) <= north && Math.max(...lats) >= south && Math.min(...lons) <= east && Math.max(...lons) >= west;
+      });
+    }
+    return n.lat >= south && n.lat <= north && n.lon >= west && n.lon <= east;
+  });
   const visible = showAll ? inView : inView.filter((n) => zoom >= minZoomFor(n.category));
   if (visible.length <= limit) return visible;
 
@@ -620,6 +768,7 @@ export const CATEGORY_LABELS = {
   cardinal_east: 'East cardinal mark',
   cardinal_south: 'South cardinal mark',
   cardinal_west: 'West cardinal mark',
+  cardinal_unspecified: 'Cardinal mark (direction unspecified)',
   safe_water: 'Safe water mark',
   isolated_danger: 'Isolated danger mark',
   special_purpose: 'Special purpose mark',
@@ -638,6 +787,7 @@ export const CATEGORY_LABELS = {
   anchorage: 'Anchorage',
   anchor_berth: 'Anchor berth',
   calling_in_point: 'Calling-in point',
+  communication_area: 'Vessel reporting / communication area',
   notice: 'Notice mark',
   gate: 'Gate / start-finish mark',
   other: 'Mark',

@@ -38,6 +38,7 @@ const ALL_CATEGORIES: NavaidCategory[] = [
   'anchorage',
   'anchor_berth',
   'calling_in_point',
+  'communication_area',
   'notice',
   'gate',
   'other',

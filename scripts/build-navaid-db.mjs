@@ -30,15 +30,18 @@ const registry = JSON.parse(readFileSync(resolve(root, 'src/data/navaidSources.j
 const outDir = resolve(root, 'public/navaid-db');
 const refresh = process.argv.includes('--refresh');
 const MIRRORS = [
-  'https://overpass.openstreetmap.fr/api/interpreter',
   'https://overpass-api.de/api/interpreter',
+  'https://overpass.openstreetmap.fr/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ];
 
 function query(bounds) {
-  const [w, s, e, n] = bounds;
+  // Registry bounds are [south, west, north, east]; Overpass expects
+  // south,west,north,east.
+  const [s, w, n, e] = bounds;
   const box = `${s},${w},${n},${e}`;
-  return `[out:json][timeout:120];(node["seamark:type"](${box});way["seamark:type"](${box})["seamark:type"!="calling-in_point"];node["man_made"="lighthouse"](${box});node["seamark:light:character"](${box}););out center tags;way["seamark:type"="calling-in_point"](${box});out geom;`;
+  // Include charted seamarks and nearby wrecks; OSM data is community mapped.
+  return `[out:json][timeout:120];(node["seamark:type"](${box});way["seamark:type"](${box})["seamark:type"!="calling-in_point"];node["man_made"="lighthouse"](${box});node["seamark:light:character"](${box});node["historic"="wreck"](${box});way["historic"="wreck"](${box});node["man_made"="wreck"](${box});way["man_made"="wreck"](${box}););out center tags;way["seamark:type"="calling-in_point"](${box});out geom;`;
 }
 
 async function fetchRegion(region) {
@@ -48,9 +51,9 @@ async function fetchRegion(region) {
     try {
       const response = await fetch(mirror, {
         method: 'POST',
-        headers: { 'User-Agent': 'wheel-over-navaid-build/1.0', 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 'User-Agent': 'wheel-over-navaid-build/1.0', 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
-        signal: AbortSignal.timeout(150_000),
+        signal: AbortSignal.timeout(260_000),
       });
       if (!response.ok) {
         lastError = new Error(`${mirror} -> HTTP ${response.status}`);
@@ -59,6 +62,10 @@ async function fetchRegion(region) {
       const payload = await response.json();
       if (!Array.isArray(payload.elements) || payload.elements.length === 0) {
         lastError = new Error(`${mirror} -> 0 elements`);
+        continue;
+      }
+      if (payload.elements.some((element) => element.type === 'count')) {
+        lastError = new Error(`${mirror} -> count response contained no feature data`);
         continue;
       }
       return payload;

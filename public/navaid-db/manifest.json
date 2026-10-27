@@ -1,7 +1,7 @@
 {
   "schema": 2,
-  "version": "20261019040246-f6caa4cbca",
-  "generatedAt": "2026-10-19T04:02:46.428Z",
+  "version": "20261027014338-4d85ebce86",
+  "generatedAt": "2026-10-27T01:43:38.301Z",
   "cellSize": 0.25,
   "regions": [
     {
@@ -132,12 +132,12 @@
       "categoryCounts": {
         "gate": 14,
         "facility": 76,
-        "light": 217,
+        "light": 216,
         "marina": 55,
         "landmark": 7,
         "major_light": 9,
         "hazard": 182,
-        "lateral_starboard": 381,
+        "lateral_starboard": 382,
         "lateral_port": 422,
         "wreck": 105,
         "cardinal_south": 29,
@@ -167,7 +167,7 @@
         40.95,
         -73.7
       ],
-      "count": 1149,
+      "count": 1151,
       "sources": [
         "osm"
       ],
@@ -180,7 +180,7 @@
             40.75,
             -74
           ],
-          "count": 573
+          "count": 574
         },
         {
           "path": "ny-harbor/162_-296.json",
@@ -220,7 +220,7 @@
             40.75,
             -74.25
           ],
-          "count": 31
+          "count": 32
         },
         {
           "path": "ny-harbor/163_-295.json",
@@ -277,7 +277,7 @@
         "marina": 93,
         "major_light": 13,
         "landmark": 9,
-        "light": 27,
+        "light": 28,
         "facility": 58,
         "safe_water": 2,
         "lateral_other": 16,
@@ -286,7 +286,7 @@
         "preferred_channel_port": 9,
         "special_purpose": 71,
         "mooring": 105,
-        "wreck": 201,
+        "wreck": 202,
         "lateral_port": 130,
         "gate": 8,
         "transit_front": 1,
@@ -425,8 +425,8 @@
     }
   ],
   "stats": {
-    "rawRecords": 3693,
-    "uniqueAids": 3256,
+    "rawRecords": 3695,
+    "uniqueAids": 3258,
     "duplicatesRemoved": 248
   }
 }

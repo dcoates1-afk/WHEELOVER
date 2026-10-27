@@ -103,12 +103,16 @@ steals a map tap.
 
 **Overlays** (each independently toggleable, all in the menu)
 
-- **Depth contours** — from zoom 9 in US waters this is the ENC's own
-  depth-contour layer (`DepthsL`), drawn from the harbour/coastal band that
-  matches the zoom, so it carries the charted interval and labels rather than a
-  global grid. Below zoom 9, and outside the US, it falls back to GEBCO isobaths
-  (10 m/25 m and deeper). The GEBCO tile cache ends at zoom 10; closer in those
-  tiles are upscaled so the overlay stays visible instead of vanishing.
+- **Depth contours** — from zoom 9 in US waters this is NOAA ENC's charted
+  depth-contour layer, drawn from the harbour/coastal band matching the zoom.
+  Elsewhere it uses GEBCO's global 15-arc-second grid (nominally ~463 m
+  north–south at the equator) and can optionally load local, viewport-filtered
+  vector contour shards from the `/contours/` archive. Vector files use
+  FlatGeobuf spatial indexes and HTTP byte ranges; the local archive is served
+  from `WHEELOVER_CONTOUR_DATA_DIR`. Crisp line rendering does not add data
+  resolution: GEBCO is a compiled model with mixed source quality and vertical
+  references. These contours are not chart-grade and not for navigation.
+  The legacy GEBCO tile fallback is upscaled beyond its zoom-10 native limit.
 - **Depth numbers** — numeric depth labels sampled from the seabed grid for the
   current view, refreshed after each pan. GEBCO's 15 arc-second global grid
   answers the whole grid in one batch; inside European waters at zoom 14+ every
@@ -230,7 +234,50 @@ On the device:
 - **Check for updates** in the menu forces the check;
 - a pan into an area with no built shards falls back to the live Overpass proxy.
 
-### Sources
+#### Local worldwide bathymetry contours (prototype)
+
+The browser-side vector contour loader is in place, but it stays dormant until a
+locally generated archive exists. It reads a manifest, selects only geographic
+shards intersecting the current viewport, then uses FlatGeobuf's packed spatial
+index and HTTP Range requests to download matching feature bytes. If a view
+would select more than 64 MiB of shard files it is rejected instead of fetching
+an impractical fraction of the planet. The local Vite and production Node
+servers stream exact byte ranges from `WHEELOVER_CONTOUR_DATA_DIR`.
+
+The Windows builder in `scripts/build-worldwide-contours.py` accepts the
+released GEBCO_2026 GeoTIFF tiles and optional standard EMODnet DTM 2024 tiles.
+It writes indexed 10-degree shards plus a manifest with actual coverage bounds,
+bytes, source resolution, attribution and datum. It is designed to process
+small crops with GDAL's cache capped at 512 MiB and does not upsample the source
+raster. Its default shallow contours are 2 m steps from 2–5 m and 5 m steps from
+5–10 m, followed by progressively wider depth bands; use `--intervals`, `--min-depth`
+and `--max-depth` to customize them. GEBCO's nominal 15-arc-second grid spacing
+is not uniform measurement
+detail, and its assumed mean-sea-level reference has shallow-water exceptions;
+EMODnet's standard DTM is referenced to LAT. Mixed-source seams are expected.
+Nothing in these model contours is for navigation or safety at sea.
+
+Start with a regional pilot and a separate scratch directory before any global
+processing. Run from Miniforge Prompt after installing Node.js, GDAL, Osmium and
+Pyosmium as already instructed:
+
+```powershell
+$env:WHEELOVER_CONTOUR_DATA_DIR = 'E:\\WHEELOVER\\contours'
+python scripts\\test-worldwide-contours.py
+python scripts\\build-worldwide-contours.py --gebco 'E:\\data\\GEBCO_2026\\gebco_2026_n50.0_s0.0_w0.0_e90.0.tif' --bounds -2 49.8 -0.8 51 --output 'E:\\WHEELOVER\\contours-pilot' --work-dir 'E:\\WHEELOVER\\contour-scratch'
+```
+
+The pilot `.tif` filename above is only an example: substitute the actual GEBCO
+GeoTIFF downloaded from [the official GEBCO_2026 product page](https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2026-grid).
+Do not start a full global conversion until the pilot verifies correct raster
+band selection, non-empty indexed shards, bounded memory and available disk.
+The full GEBCO release uses eight 90-degree GeoTIFF tiles. Specify each tile
+with a repeated `--gebco` option; `--bounds` can be omitted for full coverage.
+Do not provide the accompanying TID grid as an elevation input. Generated
+shards are not placed in Git automatically; the Vite app serves them locally
+when launched with `WHEELOVER_CONTOUR_DATA_DIR`. For a hosted site, a separately
+configured byte-range/CORS-capable public origin is still required; an ordinary
+OneDrive share link has not been verified for this purpose.
 
 `src/data/navaidSources.json` audits 16 chart sources (OpenCPN's list, C-MAP,
 gpsnauticalcharts, i-Boating, UKHO, NOAA, BSH, LINZ, CHS and others) with
@@ -426,9 +473,9 @@ desktop install already has the libraries and fonts and does not need this.
   refined by EMODnet's ~115 m DTM in Europe. Both are seabed models, not the
   hydrographer's plotted soundings, and EMODnet cells mix survey, satellite and
   interpolated sources. UKHO high-resolution surveys are download products, not
-  public tile services. GEBCO contour tiles stop at zoom 10 and are upscaled
-  beyond that. The overlays are for passage planning and context, not for
-  pilotage or chart datum.
+  public tile services. The global contour prototype uses GEBCO's grid and can
+  optionally use EMODnet regional DTM; crisp rendering does not add source detail.
+  The overlays are for passage planning and context, not for pilotage or chart datum.
 - **Public places are community-mapped.** They come live from Overpass, are
   cached by the proxy for six hours, and can be incomplete, misplaced or out of
   date. A marina pin is not a surveyed chart feature and may not mark the
@@ -463,9 +510,7 @@ desktop install already has the libraries and fonts and does not need this.
 Map data © OpenStreetMap contributors (ODbL). Seamark overlay © OpenSeaMap
 (CC-BY-SA). Imagery © Esri, Maxar, Earthstar Geographics. Nautical and relief
 bases © Esri, Garmin, GEBCO, NOAA NGDC, USGS. Charts © NOAA (public domain);
-NOAA tide and current predictions © NOAA CO-OPS. Global depth contours © GEBCO
-(via NOAA's GEBCO contour tiles). Depth numbers © GEBCO 2024 and EMODnet
-Bathymetry (CC BY 4.0). Public places © OpenStreetMap contributors (ODbL).
+NOAA tide and current predictions © NOAA CO-OPS. Global depth contours © GEBCO 2026 (doi:10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa); optional regional contours © EMODnet Bathymetry DTM 2024 (CC BY 4.0, doi:10.12770/cf51df64-56f9-4a99-b1aa-36b8d7b743a1). Depth numbers © GEBCO 2024 and EMODnet Bathymetry (CC BY 4.0). Public places © OpenStreetMap contributors (ODbL).
 Sea-level
 and surface-current model data © Météo-France SMOC via Open-Meteo (CC BY 4.0).
 Forecasts from Open-Meteo. AIS data via AISStream.

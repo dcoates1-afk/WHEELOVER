@@ -9,7 +9,45 @@ export interface MarineFeature {
   name: string;
   bounds: MarineBounds;
   path: [number, number][];
+  paths?: [number, number][][];
+  details?: Record<string, string>;
+  sourceUrl?: string;
   navaid?: Navaid;
+}
+
+export const TSS_SOURCE_ATTRIBUTION = 'TSS data © OpenStreetMap contributors (ODbL)';
+
+const TSS_DETAIL_LABELS: Record<string, string> = {
+  operator: 'Operator',
+  source: 'OSM source note',
+  ref: 'Reference',
+  'seamark:separation_scheme:category': 'Scheme category',
+  'seamark:separation_scheme:traffic_flow': 'Traffic flow',
+  'seamark:separation_scheme:lane_count': 'Lane count',
+  'seamark:separation_scheme:lane_width': 'Lane width',
+  'seamark:separation_scheme:orientation': 'Orientation',
+  'seamark:separation_scheme:category_of_separation': 'Separation type',
+  'seamark:separation_boundary:category': 'Boundary',
+  'seamark:separation_lane:traffic_flow': 'Lane traffic flow',
+  'seamark:separation_lane:category': 'Lane category',
+  'seamark:separation_zone:category': 'Zone category',
+  'seamark:information': 'Information',
+};
+
+export function describeTssFeature(feature: MarineFeature): { title: string; type: string; details: Array<[string, string]>; sourceUrl: string | null } {
+  const details = Object.entries(feature.details ?? {})
+    .filter(([key, value]) => key !== 'seamark:name' && key !== 'name' && typeof value === 'string' && value.trim())
+    .map(([key, value]) => [TSS_DETAIL_LABELS[key] ?? key.replace(/^seamark:/, '').replace(/[:_]/g, ' '), value.trim()] as [string, string]);
+  const osmId = feature.id.match(/(?:^|:)([nwr])(\d+)$/);
+  const sourceUrl = feature.sourceUrl ?? (osmId
+    ? `https://www.openstreetmap.org/${osmId[1] === 'r' ? 'relation' : osmId[1] === 'w' ? 'way' : 'node'}/${osmId[2]}`
+    : null);
+  return {
+    title: feature.name,
+    type: feature.type.replace(/_/g, ' '),
+    details,
+    sourceUrl,
+  };
 }
 
 export interface MarineShard {

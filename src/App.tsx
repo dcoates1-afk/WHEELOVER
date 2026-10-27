@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { selectVisibleNavaids } from '../shared/navaid-core.mjs';
 import type { Navaid } from './lib/navaidTypes';
-import { MapCanvas, isUsWaters } from './components/MapCanvas';
+import type { SeedExtract } from './lib/navaidDb';
+import { isUsWaters } from './lib/usWaters';
 import type { MapHandle } from './components/MapCanvas';
-import { LayerControl } from './components/LayerControl';
 import type { DbInfo } from './components/LayerControl';
 import { GpsWidget } from './components/GpsWidget';
 import { LocateButton } from './components/LocateButton';
 import { ZoomControls } from './components/ZoomControls';
-import { NavaidSheet } from './components/NavaidSheet';
-import { VesselSheet } from './components/VesselSheet';
-import { StationDrawer } from './components/StationDrawer';
+
+const MapCanvas = lazy(() => import('./components/MapCanvas').then((module) => ({ default: module.MapCanvas })));
+const LayerControl = lazy(() => import('./components/LayerControl').then((module) => ({ default: module.LayerControl })));
+const NavaidSheet = lazy(() => import('./components/NavaidSheet').then((module) => ({ default: module.NavaidSheet })));
+const VesselSheet = lazy(() => import('./components/VesselSheet').then((module) => ({ default: module.VesselSheet })));
+const StationDrawer = lazy(() => import('./components/StationDrawer').then((module) => ({ default: module.StationDrawer })));
 import type { AisVessel } from './lib/ais';
 import { useAis } from './hooks/useAis';
 import { useGeolocation } from './hooks/useGeolocation';
@@ -112,7 +115,7 @@ export default function App() {
     initialView.center[1],
   ]);
   const [noaaCovered, setNoaaCovered] = useState(false);
-  const [marks, setMarks] = useState<Navaid[]>(() => navaidDatabase.seed());
+  const [marks, setMarks] = useState<Navaid[]>([]);
   const [worldwideNavaids, setWorldwideNavaids] = useState<Navaid[] | null>(null);
   const [pois, setPois] = useState<Poi[]>([]);
   const [marineFeatures, setMarineFeatures] = useState<{ ferries: MarineFeature[]; tss: MarineFeature[] } | null>(null);
@@ -215,6 +218,11 @@ export default function App() {
         manifest: report.manifest,
         checkedAt: report.checked ? Date.now() : navaidDatabase.getCheckedAt(),
       });
+      if (!report.manifest) {
+        void import('./data/solentNavaids.json').then(({ default: seedExtract }) => {
+          if (!cancelled) setMarks((seedExtract as SeedExtract).navaids);
+        });
+      }
     });
     return () => {
       cancelled = true;
@@ -440,6 +448,7 @@ export default function App() {
 
   return (
     <div className={`app theme-${preferences.theme}`}>
+      <Suspense fallback={<div className="app-loading" role="status">Loading chart tools…</div>}>
       <MapCanvas
         ref={mapRef}
         initialCenter={initialView.center}
@@ -587,6 +596,7 @@ export default function App() {
           onClose={() => setSelectedMark(null)}
         />
       )}
+      </Suspense>
     </div>
   );
 }

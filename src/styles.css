@@ -80,6 +80,17 @@ ul {
   border: 0;
 }
 
+.app-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  background: #04141f;
+  color: #e8f4fa;
+  font: 500 14px/1.4 ui-sans-serif, system-ui, sans-serif;
+}
+
 .app {
   position: fixed;
   inset: 0;

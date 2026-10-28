@@ -352,6 +352,19 @@ export default function App() {
     );
   }, [chartedMarks, view.bounds]);
 
+  const wrecksInView = useMemo(() => {
+    const byId = new Map(chartedMarks.map((mark) => [mark.id, mark]));
+    // The regional NAVAID database can carry richer heritage metadata than the
+    // global marine archive. Prefer that record when both contain the same mark.
+    for (const mark of marks) byId.set(mark.id, mark);
+    return filterNavaidsByGroups([...byId.values()], preferences.hiddenGroups)
+      .filter((mark) =>
+        (mark.category === 'wreck' || mark.category === 'hazard_danger') &&
+        mark.lat >= view.bounds[0] && mark.lat <= view.bounds[2] &&
+        mark.lon >= view.bounds[1] && mark.lon <= view.bounds[3],
+      );
+  }, [chartedMarks, marks, preferences.hiddenGroups, view.bounds]);
+
   const visibleMarks = useMemo(
     () =>
       selectVisibleNavaids(chartedMarks, {
@@ -525,6 +538,12 @@ export default function App() {
         onStation={setStation}
         noaaCovered={noaaCovered}
         legendRegion={ialaRegion(view.center[0], view.center[1])}
+        wrecks={wrecksInView}
+        onSelectWreck={(wreck) => {
+          setMenuOpen(false);
+          setSelectedVessel(null);
+          setSelectedMark(wreck);
+        }}
         hidden={Boolean(station || selectedMark || selectedVessel)}
       />
 

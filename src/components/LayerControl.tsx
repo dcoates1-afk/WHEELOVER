@@ -4,7 +4,8 @@ import type { GpsMode } from '../lib/gpsPreference';
 import type { GeoStatus } from '../hooks/useGeolocation';
 import type { StationTab } from '../lib/station';
 import { STATION_LABELS } from '../lib/station';
-import { symbolFor } from '../lib/navaids';
+import { formatPosition, symbolFor } from '../lib/navaids';
+import type { Navaid } from '../lib/navaids';
 import { NAVAID_GROUPS, isGroupHidden, toggleGroup } from '../lib/navaidGroups';
 import { POI_GROUPS, isPoiGroupHidden, togglePoiGroup } from '../lib/poiGroups';
 import { poiIconSvg } from '../lib/pois';
@@ -46,6 +47,8 @@ interface LayerControlProps {
   onStation: (tab: StationTab | null) => void;
   noaaCovered: boolean;
   legendRegion: 'A' | 'B';
+  wrecks: Navaid[];
+  onSelectWreck: (wreck: Navaid) => void;
   hidden?: boolean;
 }
 
@@ -145,6 +148,8 @@ export function LayerControl({
   onStation,
   noaaCovered,
   legendRegion,
+  wrecks,
+  onSelectWreck,
   hidden = false,
 }: LayerControlProps) {
   const setBase = (base: BaseLayerId) => onChange({ ...preferences, base });
@@ -498,6 +503,34 @@ export function LayerControl({
                       Show every mark class
                     </button>
                   )}
+                  <section className="wreck-picker" aria-label="Wreck details">
+                    <h4>Wrecks in this chart view</h4>
+                    <p className="legend-hint">Select a wreck to open its chart and historical details.</p>
+                    {wrecks.length > 0 ? (
+                      <ul className="wreck-picker-list">
+                        {wrecks.map((wreck) => {
+                          const spec = symbolFor(wreck.category, legendRegion);
+                          const label = wreck.name ?? wreck.wreckInventoryName ?? `Wreck · ${formatPosition(wreck.lat, wreck.lon)}`;
+                          return (
+                            <li key={wreck.id}>
+                              <button
+                                type="button"
+                                className="wreck-picker-button"
+                                aria-label={`Open details for ${label}`}
+                                onClick={() => onSelectWreck(wreck)}
+                              >
+                                <span className="legend-symbol" dangerouslySetInnerHTML={{ __html: spec.svg }} aria-hidden="true" />
+                                <span className="wreck-picker-label">{label}</span>
+                                <span className="chevron" aria-hidden="true">›</span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="menu-note">No wrecks are loaded in this view. Pan to a charted area or turn on the wreck filter.</p>
+                    )}
+                  </section>
                 </details>
               </Section>
 

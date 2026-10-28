@@ -45,7 +45,34 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
     partner?.name && (mark.category === 'transit_front' || mark.category === 'transit_rear')
       ? `${partner.name} ${mark.category === 'transit_front' ? 'front' : 'rear'} light`
       : null;
-  const title = mark.name ?? unnamedTransit ?? CATEGORY_LABELS[mark.category] ?? 'Unnamed mark';
+  const title =
+    mark.name ??
+    mark.wreckInventoryName ??
+    unnamedTransit ??
+    (mark.category === 'wreck' || mark.category === 'hazard_danger'
+      ? `Wreck at ${formatPosition(mark.lat, mark.lon)}`
+      : CATEGORY_LABELS[mark.category] ?? 'Unnamed mark');
+  const hasWreckDetails = [
+    mark.wreckBoatingEffect,
+    mark.wreckWaterLevel,
+    mark.wreckSoundingDepth,
+    mark.wreckReportedDepth,
+    mark.wreckClearance,
+    mark.wreckType,
+    mark.wreckDateSunk,
+    mark.wreckInventoryName,
+    mark.wreckInventoryDepth,
+    mark.wreckTypeDescription,
+    mark.wreckSiteDescription,
+    mark.wreckHistoricalContext,
+    mark.wreckInventoryLegalStatus,
+    mark.wreckChartSource,
+    mark.diveSite,
+    mark.diveDepth,
+    mark.diveMaxDepth,
+    mark.diveEntry,
+    mark.diveHazard,
+  ].some(Boolean);
   const form =
     FORM_LABELS[mark.category] ??
     (mark.form === 'beacon' && mark.lit === false ? 'Unlit beacon (day mark)' : mark.form);
@@ -94,9 +121,11 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
 
         <dl className="sheet-body">
           <Row label="Form / mark type" value={mark.markType ? `${form} · ${mark.markType.replace(/_/g, ' ')}` : form} />
-          <Row label="Mark category" value={mark.markCategory} />
-          <Row label="Light character / flash" value={mark.light ? `${mark.light}${mark.lightCategory ? ` · ${mark.lightCategory.replace(/_/g, ' ')}` : ''}` : mark.lightCharacter ?? (mark.lit === false ? 'Unlit daymark' : null)} />
-          {mark.lit !== false && !mark.lightCharacter && !mark.light ? <Row label="Light character status" value="Not specified in the mapped source (not assumed steady)" /> : null}
+          {mark.category !== 'wreck' && mark.category !== 'hazard_danger' ? (
+            <Row label="Mark category" value={mark.markCategory} />
+          ) : null}
+          <Row label="Light character / flash" value={mark.light ? `${mark.light}${mark.lightCategory ? ` · ${mark.lightCategory.replace(/_/g, ' ')}` : ''}` : mark.lightCharacter ?? (mark.lit === false && mark.form === 'beacon' ? 'Unlit daymark' : null)} />
+          {mark.lit !== false && mark.form !== 'mark' && !mark.lightCharacter && !mark.light ? <Row label="Light character status" value="Not specified in the mapped source (not assumed steady)" /> : null}
           <Row label="Buoyage system" value={mark.buoyageSystem?.replace(/-/g, ' ').toUpperCase()} />
           {mark.lightSectors?.map((sector) => (
             <Row
@@ -142,19 +171,51 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
               <Row label="Wreck-top clearance" value={mark.wreckClearance ? `${mark.wreckClearance} m (reported)` : null} />
               <Row label="Craft type" value={mark.wreckType} />
               <Row label="Reported sinking date" value={mark.wreckDateSunk} />
+              <Row label="Heritage inventory depth information" value={mark.wreckInventoryDepth ? `${mark.wreckInventoryDepth} (heritage inventory report; units/datum may differ; not chart-clearance information)` : null} />
+              <Row label="Heritage wreck / vessel description" value={mark.wreckTypeDescription} />
+              <Row label="Heritage site condition" value={mark.wreckSiteDescription} />
+              <Row label="Historical context" value={mark.wreckHistoricalContext} />
+              <Row label="Heritage protection status" value={mark.wreckInventoryLegalStatus} />
+              <Row label="Heritage position type" value={mark.wreckInventoryPositionType ? `${mark.wreckInventoryPositionType}${mark.wreckInventoryMatchDistanceM != null ? `; matched chart mark ${mark.wreckInventoryMatchDistanceM} m away` : ''}` : null} />
+              <Row label="Heritage inventory updated" value={mark.wreckInventoryUpdated} />
               <Row label="Reported dimensions" value={mark.wreckLength || mark.wreckWidth ? `${mark.wreckLength ? `${mark.wreckLength} m long` : ''}${mark.wreckLength && mark.wreckWidth ? ' · ' : ''}${mark.wreckWidth ? `${mark.wreckWidth} m wide` : ''}` : null} />
+              <Row label="NOAA ENC Direct GIS category" value={mark.wreckChartSource ? mark.wreckCategory : null} />
+              <Row label="NOAA chart expected depth" value={mark.wreckChartExpectedDepth ? `${mark.wreckChartExpectedDepth} m; ENC Direct GIS value, not navigation-certified` : null} />
+              <Row label="NOAA chart sounding quality" value={mark.wreckChartQuality} />
+              <Row label="NOAA chart source date" value={mark.wreckChartSurveyDate} />
+              <Row label="NOAA vertical datum code" value={mark.wreckChartVerticalDatum} />
+              <Row label="NOAA wreck exposure code" value={mark.wreckChartExposed} />
+              <Row label="NOAA source warning" value={mark.wreckChartSource} />
               <Row label="Dive site (community mapped)" value={mark.diveSite ? 'Yes — community-mapped interest only; not confirmation of access, conditions, or safety' : null} />
               <Row label="Typical dive depth" value={mark.diveDepth ? `${mark.diveDepth} m (community mapped)` : null} />
               <Row label="Maximum reported dive depth" value={mark.diveMaxDepth ? `${mark.diveMaxDepth} m (community mapped)` : null} />
               <Row label="Dive entry" value={mark.diveEntry} />
               <Row label="Reported diver hazard" value={mark.diveHazard} />
               <Row label="Dive style" value={mark.driftDive ? 'Drift diving reported' : null} />
+              {!hasWreckDetails ? (
+                <Row label="Additional wreck information" value="No additional chart, heritage, or dive details are available for this mark yet." />
+              ) : null}
             </>
           ) : null}
-          <Row label="Description / chart & dive notes" value={mark.description} />
+          <Row label="Description / chart & dive notes" value={
+            mark.category === 'wreck' || mark.category === 'hazard_danger'
+              ? mark.description
+                  ?.split(' · ')
+                  .filter((part) =>
+                    part !== mark.wreckBoatingEffect &&
+                    !part.startsWith('Chart source classifies this wreck') &&
+                    !part.startsWith('Mapped water-level effect:') &&
+                    !part.startsWith('Charted water level:')
+                  )
+                  .join(' · ') || null
+              : mark.description
+          } />
           <Row label="Source citation" value={mark.sourceCitation} />
+          <Row label="Heritage dataset source" value={mark.wreckInventorySource} />
+          {mark.wreckInventoryUrl && <Row label="Heritage dataset metadata" value={mark.wreckInventoryUrl} />}
+          {mark.wreckChartSourceUrl && <Row label="NOAA ENC Direct GIS guidance" value={mark.wreckChartSourceUrl} />}
           <Row label="Source date" value={mark.sourceDate} />
-          <Row label="Source" value={mark.source === 'osm' ? 'OpenStreetMap seamarks (ODbL)' : mark.source} />
+          <Row label="Source" value={mark.source === 'osm' ? 'OpenStreetMap seamarks (ODbL)' : mark.source === 'noaa-enc' ? 'NOAA ENC Direct to GIS (not certified for navigation)' : mark.source} />
           {mark.sourceUrl && <Row label="Source feature" value={mark.sourceUrl} />}
           <Row label="Last mapped" value={mark.updated ? new Date(mark.updated).toLocaleDateString() : null} />
           <Row label="Reference" value={mark.id} />

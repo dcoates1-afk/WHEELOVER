@@ -1095,6 +1095,57 @@ ul {
   margin: 0 0 8px;
 }
 
+.wreck-picker {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.wreck-picker h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.wreck-picker-list {
+  display: grid;
+  gap: 4px;
+  padding: 0 0 8px;
+}
+
+.wreck-picker-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 4px 8px 4px 2px;
+  color: var(--ink);
+  text-align: left;
+  background: rgba(143, 176, 192, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.wreck-picker-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.wreck-picker-button .legend-symbol {
+  width: 28px;
+  height: 28px;
+}
+
+.wreck-picker-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Chips are chart-paper light: black cardinal and isolated-danger bodies are
    invisible on a dark tile, which made those rows look empty. */
 .legend-symbol {
@@ -1260,18 +1311,22 @@ ul {
   z-index: 1400;
   background: rgba(2, 10, 16, 0.6);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
+  padding: 16px;
 }
 
 .navaid-sheet {
   width: 100%;
-  max-height: 88dvh;
-  overflow-y: auto;
+  max-width: 560px;
+  max-height: min(88dvh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   overscroll-behavior: contain;
   background: var(--panel);
-  border-top: 1px solid var(--line);
-  border-radius: 22px 22px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
   padding: 10px 18px calc(20px + var(--safe-bottom));
   animation: sheet-up 0.18s ease-out;
 }
@@ -1280,9 +1335,11 @@ ul {
   .sheet-scrim {
     align-items: stretch;
     justify-content: flex-end;
+    padding: 0;
   }
   .navaid-sheet {
     width: 440px;
+    max-width: none;
     max-height: none;
     height: 100%;
     border-radius: 0;
@@ -1333,6 +1390,11 @@ ul {
 }
 
 .sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
   padding: 10px 0;
 }
 
@@ -1357,7 +1419,15 @@ ul {
   overflow-wrap: anywhere;
 }
 
+@media (max-width: 480px) {
+  .sheet-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+}
+
 .sheet-actions {
+  flex: none;
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;

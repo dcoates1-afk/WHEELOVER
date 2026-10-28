@@ -83,6 +83,26 @@ export interface Navaid {
   wreckClearance?: string | null;
   wreckLength?: string | null;
   wreckWidth?: string | null;
+  /** Non-navigation heritage inventory context from an open source dataset. */
+  wreckInventoryName?: string | null;
+  wreckInventoryDepth?: string | null;
+  wreckHistoricalContext?: string | null;
+  wreckSiteDescription?: string | null;
+  wreckTypeDescription?: string | null;
+  wreckInventorySource?: string | null;
+  wreckInventoryUrl?: string | null;
+  wreckInventoryPositionType?: string | null;
+  wreckInventoryLegalStatus?: string | null;
+  wreckInventoryUpdated?: string | null;
+  wreckInventoryMatchDistanceM?: number | null;
+  /** NOAA ENC Direct GIS fields; this GIS service is not navigation-certified. */
+  wreckChartSource?: string | null;
+  wreckChartSourceUrl?: string | null;
+  wreckChartSurveyDate?: string | null;
+  wreckChartQuality?: string | null;
+  wreckChartExpectedDepth?: string | null;
+  wreckChartVerticalDatum?: string | null;
+  wreckChartExposed?: string | null;
   diveSite?: boolean;
   diveDepth?: string | null;
   diveMaxDepth?: string | null;

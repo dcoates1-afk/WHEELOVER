@@ -127,6 +127,18 @@ describe('classification', () => {
     expect(classifyTags({ 'man_made': 'wreck' })?.category).toBe('wreck');
   });
 
+  it('keeps NOAA chart wrecks distinct from OSM identities and retains danger classification', () => {
+    const wreck = normalizeElement({
+      type: 'node',
+      id: 610308,
+      lat: 40.4523944,
+      lon: -73.8178389,
+      tags: { 'seamark:type': 'wreck', 'seamark:wreck:category': 'dangerous' },
+    }, undefined, 'noaa-enc') as Navaid;
+    expect(wreck.category).toBe('hazard_danger');
+    expect(wreck.id).toBe('noaa-enc:node/610308');
+  });
+
   it('drops areas, cables and unknown shoreline features', () => {
     expect(classifyTags({ 'seamark:type': 'cable_submarine' })).toBeNull();
     expect(classifyTags({ 'seamark:type': 'restricted_area' })).toBeNull();
@@ -438,6 +450,14 @@ describe('dedupe', () => {
     const { navaids, removed } = dedupeNavaids([first, second]) as { navaids: Navaid[]; removed: number };
     expect(removed).toBe(1);
     expect(navaids).toHaveLength(1);
+  });
+
+  it('does not treat nearby unnamed wrecks as duplicates by proximity alone', () => {
+    const first = mark({ category: 'hazard_danger', id: 'osm:node/1', lat: 50.7, lon: -1.2 });
+    const second = mark({ category: 'hazard_danger', id: 'noaa-enc:2', lat: 50.70001, lon: -1.2, source: 'noaa-enc' });
+    const { navaids, removed } = dedupeNavaids([first, second]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(0);
+    expect(navaids).toHaveLength(2);
   });
 });
 

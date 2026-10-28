@@ -31,10 +31,11 @@ check('manifest is schema 2 with a version stamp', manifest.schema === 2 && /^\d
 check('manifest records unique aids', manifest.stats.uniqueAids > 3000, `${manifest.stats.uniqueAids} aids`);
 check('manifest records duplicates removed', manifest.stats.duplicatesRemoved > 0, `${manifest.stats.duplicatesRemoved} merged`);
 check('at least two built regions', manifest.regions.length >= 2, manifest.regions.map((r) => r.id).join(', '));
-check('source registry has 16 audited sources', registry.sources.length === 16, `${registry.sources.length} sources`);
+check('source registry has 17 audited sources', registry.sources.length === 17, `${registry.sources.length} sources`);
 
 let totalShardAids = 0;
 const categories = new Set();
+const wrecksByRegion = new Map();
 for (const region of manifest.regions) {
   let sum = 0;
   for (const shard of region.shards) {
@@ -49,6 +50,11 @@ for (const region of manifest.regions) {
     }
     for (const navaid of payload.navaids) {
       categories.add(navaid.category);
+      if (navaid.category === 'wreck' || navaid.category === 'hazard_danger') {
+        const records = wrecksByRegion.get(region.id) ?? [];
+        records.push(navaid);
+        wrecksByRegion.set(region.id, records);
+      }
       if (
         !Number.isFinite(navaid.lat) ||
         !Number.isFinite(navaid.lon) ||
@@ -67,6 +73,22 @@ for (const region of manifest.regions) {
 }
 
 check('total shard aids match manifest', totalShardAids === manifest.stats.uniqueAids, `${totalShardAids}`);
+const solentEnriched = (wrecksByRegion.get('solent') ?? []).filter((wreck) => wreck.wreckInventoryName);
+check(
+  'two uniquely matched EMODnet heritage wreck enrichments are present',
+  solentEnriched.length === 2 && solentEnriched.every((wreck) => wreck.wreckInventoryMatchDistanceM <= 25 && wreck.wreckInventoryPositionType === 'Polygon centroid'),
+  solentEnriched.map((wreck) => `${wreck.wreckInventoryName} (${wreck.wreckInventoryMatchDistanceM} m)`).join(', '),
+);
+check(
+  'heritage data does not override charted wreck danger or position',
+  solentEnriched.every((wreck) => wreck.id.startsWith('osm:') && wreck.wreckCategory && wreck.wreckInventoryUrl),
+);
+const noaaWrecks = (wrecksByRegion.get('ny-harbor') ?? []).filter((wreck) => wreck.source === 'noaa-enc');
+check(
+  'NOAA ENC Direct GIS wreck is separately namespaced and attributed',
+  noaaWrecks.length === 1 && noaaWrecks[0].id.startsWith('noaa-enc:') && noaaWrecks[0].wreckChartSourceUrl && noaaWrecks[0].sourceCitation,
+  noaaWrecks.map((wreck) => `${wreck.id} ${wreck.wreckCategory} ${wreck.wreckChartExpectedDepth ?? 'depth unavailable'}`).join(', '),
+);
 check(
   'lateral, cardinal, light, hazard and range categories are present',
   ['lateral_port', 'lateral_starboard', 'cardinal_north', 'major_light', 'hazard', 'range'].every((category) =>

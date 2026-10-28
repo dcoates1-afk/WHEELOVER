@@ -533,7 +533,7 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
   if (typeof lat !== 'number' || typeof lon !== 'number') return null;
 
   const kind = element.type || 'node';
-  const id = element.id !== undefined ? `osm:${kind}/${element.id}` : `osm:${kind}/${lat.toFixed(5)}/${lon.toFixed(5)}`;
+  const id = element.id !== undefined ? `${source}:${kind}/${element.id}` : `${source}:${kind}/${lat.toFixed(5)}/${lon.toFixed(5)}`;
 
   // Painted buoy/beacon colour, emitted light colour, and topmark colour are
   // different facts. Preserve each independently; the IALA chart symbol is
@@ -654,8 +654,10 @@ function richness(navaid) {
 }
 
 /**
- * Merge records that describe the same physical mark: same name within 60 m,
- * or any two aids of the same family within 15 m. The richer record wins.
+ * Merge records that describe the same physical mark. Same-name aids can merge
+ * within the dedupe radius; non-wreck families use close-position fallbacks.
+ * Wrecks are never deduped by proximity alone because separate casualties may
+ * cluster together, especially in ports and historic sites.
  */
 export function dedupeNavaids(items, options = {}) {
   const distance = options.distanceM ?? DEDUPE_DISTANCE_M;
@@ -683,7 +685,11 @@ export function dedupeNavaids(items, options = {}) {
           const sameName =
             normName(item.name) !== '' && normName(item.name) === normName(other.name);
           const sameFamily = familyOf(item.category) === familyOf(other.category);
-          if (sameName || (sameFamily && metres <= 15) || metres <= 12) {
+          const itemIsWreck = item.category === 'wreck' || item.category === 'hazard_danger';
+          const otherIsWreck = other.category === 'wreck' || other.category === 'hazard_danger';
+          const sameWreckIdentity = itemIsWreck && otherIsWreck &&
+            item.source === other.source && item.id === other.id;
+          if (sameWreckIdentity || sameName || (!itemIsWreck && !otherIsWreck && ((sameFamily && metres <= 15) || metres <= 12))) {
             duplicateOf = index;
             break;
           }

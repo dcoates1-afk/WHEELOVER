@@ -1,0 +1,37 @@
+{
+  "type": "FeatureCollection",
+  "downloadedAt": "2026-10-28T13:04:21.001Z",
+  "sourceUrl": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_coastal/MapServer/33/query?where=1%3D1&outFields=OBJECTID,CATWRK,EXPSOU,HEIGHT,OBJNAM,QUASOU,SOUACC,TECSOU,VALSOU,VERACC,VERDAT,VERLEN,WATLEV,INFORM,SORDAT,SORIND,DSNM&geometry=-74.3,40.45,-73.7,40.95&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 610308,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.81783890000003,
+          40.4523944
+        ]
+      },
+      "properties": {
+        "OBJECTID": 610308,
+        "CATWRK": "dangerous wreck",
+        "EXPSOU": 1,
+        "HEIGHT": null,
+        "OBJNAM": null,
+        "QUASOU": "6",
+        "SOUACC": null,
+        "TECSOU": null,
+        "VALSOU": 20.1,
+        "VERACC": null,
+        "VERDAT": null,
+        "VERLEN": null,
+        "WATLEV": 3,
+        "INFORM": "Wrecks",
+        "SORDAT": "20080905",
+        "SORIND": "US,US,graph,FE-00561",
+        "DSNM": "US3NY1AE.000"
+      }
+    }
+  ]
+}

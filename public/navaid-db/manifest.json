@@ -1,7 +1,7 @@
 {
   "schema": 2,
-  "version": "20261027014338-4d85ebce86",
-  "generatedAt": "2026-10-27T01:43:38.301Z",
+  "version": "20261028134024-543d534d43",
+  "generatedAt": "2026-10-28T13:40:24.039Z",
   "cellSize": 0.25,
   "regions": [
     {
@@ -13,9 +13,10 @@
         51.05,
         -0.75
       ],
-      "count": 2107,
+      "count": 2118,
       "sources": [
-        "osm"
+        "osm",
+        "emodnet-heritage"
       ],
       "shards": [
         {
@@ -26,7 +27,7 @@
             51,
             -1
           ],
-          "count": 512
+          "count": 518
         },
         {
           "path": "solent/203_-6.json",
@@ -36,7 +37,7 @@
             51,
             -1.25
           ],
-          "count": 504
+          "count": 508
         },
         {
           "path": "solent/203_-4.json",
@@ -46,7 +47,7 @@
             51,
             -0.75
           ],
-          "count": 453
+          "count": 454
         },
         {
           "path": "solent/202_-5.json",
@@ -139,7 +140,7 @@
         "hazard": 182,
         "lateral_starboard": 382,
         "lateral_port": 422,
-        "wreck": 105,
+        "wreck": 115,
         "cardinal_south": 29,
         "cardinal_north": 12,
         "cardinal_west": 11,
@@ -154,7 +155,7 @@
         "isolated_danger": 4,
         "mooring": 17,
         "lateral_other": 38,
-        "hazard_danger": 91,
+        "hazard_danger": 92,
         "notice": 1
       }
     },
@@ -167,9 +168,10 @@
         40.95,
         -73.7
       ],
-      "count": 1151,
+      "count": 1187,
       "sources": [
-        "osm"
+        "osm",
+        "noaa-enc"
       ],
       "shards": [
         {
@@ -180,7 +182,7 @@
             40.75,
             -74
           ],
-          "count": 574
+          "count": 609
         },
         {
           "path": "ny-harbor/162_-296.json",
@@ -233,22 +235,22 @@
           "count": 27
         },
         {
-          "path": "ny-harbor/161_-298.json",
-          "bounds": [
-            40.25,
-            -74.5,
-            40.5,
-            -74.25
-          ],
-          "count": 21
-        },
-        {
           "path": "ny-harbor/161_-296.json",
           "bounds": [
             40.25,
             -74,
             40.5,
             -73.75
+          ],
+          "count": 22
+        },
+        {
+          "path": "ny-harbor/161_-298.json",
+          "bounds": [
+            40.25,
+            -74.5,
+            40.5,
+            -74.25
           ],
           "count": 21
         },
@@ -286,11 +288,11 @@
         "preferred_channel_port": 9,
         "special_purpose": 71,
         "mooring": 105,
-        "wreck": 202,
+        "wreck": 237,
         "lateral_port": 130,
         "gate": 8,
         "transit_front": 1,
-        "hazard_danger": 16,
+        "hazard_danger": 17,
         "preferred_channel_starboard": 8,
         "notice": 2,
         "range": 7,
@@ -308,6 +310,26 @@
       "redistribution": "allowed",
       "enabled": true,
       "notes": "Worldwide, queryable AtoN via the Overpass API. Coverage is densest in Europe and the US; some regions map no bifurcation or range marks at all."
+    },
+    {
+      "id": "noaa-enc",
+      "name": "NOAA ENC Direct to GIS",
+      "kind": "vector",
+      "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_coastal/MapServer/33",
+      "licence": "CC0 1.0 (NOAA Coast Survey data; verify third-party feature provenance)",
+      "redistribution": "allowed",
+      "enabled": true,
+      "notes": "One chart-feature wreck in the New York Harbor query bounds, retained as a separate source feature. NOAA states ENC Direct to GIS is not certified for navigation; use current official ENCs for navigation. Retrieval snapshot: data-raw/noaa-ny-harbor-wrecks.geojson."
+    },
+    {
+      "id": "emodnet-heritage",
+      "name": "EMODnet Human Activities — Heritage Shipwrecks",
+      "kind": "vector",
+      "url": "https://ows.emodnet-humanactivities.eu/geoserver/emodnet/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=emodnet%3Aheritageshipwrecks",
+      "licence": "CC BY 4.0",
+      "redistribution": "allowed",
+      "enabled": true,
+      "notes": "Solent heritage inventory snapshot with Historic England source attribution. The layer includes Polygon centroid points and heterogeneous, historical depth information; not navigation-grade. Only HMS/m A1 and HMS Invincible records were matched to OSM chart marks within 25 m. Retrieval snapshot: data-raw/emodnet-solent-heritage-wrecks.geojson."
     }
   ],
   "sourceRegistry": [
@@ -320,10 +342,17 @@
     },
     {
       "id": "noaa-enc",
-      "name": "NOAA ENC Direct",
-      "enabled": false,
+      "name": "NOAA ENC Direct to GIS",
+      "enabled": true,
       "redistribution": "allowed",
-      "licence": "US Government public domain"
+      "licence": "CC0 1.0 (NOAA Coast Survey data; verify third-party feature provenance)"
+    },
+    {
+      "id": "emodnet-heritage",
+      "name": "EMODnet Human Activities — Heritage Shipwrecks",
+      "enabled": true,
+      "redistribution": "allowed",
+      "licence": "CC BY 4.0"
     },
     {
       "id": "openseamap",
@@ -425,8 +454,8 @@
     }
   ],
   "stats": {
-    "rawRecords": 3695,
-    "uniqueAids": 3258,
-    "duplicatesRemoved": 248
+    "rawRecords": 3696,
+    "uniqueAids": 3305,
+    "duplicatesRemoved": 202
   }
 }

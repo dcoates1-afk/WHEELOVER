@@ -12,13 +12,23 @@
     },
     {
       "id": "noaa-enc",
-      "name": "NOAA ENC Direct",
+      "name": "NOAA ENC Direct to GIS",
       "kind": "vector",
-      "url": "https://charts.noaa.gov/ENCs/ENCs.shtml",
-      "licence": "US Government public domain",
+      "url": "https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_coastal/MapServer/33",
+      "licence": "CC0 1.0 (NOAA Coast Survey data; verify third-party feature provenance)",
       "redistribution": "allowed",
-      "enabled": false,
-      "notes": "Free US-water ENC. The ArcGIS MapServer endpoints returned HTTP 500 during the last build, so this build has no NOAA records; the chart still renders NOAA Chart Display raster tiles."
+      "enabled": true,
+      "notes": "One chart-feature wreck in the New York Harbor query bounds, retained as a separate source feature. NOAA states ENC Direct to GIS is not certified for navigation; use current official ENCs for navigation. Retrieval snapshot: data-raw/noaa-ny-harbor-wrecks.geojson."
+    },
+    {
+      "id": "emodnet-heritage",
+      "name": "EMODnet Human Activities — Heritage Shipwrecks",
+      "kind": "vector",
+      "url": "https://ows.emodnet-humanactivities.eu/geoserver/emodnet/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=emodnet%3Aheritageshipwrecks",
+      "licence": "CC BY 4.0",
+      "redistribution": "allowed",
+      "enabled": true,
+      "notes": "Solent heritage inventory snapshot with Historic England source attribution. The layer includes Polygon centroid points and heterogeneous, historical depth information; not navigation-grade. Only HMS/m A1 and HMS Invincible records were matched to OSM chart marks within 25 m. Retrieval snapshot: data-raw/emodnet-solent-heritage-wrecks.geojson."
     },
     {
       "id": "openseamap",
@@ -167,14 +177,14 @@
       "name": "Solent & Isle of Wight",
       "bounds": [50.55, -1.85, 51.05, -0.75],
       "snapshot": "data-raw/solent.json",
-      "sources": ["osm"]
+      "sources": ["osm", "emodnet-heritage"]
     },
     {
       "id": "ny-harbor",
       "name": "New York Harbor",
       "bounds": [40.45, -74.3, 40.95, -73.7],
       "snapshot": "data-raw/ny.json",
-      "sources": ["osm"]
+      "sources": ["osm", "noaa-enc"]
     }
   ]
 }

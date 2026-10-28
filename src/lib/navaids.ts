@@ -44,18 +44,32 @@ function outline(shape: string, fill: string, stroke = '#04141f') {
   return `<g stroke="${stroke}" stroke-width="1.6" stroke-linejoin="round">${shape.replace('{fill}', fill)}</g>`;
 }
 
-function can(fill: string) {
-  return outline('<rect x="8" y="8" width="16" height="18" rx="3" fill="{fill}"/>', fill);
+function can(fill: string, top = fill) {
+  // Chart-style can buoy: square-sided body, narrow neck and small top bar.
+  return `<path d="M16 3 V8" stroke="#04141f" stroke-width="2" stroke-linecap="round"/>
+    ${outline('<path d="M12 8 H20 V11 H23 V25 H9 V11 H12 Z" fill="{fill}"/>', fill)}
+    <rect x="12" y="6" width="8" height="4" rx="1" fill="${top}" stroke="#04141f" stroke-width="1.1"/>
+    <path d="M9 18 H23" stroke="#04141f" stroke-width="1.2" opacity=".65"/>`;
 }
 
-function cone(fill: string) {
-  return outline('<path d="M16 6 L25 26 H7 Z" fill="{fill}"/>', fill);
+function cone(fill: string, top = fill) {
+  // Chart-style nun buoy: pointed body with a short neck and cap.
+  return `<path d="M16 3 V7" stroke="#04141f" stroke-width="2" stroke-linecap="round"/>
+    ${outline('<path d="M12 7 H20 L23 11 L18 25 H14 L9 11 Z" fill="{fill}"/>', fill)}
+    <path d="M12 7 L16 3 L20 7 Z" fill="${top}" stroke="#04141f" stroke-width="1.1" stroke-linejoin="round"/>
+    <path d="M9.7 13 H22.3" stroke="#04141f" stroke-width="1.2" opacity=".65"/>`;
 }
 
 function sphere(fill: string, band?: string) {
-  const base = outline('<circle cx="16" cy="17" r="9.5" fill="{fill}"/>', fill);
+  const base = outline('<circle cx="16" cy="17.5" r="8.5" fill="{fill}"/>', fill);
   if (!band) return base;
-  return `${base}<rect x="7" y="14" width="18" height="5" fill="${band}" stroke="#04141f" stroke-width="1.2"/>`;
+  // Safe-water balls use vertical red/white stripes. Other banded marks use
+  // horizontal black/red or black/white bands to keep their chart meanings apart.
+  const stripe = fill === WHITE && band === RED
+    ? `<path d="M10.3 12.2 Q11.4 10.2 13 9.7 V25.3 Q11.4 24.8 10.3 22.8 Z M19 9.7 Q20.6 10.2 21.7 12.2 V22.8 Q20.6 24.8 19 25.3 Z" fill="${band}" stroke="#04141f" stroke-width=".7"/>
+       <path d="M13 9.7 Q16 8.4 19 9.7 V25.3 Q16 26.6 13 25.3 Z" fill="${band}" stroke="#04141f" stroke-width=".7"/>`
+    : `<path d="M8.2 15 H23.8 V19.5 H8.2 Z" fill="${band}" stroke="#04141f" stroke-width=".8"/>`;
+  return `${base}${stripe}`;
 }
 
 /**
@@ -63,13 +77,10 @@ function sphere(fill: string, band?: string) {
  * white band. They used to be drawn as a sphere, which is the safe-water mark
  * and made the two impossible to tell apart on the chart.
  */
-function bifurcation(shape: 'can' | 'cone', main: string) {
-  if (shape === 'can') {
-    return `${outline('<rect x="8" y="8" width="16" height="18" rx="3" fill="{fill}"/>', main)}
-      <rect x="8" y="13.5" width="16" height="5" fill="${WHITE}" stroke="#04141f" stroke-width="1.4"/>`;
-  }
-  return `${outline('<path d="M16 6 L25 26 H7 Z" fill="{fill}"/>', main)}
-    <path d="M12.6 13.5 L19.4 13.5 L21.6 18.5 L10.4 18.5 Z" fill="${WHITE}" stroke="#04141f" stroke-width="1.4" stroke-linejoin="round"/>`;
+function bifurcation(shape: 'can' | 'cone', main: string, top: string) {
+  const body = shape === 'can' ? can(main, top) : cone(main, top);
+  return `${body}<path d="M9 18 H23" stroke="${WHITE}" stroke-width="4.5"/>
+    <path d="M9 18 H23" stroke="#04141f" stroke-width=".9"/>`;
 }
 
 /**
@@ -101,17 +112,17 @@ function anchorBerthSvg() {
 }
 
 /**
- * Calling-in point: a VHF handset with radio waves. Canadian Coast Guard
- * calling-in points are reporting lines over the radio, not seamarks, so a
- * radio silhouette reads correctly and cannot be mistaken for a buoy.
+ * Calling-in point: a chart-style plotted point with a radio-wave cue. Keep
+ * the radio indication around the actual location rather than drawing a
+ * pictorial handheld device.
  */
 function callingInSvg() {
-  return `<rect x="7.5" y="13" width="13" height="12" rx="3" fill="#3dd6ff" stroke="#04141f" stroke-width="1.6"/>
-    <rect x="10.5" y="16.5" width="7" height="3.5" rx="1" fill="#04141f"/>
-    <path d="M9.5 13 V8.5" stroke="#04141f" stroke-width="2.2" stroke-linecap="round"/>
-    <circle cx="20.5" cy="19.5" r="1.3" fill="#04141f"/>
-    <path d="M23 8 A6.5 6.5 0 0 1 23 16.5" fill="none" stroke="#3dd6ff" stroke-width="1.8" stroke-linecap="round"/>
-    <path d="M26 5.2 A10 10 0 0 1 26 19.3" fill="none" stroke="#3dd6ff" stroke-width="1.3" stroke-linecap="round" opacity="0.68"/>`;
+  return `<circle cx="16" cy="19" r="7.2" fill="rgba(61,214,255,.14)" stroke="#04141f" stroke-width="2.4"/>
+    <circle cx="16" cy="19" r="7.2" fill="none" stroke="#3dd6ff" stroke-width="1.4"/>
+    <circle cx="16" cy="19" r="2.2" fill="${WHITE}" stroke="#04141f" stroke-width="1.1"/>
+    <path d="M12 10.5 A5.4 5.4 0 0 1 20 10.5" fill="none" stroke="#04141f" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M12 10.5 A5.4 5.4 0 0 1 20 10.5" fill="none" stroke="#3dd6ff" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M9.5 7 A9 9 0 0 1 22.5 7" fill="none" stroke="#3dd6ff" stroke-width="1.4" stroke-linecap="round"/>`;
 }
 
 /**
@@ -120,31 +131,26 @@ function callingInSvg() {
  * "wrecked boat" rather than "boat", and shares nothing with the hazard sphere
  * or the dangerous-wreck cross.
  */
-function wreckSvg() {
-  return `<path d="M2.8 25 Q6.5 23.7 10 25 T17 25 T24 25 T29.2 25" fill="none" stroke="${WHITE}" stroke-width="1.6" stroke-linecap="round" opacity="0.9"/>
-    <path d="M4.2 21.6 C8.4 25.6 20.4 22.8 27.4 18.2 L25.4 24.6 C18 28.4 9.4 27.4 4.2 21.6 Z" fill="#8fa3ad" stroke="#04141f" stroke-width="1.8" stroke-linejoin="round"/>
-    <path d="M21.4 20.4 L22.2 24.2 L19.4 23.6 Z" fill="#8fa3ad" stroke="#04141f" stroke-width="1.2" stroke-linejoin="round"/>
-    <path d="M7.6 22 L6.8 15.8 M11.6 21.2 L11.8 13.2 M15.6 20.2 L15 11.6 M19.6 18.6 L20.6 14.4" stroke="#04141f" stroke-width="1.6" stroke-linecap="round"/>
-    <path d="M15 11.6 L10.6 12.4" stroke="#04141f" stroke-width="1.4" stroke-linecap="round"/>
-    <path d="M6.8 15.8 L3.9 16.2" stroke="#04141f" stroke-width="1.4" stroke-linecap="round"/>
-    <path d="M6.2 22.6 C11.4 25.4 19.6 23.8 24.9 20.4" fill="none" stroke="${RED}" stroke-width="1.5"/>`;
+function wreckSvg(enclosed = false) {
+  // Nautical-chart wreck/fishbone: a central wreck spine with broken ribs.
+  // The dashed circle denotes the separately classified dangerous wreck.
+  const fishbone = `<g fill="none" stroke="#04141f" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 16 H25 M9 13 L12 19 M14 12 L17 20 M19 13 L22 19 M7 14 L5 16 L7 18 M25 14 L27 16 L25 18"/>
+    </g>
+    <g fill="none" stroke="${WHITE}" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 16 H25 M9 13 L12 19 M14 12 L17 20 M19 13 L22 19 M7 14 L5 16 L7 18 M25 14 L27 16 L25 18"/>
+    </g>`;
+  return enclosed
+    ? `<circle cx="16" cy="16" r="14" fill="rgba(244,247,248,.12)" stroke="#04141f" stroke-width="2" stroke-dasharray="2 2"/>${fishbone}`
+    : fishbone;
 }
 
 /**
- * Transit (leading) marks: the two lights that define a leading line, drawn as
- * two dots on a dashed sight line. The filled dot is this mark's end of the
- * transit — lower/front or higher/rear — so a pair of range lights is told
- * apart at a glance instead of both reading as minor lights.
+ * Transit (leading) marks use a single light symbol at each mapped position.
+ * The line joining the front and rear coordinates is drawn on the map.
  */
-function transitSvg(role: 'front' | 'rear') {
-  const dot = (cy: number, filled: boolean, radius: number) =>
-    filled
-      ? `<circle cx="16" cy="${cy}" r="${radius}" fill="${LIGHT_MAJOR}" stroke="#04141f" stroke-width="1.8"/>`
-      : `<circle cx="16" cy="${cy}" r="${radius}" fill="none" stroke="#04141f" stroke-width="3.2"/>` +
-        `<circle cx="16" cy="${cy}" r="${radius}" fill="none" stroke="${WHITE}" stroke-width="1.5"/>`;
-  return `<line x1="16" y1="3.5" x2="16" y2="28.5" stroke="#04141f" stroke-width="1.3" stroke-dasharray="2 2.6" opacity="0.85"/>
-    ${dot(9.5, role === 'rear', 3.4)}
-    ${dot(21.5, role === 'front', 3.9)}`;
+function transitSvg() {
+  return majorLightSvg();
 }
 
 function diamond(fill: string) {
@@ -152,20 +158,25 @@ function diamond(fill: string) {
 }
 
 function cardinalSvg(kind: 'north' | 'east' | 'south' | 'west') {
-  // Two stacked triangles: the classic black/yellow quadrant topmark.
-  const top = kind === 'north' || kind === 'west' ? BLACK : YELLOW;
-  const bottom = kind === 'north' || kind === 'east' ? YELLOW : BLACK;
-  const bands =
-    kind === 'east'
-      ? `<rect x="7" y="12" width="18" height="5" fill="${BLACK}"/>`
-      : kind === 'west'
-        ? `<rect x="7" y="19" width="18" height="5" fill="${BLACK}"/>`
-        : kind === 'south'
-          ? `<rect x="7" y="8" width="18" height="6" fill="${YELLOW}"/>`
-          : '';
-  return `${outline('<rect x="8" y="8" width="16" height="18" rx="3" fill="{fill}"/>', top)}${bands}
-    <path d="M16 3 L21 9 H11 Z" fill="${top}" stroke="#04141f" stroke-width="1.2"/>
-    <path d="M16 13 L21 19 H11 Z" fill="${bottom}" stroke="#04141f" stroke-width="1.2"/>`;
+  // IALA cardinal topmarks and body bands: north = points up, east = bases
+  // together, south = points down, west = points together.
+  const topmark = {
+    north: '<path d="M11 9 L16 2.5 L21 9 Z M11 14 L16 8.5 L21 14 Z"/>',
+    east: '<path d="M11 7 L16 2.5 L21 7 Z M11 9.5 L21 9.5 L16 14 Z"/>',
+    south: '<path d="M11 3 L16 8.5 L21 3 Z M11 8.5 L16 14 L21 8.5 Z"/>',
+    west: '<path d="M11 2.5 L21 2.5 L16 7 Z M11 14 L16 9.5 L21 14 Z"/>',
+  }[kind];
+  const bands = {
+    north: `<rect x="12" y="17" width="8" height="5" fill="${BLACK}"/><rect x="12" y="22" width="8" height="6" fill="${YELLOW}"/>`,
+    east: `<rect x="12" y="17" width="8" height="3.7" fill="${BLACK}"/><rect x="12" y="20.7" width="8" height="3.6" fill="${YELLOW}"/><rect x="12" y="24.3" width="8" height="3.7" fill="${BLACK}"/>`,
+    south: `<rect x="12" y="17" width="8" height="5" fill="${YELLOW}"/><rect x="12" y="22" width="8" height="6" fill="${BLACK}"/>`,
+    west: `<rect x="12" y="17" width="8" height="3.7" fill="${YELLOW}"/><rect x="12" y="20.7" width="8" height="3.6" fill="${BLACK}"/><rect x="12" y="24.3" width="8" height="3.7" fill="${YELLOW}"/>`,
+  }[kind];
+  return `<path d="M16 14 V18" stroke="#04141f" stroke-width="1.5"/>
+    <path d="M16 14 V18" stroke="${WHITE}" stroke-width=".6"/>
+    <rect x="12" y="17" width="8" height="11" rx="1" fill="${YELLOW}" stroke="#04141f" stroke-width="1.4"/>
+    ${bands}
+    <g fill="${BLACK}" stroke="#04141f" stroke-width=".8" stroke-linejoin="round">${topmark}</g>`;
 }
 
 /**
@@ -184,7 +195,7 @@ function majorLightSvg() {
       return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${LIGHT_MAJOR}" stroke-width="2.2" stroke-linecap="round"/>`;
     })
     .join('');
-  return `${rays}<circle cx="16" cy="16" r="6.6" fill="${LIGHT_MAJOR}" stroke="${WHITE}" stroke-width="1.3"/><circle cx="16" cy="16" r="2.4" fill="${WHITE}"/>`;
+  return `${rays}<circle cx="16" cy="16" r="4.2" fill="${WHITE}" stroke="#04141f" stroke-width="1"/><circle cx="16" cy="16" r="2.5" fill="${BLACK}" stroke="${LIGHT_MAJOR}" stroke-width=".8"/>`;
 }
 
 /**
@@ -203,22 +214,29 @@ function minorLightSvg() {
       return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${LIGHT_MINOR}" stroke-width="1.5" stroke-linecap="round"/>`;
     })
     .join('');
-  return `${stubs}<circle cx="16" cy="16" r="9.4" fill="none" stroke="${LIGHT_MINOR}" stroke-width="1.2" opacity="0.55"/>` +
-    `<circle cx="16" cy="16" r="5" fill="${LIGHT_MINOR}" stroke="#04141f" stroke-width="1.5"/>` +
-    `<circle cx="16" cy="16" r="1.8" fill="#ffffff"/>`;
+  return `${stubs}<circle cx="16" cy="16" r="3.8" fill="${WHITE}" stroke="#04141f" stroke-width="1"/>` +
+    `<circle cx="16" cy="16" r="2.2" fill="${BLACK}" stroke="${LIGHT_MINOR}" stroke-width=".8"/>`;
 }
 
 export function symbolFor(category: NavaidCategory, region: 'A' | 'B'): SymbolSpec {
   const label = CATEGORY_LABELS[category] ?? 'Mark';
   switch (category) {
-    case 'lateral_port':
-      return { svg: svgWrap(can(lateralColours('port', region).main)), label };
-    case 'lateral_starboard':
-      return { svg: svgWrap(cone(lateralColours('starboard', region).main)), label };
-    case 'preferred_channel_port':
-      return { svg: svgWrap(bifurcation('can', lateralColours('port', region).main)), label };
-    case 'preferred_channel_starboard':
-      return { svg: svgWrap(bifurcation('cone', lateralColours('starboard', region).main)), label };
+    case 'lateral_port': {
+      const colours = lateralColours('port', region);
+      return { svg: svgWrap(can(colours.main, colours.band)), label };
+    }
+    case 'lateral_starboard': {
+      const colours = lateralColours('starboard', region);
+      return { svg: svgWrap(cone(colours.main, colours.band)), label };
+    }
+    case 'preferred_channel_port': {
+      const colours = lateralColours('port', region);
+      return { svg: svgWrap(bifurcation('can', colours.main, colours.band)), label };
+    }
+    case 'preferred_channel_starboard': {
+      const colours = lateralColours('starboard', region);
+      return { svg: svgWrap(bifurcation('cone', colours.main, colours.band)), label };
+    }
     case 'lateral_other':
       return { svg: svgWrap(can('#8fa3ad')), label };
     case 'cardinal_north':
@@ -245,9 +263,8 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B'): SymbolSp
         label,
       };
     case 'transit_front':
-      return { svg: svgWrap(transitSvg('front')), label };
     case 'transit_rear':
-      return { svg: svgWrap(transitSvg('rear')), label };
+      return { svg: svgWrap(transitSvg()), label };
     case 'major_light':
       return { svg: svgWrap(majorLightSvg()), label };
     case 'light':
@@ -257,13 +274,7 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B'): SymbolSp
     case 'hazard':
       return { svg: svgWrap(sphere(WHITE, BLACK)), label };
     case 'hazard_danger':
-      return {
-        svg: svgWrap(
-          `${outline('<circle cx="16" cy="16" r="10" fill="{fill}"/>', '#3b2a2a')}
-           <path d="M11 11 L21 21 M21 11 L11 21" stroke="${RED}" stroke-width="3"/>`,
-        ),
-        label,
-      };
+      return { svg: svgWrap(wreckSvg(true)), label };
     case 'landmark':
       return {
         svg: svgWrap(

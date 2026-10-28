@@ -9,10 +9,11 @@ describe('light symbols', () => {
     const minor = symbolFor('light', 'A').svg;
 
     expect(major).not.toBe(minor);
-    // Major lights carry an 8-ray star burst; minor lights only four stubs.
+    // Retain the flare language; center and ray sizes distinguish the classes.
     expect((major.match(/<line/g) ?? []).length).toBe(8);
     expect((minor.match(/<line/g) ?? []).length).toBe(4);
-    expect(minor).toContain('r="9.4"');
+    expect(major).toContain('r="4.2"');
+    expect(minor).toContain('r="3.8"');
   });
 
   it('uses distinct colours for the two light classes', () => {
@@ -27,12 +28,56 @@ describe('light symbols', () => {
   });
 });
 
-describe('lateral colours', () => {
+describe('lateral colours and buoy silhouettes', () => {
   it('follows IALA region A and B', () => {
     expect(symbolFor('lateral_port', 'A').svg).toContain('#e23b3b');
     expect(symbolFor('lateral_starboard', 'A').svg).toContain('#26a65b');
     expect(symbolFor('lateral_port', 'B').svg).toContain('#26a65b');
     expect(symbolFor('lateral_starboard', 'B').svg).toContain('#e23b3b');
+  });
+
+  it('uses chart-like square can and pointed nun buoy bodies', () => {
+    const can = symbolFor('lateral_port', 'A').svg;
+    const nun = symbolFor('lateral_starboard', 'A').svg;
+    expect(can).toContain('M12 8 H20 V11 H23 V25 H9 V11 H12 Z');
+    expect(nun).toContain('M12 7 H20 L23 11 L18 25 H14 L9 11 Z');
+    expect(can).toContain('fill="#26a65b"');
+    expect(nun).toContain('fill="#e23b3b"');
+    expect(can).not.toBe(nun);
+  });
+});
+
+describe('cardinal chart symbols', () => {
+  it('uses directional IALA topmarks and the four black/yellow band patterns', () => {
+    const north = symbolFor('cardinal_north', 'A').svg;
+    const east = symbolFor('cardinal_east', 'A').svg;
+    const south = symbolFor('cardinal_south', 'A').svg;
+    const west = symbolFor('cardinal_west', 'A').svg;
+
+    expect(north).toContain('M11 9 L16 2.5 L21 9 Z');
+    expect(south).toContain('M11 3 L16 8.5 L21 3 Z');
+    // East's twin cones point away from each other; west's point inward.
+    expect(east).toContain('M11 7 L16 2.5 L21 7 Z M11 9.5 L21 9.5 L16 14 Z');
+    expect(west).toContain('M11 2.5 L21 2.5 L16 7 Z M11 14 L16 9.5 L21 14 Z');
+    expect(north).toContain('fill="#101820"');
+    expect(north).toContain('fill="#f4c531"');
+    expect([north, east, south, west].every((svg, i, list) => list.indexOf(svg) === i)).toBe(true);
+  });
+});
+
+describe('safe-water and hazard chart symbols', () => {
+  it('shows safe water as vertical red/white stripes and generic hazard as horizontal bands', () => {
+    const safeWater = symbolFor('safe_water', 'A').svg;
+    const isolatedDanger = symbolFor('isolated_danger', 'A').svg;
+    const hazard = symbolFor('hazard', 'A').svg;
+
+    expect(safeWater).toContain('V25.3');
+    expect(safeWater).toContain('V22.8');
+    expect(safeWater).toContain('#e23b3b');
+    expect(isolatedDanger).toContain('H23.8 V19.5');
+    expect(isolatedDanger).toContain('fill="#e23b3b"');
+    expect(hazard).toContain('H23.8 V19.5');
+    expect(hazard).toContain('fill="#101820"');
   });
 });
 
@@ -44,12 +89,12 @@ describe('bifurcation marks', () => {
 
     expect(port).not.toBe(starboard);
     // Port bifurcation is a can (rectangle), starboard a cone (triangle).
-    expect(port).toContain('<rect x="8" y="8"');
-    expect(starboard).toContain('M16 6 L25 26 H7 Z');
+    expect(port).toContain('M12 8 H20 V11 H23 V25 H9 V11 H12 Z');
+    expect(starboard).toContain('M12 7 H20 L23 11 L18 25 H14 L9 11 Z');
     // Neither may reuse the safe-water ball.
     expect(port).not.toContain('cx="16" cy="17" r="9.5"');
     expect(starboard).not.toContain('cx="16" cy="17" r="9.5"');
-    expect(safeWater).toContain('cx="16" cy="17" r="9.5"');
+    expect(safeWater).toContain('cx="16" cy="17.5" r="8.5"');
     // Both carry the wide white band that marks a preferred channel.
     expect(port).toContain('#f4f7f8');
     expect(starboard).toContain('#f4f7f8');
@@ -97,7 +142,9 @@ describe('anchor and calling-in symbols', () => {
   it('draws a calling-in point as a radio, not a seamark', () => {
     const spec = symbolFor('calling_in_point', 'A');
     expect(spec.svg).toContain('#3dd6ff');
-    expect(spec.svg).toContain('A6.5 6.5');
+    expect(spec.svg).toContain('A5.4 5.4');
+    expect(spec.svg).toContain('cy="19" r="7.2"');
+    expect(spec.svg).not.toContain('M9.5 13 V8.5');
     expect(spec.label).toBe('Calling-in point');
   });
 
@@ -147,16 +194,13 @@ describe('anchor and calling-in symbols', () => {
 });
 
 describe('transit symbols', () => {
-  it('fills the dot at this end of the leading line', () => {
+  it('shows one chart-like light glyph at each paired feature', () => {
     const front = symbolFor('transit_front', 'A').svg;
     const rear = symbolFor('transit_rear', 'A').svg;
-    expect(front).not.toBe(rear);
-    // The front light fills the lower dot, the rear light the upper one.
-    expect(front).toContain('cy="21.5" r="3.9" fill="#ff43d0"');
-    expect(rear).toContain('cy="9.5" r="3.4" fill="#ff43d0"');
-    // Both are drawn as a pair on a dashed sight line.
-    expect(front).toContain('stroke-dasharray="2 2.6"');
-    expect(rear).toContain('stroke-dasharray="2 2.6"');
+    expect(front).toBe(rear);
+    expect(front).toContain('#ff43d0');
+    expect(front).toContain('r="2.5"');
+    expect(front).not.toContain('stroke-dasharray');
   });
 
   it('labels the two ends of the transit', () => {
@@ -172,19 +216,17 @@ describe('transit symbols', () => {
 });
 
 describe('wreck symbols', () => {
-  it('draws a hull, not the hazard ball or the danger cross', () => {
+  it('uses the fishbone chart symbol and circles dangerous wrecks', () => {
     const wreck = symbolFor('wreck', 'A').svg;
+    const dangerousWreck = symbolFor('hazard_danger', 'A').svg;
     const hazard = symbolFor('hazard', 'A').svg;
-    const danger = symbolFor('hazard_danger', 'A').svg;
 
-    expect(wreck).not.toBe(hazard);
-    expect(wreck).not.toBe(danger);
-    // A listing hull with broken timbers standing out of it.
-    expect(wreck).toContain('M4.2 21.6');
-    expect(wreck).toContain('M15.6 20.2 L15 11.6');
-    // The generic hazard is a black-banded sphere; the wreck must not reuse it.
-    expect(hazard).toContain('cy="17" r="9.5"');
-    expect(wreck).not.toContain('cy="17" r="9.5"');
+    expect(wreck).not.toBe(dangerousWreck);
+    expect(wreck).toContain('M7 16 H25 M9 13 L12 19');
+    expect(dangerousWreck).toContain('stroke-dasharray="2 2"');
+    expect(dangerousWreck).toContain('M7 16 H25 M9 13 L12 19');
+    expect(wreck).not.toContain('stroke-dasharray="2 2"');
+    expect(hazard).not.toContain('M7 16 H25');
     expect(symbolFor('wreck', 'A').label).toBe('Wreck');
   });
 

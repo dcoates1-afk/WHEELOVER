@@ -853,7 +853,6 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           color: '#ff43d0',
           weight: 1.8,
           opacity: 0.9,
-          dashArray: '5 5',
         },
       );
       if (mark.transitBearing !== null) {
@@ -908,16 +907,9 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
             ? baseSize + 2
             : baseSize;
       const html = spec.svg.replace('width="32" height="32"', `width="${size}" height="${size}"`);
-      // A transit symbol stacks both lights, so its anchor is the dot for this
-      // end (front at y 21.5, rear at 9.5 in the 32-unit viewBox), not the
-      // centre of the box. Anchoring the middle would plot the light metres
-      // off its charted position and spoil the alignment.
-      const anchorY =
-        mark.category === 'transit_front'
-          ? (size * 21.5) / 32
-          : mark.category === 'transit_rear'
-            ? (size * 9.5) / 32
-            : size / 2;
+      // Each leading-light symbol represents one mapped light at its own
+      // feature coordinate; the connecting line shows their alignment.
+      const anchorY = size / 2;
       const marker = L.marker([mark.lat, mark.lon], {
         icon: L.divIcon({
           className: 'marnav-mark-wrap',

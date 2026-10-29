@@ -23,7 +23,7 @@ const FRESH_MS = 6 * 60 * 60 * 1000;
 const STALE_MS = 30 * 24 * 60 * 60 * 1000;
 
 type Bounds = [number, number, number, number];
-type QueryKind = 'navaids' | 'pois';
+type QueryKind = 'navaids' | 'pois' | 'chart-features';
 
 const buildPoiQuery = RAW_BUILD_POI_QUERY as (bounds: Bounds) => string;
 
@@ -34,6 +34,24 @@ interface CacheEntry {
 }
 
 const inflight = new Map<string, Promise<CacheEntry>>();
+
+export function buildChartFeatureQuery([south, west, north, east]: Bounds): string {
+  const box = `${south},${west},${north},${east}`;
+  return [
+    '[out:json][timeout:45];(',
+    `nwr["seamark:type"="bridge"](${box});`,
+    `nwr["bridge"]["bridge"!="no"](${box});`,
+    `nwr["tidal"="yes"](${box});`,
+    `nwr["tidal:range"](${box});`,
+    `nwr["water"="tidal"](${box});`,
+    `nwr["waterway"="tidal_channel"](${box});`,
+    `nwr["boundary"="protected_area"](${box});`,
+    `nwr["boundary"="national_park"](${box});`,
+    `nwr["leisure"="nature_reserve"](${box});`,
+    `nwr["protect_class"](${box});`,
+    ');out geom tags;',
+  ].join('');
+}
 
 export function buildOverpassQuery([south, west, north, east]: Bounds): string {
   const box = `${south},${west},${north},${east}`;
@@ -175,12 +193,18 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
       return;
     }
 
-    const kind: QueryKind = url.searchParams.get('kind') === 'pois' ? 'pois' : 'navaids';
+    const requestedKind = url.searchParams.get('kind');
+    const kind: QueryKind = requestedKind === 'pois' || requestedKind === 'chart-features' ? requestedKind : 'navaids';
+    // Use a new cache namespace after changing chart-feature semantics so old
+    // generic road-bridge results cannot linger as if they were water crossings.
+    const cacheKind = kind === 'chart-features' ? 'chart-features-tidal-v4' : kind;
     const key = createHash('sha1')
-      .update(`${kind}:${bounds.map((v) => v.toFixed(3)).join(',')}`)
+      .update(`${cacheKind}:${bounds.map((v) => v.toFixed(3)).join(',')}`)
       .digest('hex')
       .slice(0, 16);
-    const query = kind === 'pois' ? buildPoiQuery(bounds) : buildOverpassQuery(bounds);
+    const query = kind === 'pois'
+      ? buildPoiQuery(bounds)
+      : kind === 'chart-features' ? buildChartFeatureQuery(bounds) : buildOverpassQuery(bounds);
     const cached = await readCache(key);
     const age = cached ? Date.now() - cached.fetchedAt : Infinity;
 

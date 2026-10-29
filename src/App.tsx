@@ -36,8 +36,9 @@ import type { GpsMode } from './lib/gpsPreference';
 import { navaidDatabase, regionForPoint } from './lib/navaidDb';
 import { ialaRegion } from './lib/navaids';
 import type { NavaidManifest } from './lib/navaidDb';
-import { queryNavaids } from './lib/overpass';
+import { queryChartFeatures, queryNavaids, type ChartFeature } from './lib/overpass';
 import { loadMarineData, type MarineFeature } from './lib/marineDb';
+import { loadNatura2000, type ProtectedAreaFeature } from './lib/protectedAreas';
 import { POI_MIN_ZOOM, queryPois } from './lib/pois';
 import type { Poi } from './lib/pois';
 import type { StationTab } from './lib/station';
@@ -119,6 +120,8 @@ export default function App() {
   const [worldwideNavaids, setWorldwideNavaids] = useState<Navaid[] | null>(null);
   const [pois, setPois] = useState<Poi[]>([]);
   const [marineFeatures, setMarineFeatures] = useState<{ ferries: MarineFeature[]; tss: MarineFeature[] } | null>(null);
+  const [chartFeatures, setChartFeatures] = useState<ChartFeature[]>([]);
+  const [protectedAreaFeatures, setProtectedAreaFeatures] = useState<ProtectedAreaFeature[]>([]);
   const [markSource, setMarkSource] = useState<{ live: boolean; cached: boolean }>({ live: false, cached: true });
   const [db, setDb] = useState<DbReport>({ manifest: null, checkedAt: null });
   const [checking, setChecking] = useState(false);
@@ -299,6 +302,64 @@ export default function App() {
     };
   }, [view.bounds]);
 
+  // Bridges and protected-area outlines are optional OSM context overlays.
+  const chartFeatureRequestId = useRef(0);
+  useEffect(() => {
+    const wantsFeatures = preferences.overlays.bridges || preferences.overlays.protectedAreas;
+    if (!wantsFeatures || view.zoom < 8) {
+      setChartFeatures([]);
+      return;
+    }
+    const [south, west, north, east] = view.bounds;
+    if (north - south > 2 || east - west > 2) {
+      setChartFeatures([]);
+      return;
+    }
+    const id = ++chartFeatureRequestId.current;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void queryChartFeatures(view.bounds, { signal: controller.signal })
+        .then(({ features }) => {
+          if (id === chartFeatureRequestId.current) setChartFeatures(features);
+        })
+        .catch(() => {
+          if (id === chartFeatureRequestId.current) setChartFeatures([]);
+        });
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [preferences.overlays.bridges, preferences.overlays.protectedAreas, view]);
+
+  const protectedAreaRequestId = useRef(0);
+  useEffect(() => {
+    if (!preferences.overlays.protectedAreas || view.zoom < 6) {
+      setProtectedAreaFeatures([]);
+      return;
+    }
+    const [south, west, north, east] = view.bounds;
+    if (north - south > 2 || east - west > 2) {
+      setProtectedAreaFeatures([]);
+      return;
+    }
+    const id = ++protectedAreaRequestId.current;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void loadNatura2000(view.bounds, controller.signal)
+        .then((features) => {
+          if (id === protectedAreaRequestId.current) setProtectedAreaFeatures(features);
+        })
+        .catch(() => {
+          if (id === protectedAreaRequestId.current) setProtectedAreaFeatures([]);
+        });
+    }, 450);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [preferences.overlays.protectedAreas, view]);
+
   // Public places follow the viewport and only load once a harbour-scale view
   // is on screen. A stale answer for an older view is discarded by request id.
   const poiRequestId = useRef(0);
@@ -471,6 +532,8 @@ export default function App() {
         pois={pois}
         zoom={view.zoom}
         marineFeatures={marineFeatures}
+        chartFeatures={chartFeatures}
+        protectedAreaFeatures={protectedAreaFeatures}
         onSelectMark={(mark) => {
           setSelectedVessel(null);
           setSelectedMark(mark);

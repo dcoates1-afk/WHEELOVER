@@ -6,6 +6,8 @@ import { createAisRelay } from './aisRelay';
 import { createDepthHandler } from './depthProxy';
 import { createOverpassHandler } from './overpassProxy';
 import { serveArchiveFile } from './archiveServer';
+import { createWreckResearchHandler } from './wreckResearchProxy';
+import { createNatura2000Handler } from './natura2000Proxy';
 
 /**
  * Dev/preview server glue: Overpass/depth proxies, local data archives and
@@ -24,6 +26,8 @@ export function marnavServer(options: { aisKey: string }): Plugin {
 
       server.middlewares.use('/api/overpass', createOverpassHandler(log));
       server.middlewares.use('/api/depth', createDepthHandler(log));
+      server.middlewares.use('/api/wreck-research', createWreckResearchHandler());
+      server.middlewares.use('/api/natura2000', createNatura2000Handler());
       server.middlewares.use('/marine-db', (req, res, next) => {
         if (!marineDir) return next();
         const path = (req.url ?? '/').split('?')[0] || '/';

@@ -52,13 +52,13 @@ interface LayerControlProps {
   hidden?: boolean;
 }
 
-function Section({ title, children, hint }: { title: string; children: ReactNode; hint?: string }) {
+function Section({ title, children, hint, defaultOpen = false, id }: { title: string; children: ReactNode; hint?: string; defaultOpen?: boolean; id?: string }) {
   return (
-    <section className="menu-section">
-      <h3 className="section-title">{title}</h3>
+    <details id={id} className="menu-section" open={defaultOpen}>
+      <summary className="section-title section-summary">{title}</summary>
       {hint && <p className="section-hint">{hint}</p>}
       <div className="menu-rows">{children}</div>
-    </section>
+    </details>
   );
 }
 
@@ -188,7 +188,7 @@ export function LayerControl({
               <div>
                 <p className="eyebrow">WHEELOVER</p>
                 <h2>Menu</h2>
-                <p className="menu-tagline">Maritime Navigation and Planning</p>
+                <p className="menu-tagline">Charts, navigation &amp; conditions</p>
               </div>
               <button type="button" className="icon-button" onClick={() => onOpen(false)} aria-label="Close menu">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -197,8 +197,32 @@ export function LayerControl({
               </button>
             </header>
 
+            <nav className="menu-shortcuts" aria-label="Menu sections">
+              {[
+                ['menu-display', 'Display'],
+                ['menu-overlays', 'Map options'],
+                ['menu-places', 'Places'],
+                ['menu-chart-detail', 'Chart detail'],
+                ['menu-vessel-position', 'Position'],
+                ['menu-stations', 'Stations'],
+              ].map(([id, label]) => (
+                <button key={id} type="button" onClick={(event) => {
+                  const panel = event.currentTarget.closest('.menu-panel');
+                  const section = panel?.querySelector(`#${id}`);
+                  if (section instanceof HTMLDetailsElement) section.open = true;
+                  const body = panel?.querySelector('.menu-body');
+                  if (body && section) {
+                    const top = section.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop;
+                    body.scrollTo({ top, behavior: 'smooth' });
+                  }
+                }}>
+                  {label}
+                </button>
+              ))}
+            </nav>
+
             <div className="menu-body">
-              <Section title="Base chart">
+              <Section title="Base chart" defaultOpen>
                 <RadioRow
                   label="Standard chart"
                   hint="OpenStreetMap raster"
@@ -247,7 +271,7 @@ export function LayerControl({
                 )}
               </Section>
 
-              <Section title="Display">
+              <Section title="Display" id="menu-display">
                 <div className="segmented segmented-three" role="radiogroup" aria-label="Chart theme">
                   {(['day', 'night', 'red'] as ThemeId[]).map((theme) => (
                     <button
@@ -271,7 +295,7 @@ export function LayerControl({
                 </p>
               </Section>
 
-              <Section title="Overlays">
+              <Section title="Map options" id="menu-overlays">
                 <ToggleRow
                   label="Depth contours"
                   hint="NOAA ENC isobaths in US waters (zoom 9+), GEBCO elsewhere"
@@ -351,6 +375,21 @@ export function LayerControl({
                   checked={preferences.overlays.tss}
                   onChange={(value) => setOverlay('tss', value)}
                 />
+                <ToggleRow
+                  label="Bridges & clearances"
+                  hint="Mapped bridge types and reported clearance/opening details · zoom 8+"
+                  checked={preferences.overlays.bridges}
+                  onChange={(value) => setOverlay('bridges', value)}
+                />
+                <ToggleRow
+                  label="Protected sites"
+                  hint="EMODnet Natura 2000 marine designations · zoom 6+ · Europe"
+                  checked={preferences.overlays.protectedAreas}
+                  onChange={(value) => setOverlay('protectedAreas', value)}
+                />
+                {(preferences.overlays.bridges || preferences.overlays.protectedAreas) && (
+                  <p className="menu-note">Bridge and OSM information is community-mapped and may be incomplete; missing clearance is unknown, not safe. Natura 2000 boundaries show designations, not a universal boating ban. Check current charts, notices, laws, and local authorities before navigating or entering a restricted area.</p>
+                )}
                 {preferences.overlays.navaids && (
                   <>
                     <p className="menu-note">
@@ -389,6 +428,7 @@ export function LayerControl({
 
               <Section
                 title="Public places"
+                id="menu-places"
                 hint="Marinas, fuel, chandlery, ramps, food and facilities from OpenStreetMap."
               >
                 <ToggleRow
@@ -448,7 +488,7 @@ export function LayerControl({
                 )}
               </Section>
 
-              <Section title="Chart detail">
+              <Section title="Chart detail" id="menu-chart-detail">
                 <ToggleRow
                   label="Show all marks"
                   hint="Ignore zoom declutter (can look crowded)"
@@ -536,6 +576,7 @@ export function LayerControl({
 
               <Section
                 title="Vessel position"
+                id="menu-vessel-position"
                 hint={gpsMode === 'off' ? 'Device GPS is disabled. Nothing is requested.' : geoError ?? undefined}
               >
                 <div className="segmented" role="radiogroup" aria-label="GPS mode">
@@ -569,7 +610,7 @@ export function LayerControl({
                 />
               </Section>
 
-              <Section title="Stations">
+              <Section title="Stations" id="menu-stations">
                 {(['ais', 'colregs', 'weather'] as StationTab[]).map((tab) => (
                   <button
                     key={tab}
@@ -586,7 +627,7 @@ export function LayerControl({
                 ))}
               </Section>
 
-              <Section title="Mark database">
+              <Section title="Mark database" id="menu-data">
                 {checkMessage && (
                   <p className="menu-note" data-testid="check-message" role="status">
                     {checkMessage}

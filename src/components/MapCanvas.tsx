@@ -4,6 +4,9 @@ import L from 'leaflet';
 import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import { describeTssFeature, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
+import type { ChartFeature } from '../lib/overpass';
+import { distanceMeters } from '../../shared/navaid-core.mjs';
+import type { ProtectedAreaFeature } from '../lib/protectedAreas';
 import { ialaRegion, quickInfo, symbolFor } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
 import { vesselCourse, vesselIconSize, vesselIconSvg, vesselIsMoving, vesselTooltipHtml } from '../lib/aisVessel';
@@ -62,6 +65,29 @@ function escapePopupText(value: string): string {
   })[character]!);
 }
 
+function pointInRing(lon: number, lat: number, ring: GeoJSON.Position[]): boolean {
+  let inside = false;
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+    const [x1, y1] = ring[index];
+    const [x2, y2] = ring[previous];
+    if ((y1 > lat) !== (y2 > lat) && lon < ((x2 - x1) * (lat - y1)) / (y2 - y1) + x1) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function pointInProtectedGeometry(lon: number, lat: number, geometry: GeoJSON.Geometry): boolean {
+  const polygons = geometry.type === 'Polygon'
+    ? [geometry.coordinates]
+    : geometry.type === 'MultiPolygon'
+      ? geometry.coordinates
+      : [];
+  return polygons.some((rings) =>
+    rings.length > 0 && pointInRing(lon, lat, rings[0]) && !rings.slice(1).some((hole) => pointInRing(lon, lat, hole)),
+  );
+}
+
 export interface MapCanvasProps {
   preferences: ChartPreferences;
   initialCenter?: [number, number];
@@ -79,6 +105,8 @@ export interface MapCanvasProps {
   fix: GeoFix | null;
   aisVessels: AisVessel[];
   marineFeatures: { ferries: MarineFeature[]; tss: MarineFeature[] } | null;
+  chartFeatures: ChartFeature[];
+  protectedAreaFeatures: ProtectedAreaFeature[];
 }
 
 /**
@@ -249,7 +277,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   const contourVectorsRef = useRef<L.LayerGroup | null>(null);
   const contourCoverageRef = useRef(false);
   const contourRequestRef = useRef<AbortController | null>(null);
-  const groupsRef = useRef<Partial<Record<'navaids' | 'ferries' | 'tss' | 'ais' | 'pois' | 'reportingSystems', L.LayerGroup>>>({});
+  const groupsRef = useRef<Partial<Record<'navaids' | 'ferries' | 'tss' | 'ais' | 'pois' | 'reportingSystems' | 'bridges' | 'protectedAreas', L.LayerGroup>>>({});
   const vesselRef = useRef<L.Marker | null>(null);
   const aisMarkersRef = useRef(
     new Map<number, { marker: L.Marker; vessel: AisVessel; iconHtml: string; label: string }>(),
@@ -350,11 +378,13 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     const ais = L.layerGroup();
     const pois = L.layerGroup();
     const reportingSystems = L.layerGroup();
+    const bridges = L.layerGroup();
+    const protectedAreas = L.layerGroup();
     const depthLabels = L.layerGroup();
 
     seaRef.current = sea;
     depthLabelsRef.current = depthLabels;
-    groupsRef.current = { navaids, ferries, tss, ais, pois, reportingSystems };
+    groupsRef.current = { navaids, ferries, tss, ais, pois, reportingSystems, bridges, protectedAreas };
 
     // ENC contours replace GEBCO inside US waters; the global layer would only
     // double-draw the same water with a coarser interval. The choice follows
@@ -821,6 +851,72 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       tss.addTo(map);
     }
   }, [props.marineFeatures, props.preferences.overlays.ferries, props.preferences.overlays.tss]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const group = groupsRef.current.bridges;
+    if (!map || !group) return;
+    group.clearLayers();
+    if (!props.preferences.overlays.bridges) {
+      if (map.hasLayer(group)) map.removeLayer(group);
+      return;
+    }
+    for (const feature of props.chartFeatures.filter((entry) => entry.type === 'bridge')) {
+      const details = feature.properties;
+      const marker = L.circleMarker([feature.lat, feature.lon], {
+        radius: 4.5,
+        color: '#152c3a',
+        weight: 1.8,
+        fillColor: '#fff4bb',
+        fillOpacity: 1,
+        pane: 'lanes',
+      });
+      marker.bindTooltip(feature.name, { sticky: true, className: 'marnav-tip' });
+      const clearance = details['seamark:bridge:clearance_height']
+        ? `${details['seamark:bridge:clearance_height']} m (mapped report; datum not established)`
+        : 'Not supplied in this mapped record';
+      const bridgeDetails = Object.entries(details)
+        .filter(([key]) => !key.startsWith('seamark:bridge:clearance_height'))
+        .map(([key, value]) => `<div><strong>${escapePopupText(key.replace(/^seamark:bridge:/, '').replace(/[_:]/g, ' '))}:</strong> ${escapePopupText(value)}</div>`)
+        .join('');
+      marker.bindPopup(`<strong>${escapePopupText(feature.name)}</strong><div><strong>Reported vertical clearance:</strong> ${escapePopupText(clearance)}</div>${bridgeDetails ? `<hr>${bridgeDetails}` : ''}<hr><small>OpenStreetMap (community-mapped). Opening schedule/status is not established by this record; clearance may be incomplete, stale, or datum-dependent. Consult current official charts, Coast Pilot, notices, and the bridge authority. <a href="${escapePopupText(feature.sourceUrl)}" target="_blank" rel="noopener noreferrer">Source feature ↗</a></small>`, { className: 'reporting-system-popup', maxWidth: 340 });
+      group.addLayer(marker);
+    }
+    if (props.chartFeatures.some((entry) => entry.type === 'bridge')) group.addTo(map);
+    else if (map.hasLayer(group)) map.removeLayer(group);
+  }, [props.chartFeatures, props.preferences.overlays.bridges]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const group = groupsRef.current.protectedAreas;
+    if (!map || !group) return;
+    group.clearLayers();
+    if (!props.preferences.overlays.protectedAreas) {
+      if (map.hasLayer(group)) map.removeLayer(group);
+      return;
+    }
+    for (const feature of props.protectedAreaFeatures) {
+      const layer = L.geoJSON(feature.geometry as GeoJSON.GeoJsonObject, {
+        pane: 'lanes',
+        style: { color: '#8a54c7', weight: 2, opacity: 0.92, dashArray: '7 5', fillColor: '#ad82e5', fillOpacity: 0.08 },
+      });
+      const rows = Object.entries(feature.properties).map(([key, value]) => `<div><strong>${escapePopupText(key.replace(/_/g, ' '))}:</strong> ${escapePopupText(value)}</div>`).join('');
+      const candidateWrecks = props.marks
+        .filter((mark) => (mark.category === 'wreck' || mark.category === 'hazard_danger') &&
+          pointInProtectedGeometry(mark.lon, mark.lat, feature.geometry))
+        .sort((a, b) => distanceMeters(a.lat, a.lon, (feature.bounds[0] + feature.bounds[2]) / 2, (feature.bounds[1] + feature.bounds[3]) / 2) - distanceMeters(b.lat, b.lon, (feature.bounds[0] + feature.bounds[2]) / 2, (feature.bounds[1] + feature.bounds[3]) / 2));
+      const nearbyWrecks = candidateWrecks.slice(0, 8).map((mark) => {
+        const title = mark.name ?? mark.wreckInventoryName ?? `Wreck ${mark.id}`;
+        const metres = Math.round(distanceMeters(mark.lat, mark.lon, (feature.bounds[0] + feature.bounds[2]) / 2, (feature.bounds[1] + feature.bounds[3]) / 2));
+        return `<div>${escapePopupText(title)} · approximately ${metres} m from site's bounding-box centre</div>`;
+      }).join('');
+      layer.bindTooltip(feature.name, { sticky: true, className: 'marnav-tip' });
+      layer.bindPopup(`<strong>${escapePopupText(feature.name)}</strong>${rows ? `<hr>${rows}` : ''}${nearbyWrecks ? `<hr><strong>Charted wrecks within mapped site geometry (possible association)</strong>${nearbyWrecks}` : ''}<hr><small>Protected-site designation only; it does not establish a boating prohibition. Check site-specific rules with the responsible authority. EMODnet Human Activities / EEA, CC BY 4.0. <a href="${escapePopupText(feature.sourceUrl)}" target="_blank" rel="noopener noreferrer">Dataset information ↗</a></small>`, { className: 'reporting-system-popup', maxWidth: 360 });
+      group.addLayer(layer);
+    }
+    if (props.protectedAreaFeatures.length > 0) group.addTo(map);
+    else if (map.hasLayer(group)) map.removeLayer(group);
+  }, [props.marks, props.protectedAreaFeatures, props.preferences.overlays.protectedAreas]);
 
   // NAVAID markers.
   useEffect(() => {

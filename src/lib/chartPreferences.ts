@@ -13,6 +13,8 @@ export interface OverlayPreferences {
   soundings: boolean;
   depthLabels: boolean;
   pois: boolean;
+  bridges: boolean;
+  protectedAreas: boolean;
 }
 
 export interface ChartPreferences {
@@ -44,6 +46,8 @@ export const DEFAULT_PREFERENCES: ChartPreferences = {
     soundings: false,
     depthLabels: false,
     pois: false,
+    bridges: false,
+    protectedAreas: false,
   },
   showAllMarks: false,
   showPosition: false,

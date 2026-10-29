@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { selectVisibleNavaids } from '../shared/navaid-core.mjs';
 import type { Navaid } from './lib/navaidTypes';
 import type { SeedExtract } from './lib/navaidDb';
-import { isUsWaters } from './lib/usWaters';
+import { isUsWaters } from './components/MapCanvas';
 import type { MapHandle } from './components/MapCanvas';
 import type { DbInfo } from './components/LayerControl';
 import { GpsWidget } from './components/GpsWidget';

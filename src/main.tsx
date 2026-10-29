@@ -1,15 +1,11 @@
-import { lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import 'leaflet/dist/leaflet.css';
 import './styles.css';
+import App from './App';
 import LandingPage from './LandingPage';
 
-const App = lazy(() => import('./App'));
-
 const isAppRoute = window.location.pathname === '/app' || window.location.pathname.startsWith('/app/');
-const RootView = isAppRoute
-  ? <Suspense fallback={<div className="app-loading" role="status">Loading chart…</div>}><App /></Suspense>
-  : <LandingPage />;
+const RootView = isAppRoute ? App : LandingPage;
 
 if (isAppRoute && window.location.pathname !== '/app') {
   window.history.replaceState(null, '', `/app${window.location.search}${window.location.hash}`);
@@ -39,4 +35,4 @@ import.meta.env.DEV && console.info(`[WHEELOVER] ${isAppRoute ? 'chart app' : 'p
 const container = document.getElementById('root');
 if (!container) throw new Error('WHEELOVER root element is missing');
 
-createRoot(container).render(RootView);
+createRoot(container).render(<RootView />);

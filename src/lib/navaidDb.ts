@@ -1,4 +1,6 @@
 import type { Navaid } from './navaidTypes';
+import seedExtract from '../data/solentNavaids.json';
+
 export const MANIFEST_URL = '/navaid-db/manifest.json';
 export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export const MAX_SHARDS_PER_LOAD = 14;
@@ -234,6 +236,10 @@ export class NavaidDatabase {
 
   getCheckedAt(): number | null {
     return this.checkedAt;
+  }
+
+  seed(): Navaid[] {
+    return (seedExtract as SeedExtract).navaids;
   }
 
   async init(): Promise<InitReport> {

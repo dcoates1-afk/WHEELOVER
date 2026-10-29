@@ -7,7 +7,6 @@
  * configured so the station still demonstrates its layout offline.
  */
 import { WebSocket } from 'ws';
-import { AIS_RETRY_LIMIT, planAisRetry } from './aisReconnect';
 import {
   AIS_GLOBAL_BOX,
   boxContains,
@@ -210,8 +209,6 @@ export function createAisRelay(options: { apiKey: string; log?: (message: string
   let state: RelayState = 'idle';
   let note: string | null = null;
   let attempts = 0;
-  let rateLimitRetries = 0;
-  let rateLimited = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let snapshotTimer: ReturnType<typeof setInterval> | null = null;
   let demoTimer: ReturnType<typeof setInterval> | null = null;
@@ -548,60 +545,32 @@ export function createAisRelay(options: { apiKey: string; log?: (message: string
   function scheduleReconnect() {
     if (reconnectTimer || clients.size === 0) return;
     attempts += 1;
-    const retryNumber = rateLimited ? ++rateLimitRetries : attempts;
-    const plan = planAisRetry(retryNumber, rateLimited);
-    if (plan.exhausted) {
-      setState('error', plan.message);
-      startDemo(plan.message);
+    if (attempts > 6) {
+      setState('error', 'AISStream unreachable — showing simulated traffic');
+      startDemo('AISStream unreachable — simulated traffic');
       return;
     }
-    setState('reconnecting', plan.message);
-    log(`${plan.message}${rateLimited ? ' (429 backoff)' : ''}`);
+    const delay = Math.min(30_000, 1000 * 2 ** attempts) + Math.random() * 400;
+    setState('reconnecting', `Upstream dropped — retry ${attempts} in ${Math.round(delay / 1000)} s`);
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
       connect();
-    }, plan.delayMs);
+    }, delay);
   }
 
   function connect() {
-    if (clients.size === 0 || upstream || reconnectTimer) return;
     if (!options.apiKey) {
       startDemo('No AISStream key configured — simulated traffic');
       return;
     }
+    if (upstream) return;
+
     setState('connecting');
     const socket = new WebSocket(UPSTREAM, { handshakeTimeout: 15_000 });
     upstream = socket;
-    let retryScheduled = false;
-
-    socket.on('unexpected-response', (_request, response) => {
-      if (response.statusCode !== 429) return;
-      rateLimited = true;
-      retryScheduled = true;
-      rateLimitRetries += 1;
-      const plan = planAisRetry(rateLimitRetries, true);
-      log(plan.exhausted
-        ? `AISStream returned HTTP 429 after ${AIS_RETRY_LIMIT} retries; using simulated traffic`
-        : `AISStream returned HTTP 429; ${plan.message}`);
-      response.resume();
-      if (upstream === socket) upstream = null;
-      if (plan.exhausted) {
-        setState('error', plan.message);
-        startDemo(plan.message);
-        return;
-      }
-      setState('reconnecting', plan.message);
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
-        connect();
-      }, plan.delayMs);
-    });
 
     socket.on('open', () => {
       attempts = 0;
-      rateLimitRetries = 0;
-      rateLimited = false;
-      retryScheduled = false;
       if (pendingBoxes) {
         subscribedBoxes = pendingBoxes;
         pendingBoxes = null;
@@ -627,15 +596,10 @@ export function createAisRelay(options: { apiKey: string; log?: (message: string
         setState('idle');
         return;
       }
-      if (retryScheduled) return;
       if (resubscribing) {
         resubscribing = false;
         log('AIS upstream closed for resubscribe — reconnecting on the new area');
         connect();
-        return;
-      }
-      if (rateLimited) {
-        scheduleReconnect();
         return;
       }
       log(`AIS upstream closed (${code})`);
@@ -711,9 +675,6 @@ export function createAisRelay(options: { apiKey: string; log?: (message: string
     subscribedBoxes = [AIS_GLOBAL_BOX.map((pair) => [...pair]) as number[][]];
     upstream?.close();
     upstream = null;
-    attempts = 0;
-    rateLimitRetries = 0;
-    rateLimited = false;
     vessels.clear();
     statics.clear();
     for (const client of clients.keys()) client.close();

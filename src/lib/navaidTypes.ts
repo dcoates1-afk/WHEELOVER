@@ -49,7 +49,11 @@ export interface Navaid {
   /** Exact source light-character code, e.g. F, Fl, Iso; missing is not assumed steady. */
   lightCharacter?: string | null;
   /** Separate numbered light sectors, including any encoded bearing limits. */
-  lightSectors?: { sector: number; character?: string; colour?: string; group?: string; period?: string; sequence?: string; start?: string; end?: string; range?: string }[];
+  lightSectors?: {
+    sector: number; character?: string; colour?: string; group?: string; period?: string; sequence?: string;
+    start?: string; end?: string; range?: string; visibility?: string; exhibition?: string; category?: string;
+    orientation?: string; height?: string; multiple?: string;
+  }[];
   /** Encoded buoyage system (e.g. IALA-A/B), when supplied by the source. */
   buoyageSystem?: string | null;
   /** Cautious plain-language surface-navigation effect from wreck tags only. */

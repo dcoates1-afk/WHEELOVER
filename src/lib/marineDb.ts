@@ -1,6 +1,6 @@
 import type { Navaid } from './navaidTypes';
 
-export type MarineLayer = 'navaids' | 'ferries' | 'tss';
+export type MarineLayer = 'navaids' | 'ferries' | 'bridges' | 'tss';
 export type MarineBounds = [south: number, west: number, north: number, east: number];
 
 export interface MarineFeature {
@@ -94,7 +94,9 @@ export interface MarineManifest {
   version: string;
   generatedAt: string;
   cellSize: number;
-  layers: Record<MarineLayer, { count: number; shards: MarineShard[] }>;
+  layers: Record<Exclude<MarineLayer, 'bridges'>, { count: number; shards: MarineShard[] }> & {
+    bridges?: { count: number; shards: MarineShard[] };
+  };
 }
 
 const isBounds = (value: unknown): value is MarineBounds =>
@@ -105,15 +107,17 @@ export function validateMarineManifest(value: unknown): MarineManifest | null {
   const input = value as Partial<MarineManifest>;
   if (input.schema !== 1 || typeof input.version !== 'string' || !input.layers) return null;
   const layers = {} as MarineManifest['layers'];
-  for (const layer of ['navaids', 'ferries', 'tss'] as const) {
+  for (const layer of ['navaids', 'ferries', 'tss', 'bridges'] as const) {
     const entry = input.layers[layer];
+    if (layer === 'bridges' && entry === undefined) continue;
     if (!entry || !Array.isArray(entry.shards)) return null;
     const shards: MarineShard[] = [];
     for (const shard of entry.shards) {
       if (!shard || typeof shard.path !== 'string' || !isBounds(shard.bounds)) return null;
       shards.push({ path: shard.path, bounds: shard.bounds, count: Number(shard.count) || 0 });
     }
-    layers[layer] = { count: Number(entry.count) || 0, shards };
+    if (layer === 'bridges') layers.bridges = { count: Number(entry.count) || 0, shards };
+    else layers[layer] = { count: Number(entry.count) || 0, shards };
   }
   return {
     schema: 1,
@@ -129,7 +133,7 @@ export function marineBoundsIntersect(a: MarineBounds, b: MarineBounds): boolean
 }
 
 export function marineShardsForBounds(manifest: MarineManifest, layer: MarineLayer, bounds: MarineBounds): MarineShard[] {
-  return manifest.layers[layer].shards.filter((shard) => marineBoundsIntersect(shard.bounds, bounds));
+  return (manifest.layers[layer]?.shards ?? []).filter((shard) => marineBoundsIntersect(shard.bounds, bounds));
 }
 
 function marineDataUrl(path: string, configuredBase = import.meta.env.VITE_MARINE_DATA_URL): string {
@@ -149,10 +153,10 @@ async function readManifest(baseUrl?: string): Promise<MarineManifest> {
 export async function loadMarineData(
   bounds: MarineBounds,
   options: { signal?: AbortSignal; baseUrl?: string } = {},
-): Promise<{ navaids: Navaid[]; ferries: MarineFeature[]; tss: MarineFeature[] }> {
+): Promise<{ navaids: Navaid[]; ferries: MarineFeature[]; bridges: MarineFeature[]; tss: MarineFeature[] }> {
   const manifest = await readManifest(options.baseUrl);
-  const result: Record<MarineLayer, MarineFeature[]> = { navaids: [], ferries: [], tss: [] };
-  for (const layer of ['navaids', 'ferries', 'tss'] as const) {
+  const result: Record<MarineLayer, MarineFeature[]> = { navaids: [], ferries: [], bridges: [], tss: [] };
+  for (const layer of ['navaids', 'ferries', 'bridges', 'tss'] as const) {
     const shards = marineShardsForBounds(manifest, layer, bounds);
     const responses = await Promise.all(
       shards.map(async (shard) => {

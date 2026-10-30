@@ -119,7 +119,7 @@ export default function App() {
   const [marks, setMarks] = useState<Navaid[]>([]);
   const [worldwideNavaids, setWorldwideNavaids] = useState<Navaid[] | null>(null);
   const [pois, setPois] = useState<Poi[]>([]);
-  const [marineFeatures, setMarineFeatures] = useState<{ ferries: MarineFeature[]; tss: MarineFeature[] } | null>(null);
+  const [marineFeatures, setMarineFeatures] = useState<{ ferries: MarineFeature[]; bridges: MarineFeature[]; tss: MarineFeature[] } | null>(null);
   const [chartFeatures, setChartFeatures] = useState<ChartFeature[]>([]);
   const [protectedAreaFeatures, setProtectedAreaFeatures] = useState<ProtectedAreaFeature[]>([]);
   const [markSource, setMarkSource] = useState<{ live: boolean; cached: boolean }>({ live: false, cached: true });
@@ -289,8 +289,8 @@ export default function App() {
       void loadMarineData(view.bounds, { signal: controller.signal })
         .then((features) => {
           if (id === marineRequestId.current) {
-            setMarineFeatures({ ferries: features.ferries, tss: features.tss });
-            if (features.navaids.length > 0) setWorldwideNavaids(features.navaids);
+            setMarineFeatures({ ferries: features.ferries, bridges: features.bridges, tss: features.tss });
+            setWorldwideNavaids(features.navaids);
           }
         })
         .catch(() => {
@@ -403,10 +403,28 @@ export default function App() {
   // into the marker budget that the marks still on screen need.
   // Pair the front and rear lights of each transit before declutter, so both
   // ends carry the leading line's bearing even if only one survives on screen.
-  const chartedMarks = useMemo(
-    () => annotateTransits(filterNavaidsByGroups(worldwideNavaids ?? marks, preferences.hiddenGroups)),
-    [marks, worldwideNavaids, preferences.hiddenGroups],
-  );
+  const chartedMarks = useMemo(() => {
+    const merged = new Map((worldwideNavaids ?? marks).map((mark) => [mark.id, mark]));
+    // Preserve richer regional source metadata when the worldwide archive has
+    // a matching mark but an older or less-complete record.
+    for (const local of marks) {
+      const global = merged.get(local.id);
+      if (!global) {
+        merged.set(local.id, local);
+        continue;
+      }
+      const enriched = { ...global } as Navaid;
+      for (const [key, value] of Object.entries(local)) {
+        const current = (enriched as unknown as Record<string, unknown>)[key];
+        if ((current === null || current === undefined || current === '') && value !== null && value !== undefined && value !== '') {
+          (enriched as unknown as Record<string, unknown>)[key] = value;
+        }
+      }
+      if (!global.lightSectors?.length && local.lightSectors?.length) enriched.lightSectors = local.lightSectors;
+      merged.set(local.id, enriched);
+    }
+    return annotateTransits(filterNavaidsByGroups([...merged.values()], preferences.hiddenGroups));
+  }, [marks, worldwideNavaids, preferences.hiddenGroups]);
 
   const marksInView = useMemo(() => {
     const [south, west, north, east] = view.bounds;

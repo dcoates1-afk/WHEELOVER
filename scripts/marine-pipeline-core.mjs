@@ -18,10 +18,12 @@ export async function writeJournal(path, journal) {
 }
 
 export async function writeMarineSource(path, planetFingerprint) {
-  if (typeof planetFingerprint !== 'string' || !/^\d+:\d+$/.test(planetFingerprint)) {
+  if (typeof planetFingerprint !== 'string' || !/^\d+:\d+:\d+$/.test(planetFingerprint)) {
     throw new Error('Invalid planet fingerprint');
   }
-  await writeJournal(path, { version: 1, planetFingerprint });
+  // Version 4 adds complete GDAL all_tags exports, including numbered lights;
+  // earlier intermediate extracts may have silently lost numbered sector tags.
+  await writeJournal(path, { version: 4, planetFingerprint });
 }
 
 async function exists(path) {

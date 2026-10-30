@@ -28,11 +28,12 @@ const manifestPath = resolve(base, 'manifest.json');
 if (!existsSync(manifestPath)) throw new Error(`Missing ${manifestPath}; build the archive first`);
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 if (manifest.schema !== 1 || !manifest.version || !manifest.layers) throw new Error('Invalid marine manifest');
-for (const layer of ['navaids', 'ferries', 'tss']) {
+const layersToVerify = ['navaids', 'ferries', 'tss', ...(manifest.layers.bridges ? ['bridges'] : [])];
+for (const layer of layersToVerify) {
   const info = manifest.layers[layer];
   if (!info || !Array.isArray(info.shards)) throw new Error(`Missing ${layer} shard list`);
   let count = 0;
-  const ids = layer === 'tss' ? new Set() : null;
+  const ids = new Set();
   for (const shard of info.shards) {
     const file = resolve(base, shard.path);
     if (!existsSync(file)) throw new Error(`Missing shard ${shard.path}`);
@@ -40,9 +41,26 @@ for (const layer of ['navaids', 'ferries', 'tss']) {
     if (payload.features.length !== shard.count) throw new Error(`Count mismatch in ${shard.path}`);
     for (const feature of payload.features) {
       if (!feature.id || !feature.name || feature.path.length < 1) throw new Error(`Invalid feature in ${shard.path}`);
-      if (layer === 'navaids' && (!feature.navaid || !Number.isFinite(feature.navaid.lat) || !Number.isFinite(feature.navaid.lon))) throw new Error(`Invalid NAVAID payload in ${shard.path}`);
+      ids.add(feature.id);
+      if (layer === 'navaids') {
+        if (!feature.navaid || !Number.isFinite(feature.navaid.lat) || !Number.isFinite(feature.navaid.lon)) throw new Error(`Invalid NAVAID payload in ${shard.path}`);
+        const sectorIds = new Set();
+        for (const sector of feature.navaid.lightSectors ?? []) {
+          if (!Number.isInteger(sector.sector) || sector.sector < 1) throw new Error(`Invalid light sector in ${shard.path}: ${feature.id}`);
+          if (sectorIds.has(sector.sector)) throw new Error(`Duplicate light sector number in ${shard.path}: ${feature.id} sector ${sector.sector}`);
+          sectorIds.add(sector.sector);
+          for (const bearing of [sector.start, sector.end]) {
+            if (bearing != null && (!Number.isFinite(Number(bearing)) || Number(bearing) < 0 || Number(bearing) > 360)) {
+              throw new Error(`Invalid light-sector bearing in ${shard.path}: ${feature.id} sector ${sector.sector}`);
+            }
+          }
+          if (sector.range != null && (!Number.isFinite(Number(sector.range)) || Number(sector.range) <= 0)) {
+            throw new Error(`Invalid light-sector range in ${shard.path}: ${feature.id} sector ${sector.sector}`);
+          }
+        }
+      }
+      if (layer === 'bridges' && (!Array.isArray(feature.paths) || !feature.paths.some((path) => path.length >= 2))) throw new Error(`Bridge has no drawable geometry in ${shard.path}: ${feature.id}`);
       if (layer === 'tss') {
-        ids.add(feature.id);
         if (feature.sourceUrl && !isAllowedTssSourceUrl(feature.sourceUrl)) throw new Error(`Invalid TSS source link in ${shard.path}: ${feature.sourceUrl}`);
         if (feature.details && Object.values(feature.details).some((value) => typeof value !== 'string')) throw new Error(`Invalid TSS details in ${shard.path}`);
         const linePaths = feature.paths ?? (feature.path.length ? [feature.path] : []);
@@ -62,7 +80,7 @@ for (const layer of ['navaids', 'ferries', 'tss']) {
     }
     count += shard.count;
   }
-  if (layer === 'tss' && ids.size !== info.count) throw new Error(`TSS unique-ID mismatch: manifest ${info.count}, actual ${ids.size}`);
+  if (ids.size !== info.count) throw new Error(`${layer} unique-ID mismatch: manifest ${info.count}, actual ${ids.size}`);
   console.log(`PASS ${layer}: ${info.count} unique features in ${info.shards.length} shards (${count} shard copies)`);
 }
 console.log(`PASS manifest ${manifest.version}`);

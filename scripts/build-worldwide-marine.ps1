@@ -29,6 +29,10 @@ $TssLines = Join-Path $WorkDir "tss-lines-v2.geojsonseq"
 $TssPolygons = Join-Path $WorkDir "tss-polygons-v2.geojsonseq"
 $TssMultiLines = Join-Path $WorkDir "tss-multilines-v2.geojsonseq"
 $TssOtherRelations = Join-Path $WorkDir "tss-other-relations-v2.geojsonseq"
+$SeamarkLines = Join-Path $WorkDir "seamark-lines-v1.geojsonseq"
+$SeamarkPolygons = Join-Path $WorkDir "seamark-polygons-v1.geojsonseq"
+$SeamarkMultiLines = Join-Path $WorkDir "seamark-multilines-v1.geojsonseq"
+$SeamarkOtherRelations = Join-Path $WorkDir "seamark-other-relations-v1.geojsonseq"
 $MergedGeoJsonSeq = Join-Path $WorkDir "marine-with-ferry-relations.geojsonseq"
 $MarineSource = Join-Path $WorkDir "marine-source.json"
 $PipelineCli = Join-Path $PSScriptRoot "marine-pipeline-cli.mjs"
@@ -71,14 +75,16 @@ if (-not $SkipReplicationBootstrap) {
   Write-Warning "Skipping replication updates; the archive will represent the downloaded planet snapshot, not current OSM state."
 }
 
-# The filtered PBF and every derived extract are tied to the current PBF's size
-# and write time. A changed planet forces a rebuild instead of reusing stale data.
+# The filtered PBF and every derived extract are tied to the current PBF's size,
+# write time, and extraction schema. Bump schema when export fields/logic change;
+# otherwise a valid planet snapshot may reuse a sector-truncated cached archive.
 $PlanetInfo = Get-Item -LiteralPath $Planet
-$PlanetFingerprint = "$($PlanetInfo.Length):$($PlanetInfo.LastWriteTimeUtc.Ticks)"
+$ExportSchema = 4
+$PlanetFingerprint = "$($PlanetInfo.Length):$($PlanetInfo.LastWriteTimeUtc.Ticks):$ExportSchema"
 $ReuseFiltered = $false
 if ((Test-Path $Filtered) -and (Test-Path $MarineSource)) {
   $SourceRecord = Get-Content -Raw $MarineSource | ConvertFrom-Json
-  $ReuseFiltered = $SourceRecord.version -eq 1 -and $SourceRecord.planetFingerprint -eq $PlanetFingerprint
+  $ReuseFiltered = $SourceRecord.version -eq 4 -and $SourceRecord.planetFingerprint -eq $PlanetFingerprint
 }
 if (-not $ReuseFiltered -and $AdoptCompletedFilter) {
   if (-not (Test-Path $Filtered)) { throw "Cannot adopt completed filter; missing $Filtered" }
@@ -88,7 +94,7 @@ if (-not $ReuseFiltered -and $AdoptCompletedFilter) {
   if ($LASTEXITCODE -ne 0) { throw "Completed filtered PBF failed validation; preserve all inputs and intermediates." }
   node $PipelineCli write-source $MarineSource $PlanetFingerprint
   if ($LASTEXITCODE -ne 0) { throw "Could not record the completed filtered PBF's source fingerprint." }
-  foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $TssLines, $TssPolygons, $TssMultiLines, $TssOtherRelations, $MergedGeoJsonSeq)) {
+  foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $TssLines, $TssPolygons, $TssMultiLines, $TssOtherRelations, $SeamarkLines, $SeamarkPolygons, $SeamarkMultiLines, $SeamarkOtherRelations, $MergedGeoJsonSeq)) {
     if (Test-Path $Stale) { Remove-Item -LiteralPath $Stale -Force }
   }
   $ReuseFiltered = $true
@@ -98,12 +104,12 @@ if (-not $ReuseFiltered) {
   $PartialFiltered = "$Filtered.partial.osm.pbf"
   if (Test-Path $PartialFiltered) { Remove-Item -LiteralPath $PartialFiltered -Force }
   & osmium tags-filter --output $PartialFiltered $Planet `
-    "nwr/seamark" "nwr/seamark:*" "n/man_made=lighthouse" "route=ferry"
+    "nwr/seamark" "nwr/seamark:*" "n/man_made=lighthouse" "nwr/historic=wreck" "nwr/man_made=wreck" "route=ferry" "nwr/bridge" "nwr/tidal" "nwr/tidal:range" "nwr/water=tidal" "nwr/waterway=tidal_channel"
   if ($LASTEXITCODE -ne 0) { throw "osmium tags-filter failed ($LASTEXITCODE); original planet is unchanged." }
   Move-Item -LiteralPath $PartialFiltered -Destination $Filtered
   node $PipelineCli write-source $MarineSource $PlanetFingerprint
   if ($LASTEXITCODE -ne 0) { throw "Could not record the filtered data's source fingerprint." }
-  foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $TssLines, $TssPolygons, $TssMultiLines, $TssOtherRelations, $MergedGeoJsonSeq)) {
+  foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $TssLines, $TssPolygons, $TssMultiLines, $TssOtherRelations, $SeamarkLines, $SeamarkPolygons, $SeamarkMultiLines, $SeamarkOtherRelations, $MergedGeoJsonSeq)) {
     if (Test-Path $Stale) { Remove-Item -LiteralPath $Stale -Force }
   }
 }
@@ -117,11 +123,10 @@ if (-not (Test-Path $GeoJsonSeq)) {
   Move-Item -LiteralPath $PartialGeoJsonSeq -Destination $GeoJsonSeq
 }
 
-# GDAL's OSM driver assembles ferry route relations in multilinestrings. Export
-# them separately because osmium export intentionally drops general relations.
-# It also puts seamark TSS geometry in its lines/multipolygons layers, so export
-# those layers explicitly; the osmium export below does not reliably emit these
-# general relations and area geometries.
+# GDAL's OSM driver assembles ferry routes and seamark relations/areas in its
+# geometry layers. Export those explicitly because osmium export does not reliably
+# emit general relations or area geometries. all_tags preserves every OSM tag,
+# including numbered light-sector fields, in these OGR exports.
 $env:OSM_CONFIG_FILE = $GdalConfig
 if (-not (Test-Path $FilteredWays)) {
   Write-Host "Exporting tagged ferry ways from GDAL's lines layer."
@@ -171,7 +176,39 @@ if (-not (Test-Path $TssOtherRelations)) {
   if ($LASTEXITCODE -ne 0) { throw "GDAL TSS other-relations export failed ($LASTEXITCODE)." }
   Move-Item -LiteralPath $PartialTssOtherRelations -Destination $TssOtherRelations
 }
-$MarineSources = @($GeoJsonSeq, $FilteredWays, $FerryRelations, $TssLines, $TssPolygons, $TssMultiLines, $TssOtherRelations)
+if (-not (Test-Path $SeamarkLines)) {
+  Write-Host "Exporting all seamark line geometry from GDAL's reconstructed lines layer."
+  $PartialSeamarkLines = "$SeamarkLines.partial"
+  if (Test-Path $PartialSeamarkLines) { Remove-Item -LiteralPath $PartialSeamarkLines -Force }
+  & ogr2ogr -f GeoJSONSeq $PartialSeamarkLines $Filtered -dialect SQLite -sql "SELECT *, 'w' || osm_id AS osm_ref FROM lines WHERE seamark_type IS NOT NULL"
+  if ($LASTEXITCODE -ne 0) { throw "GDAL seamark-line export failed ($LASTEXITCODE)." }
+  Move-Item -LiteralPath $PartialSeamarkLines -Destination $SeamarkLines
+}
+if (-not (Test-Path $SeamarkPolygons)) {
+  Write-Host "Exporting all seamark polygon geometry from GDAL's multipolygons layer."
+  $PartialSeamarkPolygons = "$SeamarkPolygons.partial"
+  if (Test-Path $PartialSeamarkPolygons) { Remove-Item -LiteralPath $PartialSeamarkPolygons -Force }
+  & ogr2ogr -f GeoJSONSeq $PartialSeamarkPolygons $Filtered -dialect SQLite -sql "SELECT *, CASE WHEN osm_way_id IS NOT NULL THEN 'w' || osm_way_id ELSE 'r' || osm_id END AS osm_ref FROM multipolygons WHERE seamark_type IS NOT NULL"
+  if ($LASTEXITCODE -ne 0) { throw "GDAL seamark-polygon export failed ($LASTEXITCODE)." }
+  Move-Item -LiteralPath $PartialSeamarkPolygons -Destination $SeamarkPolygons
+}
+if (-not (Test-Path $SeamarkMultiLines)) {
+  Write-Host "Exporting all seamark relation line geometry from GDAL's multilinestrings layer."
+  $PartialSeamarkMultiLines = "$SeamarkMultiLines.partial"
+  if (Test-Path $PartialSeamarkMultiLines) { Remove-Item -LiteralPath $PartialSeamarkMultiLines -Force }
+  & ogr2ogr -f GeoJSONSeq $PartialSeamarkMultiLines $Filtered -dialect SQLite -sql "SELECT *, 'r' || osm_id AS osm_ref FROM multilinestrings WHERE seamark_type IS NOT NULL"
+  if ($LASTEXITCODE -ne 0) { throw "GDAL seamark-multiline export failed ($LASTEXITCODE)." }
+  Move-Item -LiteralPath $PartialSeamarkMultiLines -Destination $SeamarkMultiLines
+}
+if (-not (Test-Path $SeamarkOtherRelations)) {
+  Write-Host "Exporting all seamark relation area geometry from GDAL's other_relations layer."
+  $PartialSeamarkOtherRelations = "$SeamarkOtherRelations.partial"
+  if (Test-Path $PartialSeamarkOtherRelations) { Remove-Item -LiteralPath $PartialSeamarkOtherRelations -Force }
+  & ogr2ogr -f GeoJSONSeq $PartialSeamarkOtherRelations $Filtered -dialect SQLite -sql "SELECT *, 'r' || osm_id AS osm_ref FROM other_relations WHERE seamark_type IS NOT NULL"
+  if ($LASTEXITCODE -ne 0) { throw "GDAL seamark other-relations export failed ($LASTEXITCODE)." }
+  Move-Item -LiteralPath $PartialSeamarkOtherRelations -Destination $SeamarkOtherRelations
+}
+$MarineSources = @($GeoJsonSeq, $FilteredWays, $FerryRelations, $TssLines, $TssPolygons, $TssMultiLines, $TssOtherRelations, $SeamarkLines, $SeamarkPolygons, $SeamarkMultiLines, $SeamarkOtherRelations)
 $RebuildMerged = -not (Test-Path $MergedGeoJsonSeq)
 if (-not $RebuildMerged) {
   $MergedTime = (Get-Item -LiteralPath $MergedGeoJsonSeq).LastWriteTimeUtc

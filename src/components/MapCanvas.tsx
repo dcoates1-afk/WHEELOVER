@@ -4,7 +4,7 @@ import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import type { ChartFeature } from '../lib/overpass';
-import { distanceMeters } from '../../shared/navaid-core.mjs';
+import { distanceMeters, lightSectorArc, mirrorLightSectorBearings } from '../../shared/navaid-core.mjs';
 import type { ProtectedAreaFeature } from '../lib/protectedAreas';
 import { ialaRegion, quickInfo, symbolFor } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
@@ -87,6 +87,60 @@ function pointInProtectedGeometry(lon: number, lat: number, geometry: GeoJSON.Ge
   );
 }
 
+function sectorColour(value?: string): string {
+  const colour = value?.split(/[;,]/)[0]?.trim().toLowerCase();
+  if (colour === 'red') return '#e23b3b';
+  if (colour === 'green') return '#26a65b';
+  if (colour === 'white') return '#f4f7f8';
+  if (colour === 'yellow') return '#f4c531';
+  if (colour === 'orange') return '#f28c28';
+  if (colour === 'blue') return '#3d9bff';
+  if (colour === 'magenta') return '#e14bd1';
+  if (colour === 'amber') return '#ffbf00';
+  return '#d9a6ff';
+}
+
+function addLightSectors(group: L.LayerGroup, mark: Navaid, zoom: number): void {
+  for (const sector of mark.lightSectors ?? []) {
+    // Missing limits do not define a reliable wedge. Draw only the explicitly
+    // mapped sector span rather than guessing 0°/360°.
+    if (sector.start == null || sector.end == null) continue;
+    const start = Number(sector.start);
+    const end = Number(sector.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start > 360 || end < 0 || end > 360) continue;
+    const span = Math.abs(end - start) === 360 ? 360 : (end - start + 360) % 360;
+    if (span <= 0 || span > 360) continue;
+    const metresPerPixel = 40_075_016.686 * Math.max(0.01, Math.cos(mark.lat * Math.PI / 180)) / (256 * 2 ** zoom);
+    const displayRadius = Math.max(100, Math.min(12 * 1852, metresPerPixel * 72));
+    const rangeNm = Number(sector.range);
+    const radius = Number.isFinite(rangeNm) && rangeNm > 0 ? Math.min(displayRadius, rangeNm * 1852) : displayRadius;
+    // Reflect the mapped bearings across the north-south axis, swapping
+    // east/west while retaining the sector's north/south position.
+    const mirrored = mirrorLightSectorBearings(start, end);
+    if (!mirrored) continue;
+    const arc = lightSectorArc(mark.lat, mark.lon, mirrored[0], mirrored[1], radius);
+    if (arc.length < 2) continue;
+    const colour = sectorColour(sector.colour ?? mark.lightColour ?? undefined);
+    L.polygon([[mark.lat, mark.lon], ...arc], {
+      color: colour,
+      weight: 0,
+      fillColor: colour,
+      fillOpacity: 0.1,
+      interactive: false,
+      className: 'marnav-light-sector-fill',
+    }).addTo(group);
+    L.polyline([[mark.lat, mark.lon], arc[0]], {
+      color: colour, weight: 1.15, opacity: 0.78, interactive: false, className: 'marnav-light-sector-edge',
+    }).addTo(group);
+    L.polyline(arc, {
+      color: colour, weight: 1.2, opacity: 0.82, interactive: false, className: 'marnav-light-sector-arc',
+    }).addTo(group);
+    L.polyline([[mark.lat, mark.lon], arc.at(-1)!], {
+      color: colour, weight: 1.15, opacity: 0.78, interactive: false, className: 'marnav-light-sector-edge',
+    }).addTo(group);
+  }
+}
+
 export interface MapCanvasProps {
   preferences: ChartPreferences;
   initialCenter?: [number, number];
@@ -103,7 +157,7 @@ export interface MapCanvasProps {
   onMapClick: (lat: number, lon: number) => void;
   fix: GeoFix | null;
   aisVessels: AisVessel[];
-  marineFeatures: { ferries: MarineFeature[]; tss: MarineFeature[] } | null;
+  marineFeatures: { ferries: MarineFeature[]; bridges: MarineFeature[]; tss: MarineFeature[] } | null;
   chartFeatures: ChartFeature[];
   protectedAreaFeatures: ProtectedAreaFeature[];
 }
@@ -834,7 +888,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     tss.clearLayers();
     const fallbackFerries: MarineFeature[] = lanes.ferries.map((feature, index) => ({ ...feature, id: `fallback-ferry-${index}`, type: 'ferry_route', path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }));
     const fallbackTss: MarineFeature[] = lanes.tss.map((feature, index) => ({ ...feature, id: feature.id ?? `fallback-tss-${index}`, type: feature.type ?? 'separation_zone', name: feature.name || 'Traffic separation scheme', path: feature.path as [number, number][], bounds: featureBounds(feature.path as [number, number][]) }) as MarineFeature);
-    const source = props.marineFeatures ?? { ferries: fallbackFerries, tss: fallbackTss };
+    const source = props.marineFeatures ?? { ferries: fallbackFerries, bridges: [], tss: fallbackTss };
     for (const feature of source.ferries) {
       const line = L.polyline(feature.path, ferryStyle());
       line.bindTooltip(`Ferry route · ${feature.name}`, { sticky: true, className: 'marnav-tip' });
@@ -873,7 +927,30 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       if (map.hasLayer(group)) map.removeLayer(group);
       return;
     }
-    for (const feature of props.chartFeatures.filter((entry) => entry.type === 'bridge')) {
+    const archiveBridges: ChartFeature[] = (props.marineFeatures?.bridges ?? []).map((feature) => {
+      const centre = feature.path[Math.floor(feature.path.length / 2)] ?? [
+        (feature.bounds[0] + feature.bounds[2]) / 2,
+        (feature.bounds[1] + feature.bounds[3]) / 2,
+      ];
+      return {
+        id: feature.id,
+        type: 'bridge',
+        waterCrossing: true,
+        name: feature.name,
+        lat: centre[0],
+        lon: centre[1],
+        path: feature.path,
+        paths: feature.paths ?? [],
+        properties: feature.details ?? {},
+        sourceUrl: feature.sourceUrl ?? '',
+      };
+    });
+    const bridgeById = new Map<string, ChartFeature>();
+    for (const feature of [...props.chartFeatures.filter((entry) => entry.type === 'bridge'), ...archiveBridges]) {
+      bridgeById.set(feature.id, feature);
+    }
+    const bridges = [...bridgeById.values()];
+    for (const feature of bridges) {
       const details = feature.properties;
       const marker = L.circleMarker([feature.lat, feature.lon], {
         radius: 4.5,
@@ -894,9 +971,9 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       marker.bindPopup(`<strong>${escapePopupText(feature.name)}</strong><div><strong>Reported vertical clearance:</strong> ${escapePopupText(clearance)}</div>${bridgeDetails ? `<hr>${bridgeDetails}` : ''}<hr><small>OpenStreetMap (community-mapped). Opening schedule/status is not established by this record; clearance may be incomplete, stale, or datum-dependent. Consult current official charts, Coast Pilot, notices, and the bridge authority. <a href="${escapePopupText(feature.sourceUrl)}" target="_blank" rel="noopener noreferrer">Source feature ↗</a></small>`, { className: 'reporting-system-popup', maxWidth: 340 });
       group.addLayer(marker);
     }
-    if (props.chartFeatures.some((entry) => entry.type === 'bridge')) group.addTo(map);
+    if (bridges.length > 0) group.addTo(map);
     else if (map.hasLayer(group)) map.removeLayer(group);
-  }, [props.chartFeatures, props.preferences.overlays.bridges]);
+  }, [props.chartFeatures, props.marineFeatures?.bridges, props.preferences.overlays.bridges]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -999,6 +1076,9 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           }).addTo(group);
         }
       }
+      // Sector boundaries and the coloured fan sit beneath the familiar aid
+      // symbol. Sector bearings are source data; no missing limit is inferred.
+      addLightSectors(group, mark, props.zoom);
       const region = ialaRegion(mark.lat, mark.lon);
       const spec = symbolFor(mark.category, region);
       // Major lights read as the more important aid: slightly larger star. A

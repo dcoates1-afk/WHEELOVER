@@ -188,14 +188,15 @@ function lateralCategory(category) {
  */
 export function classifyTags(tags) {
   const type = (tags['seamark:type'] || '').trim();
-  const lightChar = tags['seamark:light:character'];
+  const sectors = lightSectorsFromTags(tags);
+  const lightChar = tags['seamark:light:character'] ?? sectors.find((sector) => sector.character)?.character;
   const category = firstTag(tags, [
     `seamark:${type}:category`,
     'seamark:category',
     'seamark:light:category',
   ]);
   const form = formFor(type, tags);
-  const lit = Boolean(lightChar || tags['seamark:light:colour'] || tags['seamark:light:range']);
+  const lit = Boolean(lightChar || tags['seamark:light:colour'] || tags['seamark:light:range'] || sectors.length);
   const leading = isLeading(tags, type, category);
   const transitRole = transitRoleFor(category);
   const base = { form, priority: PRIORITY.other, lit };
@@ -321,11 +322,12 @@ export function classifyTags(tags) {
 }
 
 export function lightText(tags) {
-  const character = tags['seamark:light:character'];
+  const sector = lightSectorsFromTags(tags).find((entry) => entry.character);
+  const character = tags['seamark:light:character'] ?? sector?.character;
   if (!character) return null;
-  const group = tags['seamark:light:group'];
-  const colour = tags['seamark:light:colour'];
-  const period = tags['seamark:light:period'];
+  const group = tags['seamark:light:group'] ?? sector?.group;
+  const colour = tags['seamark:light:colour'] ?? sector?.colour;
+  const period = tags['seamark:light:period'] ?? sector?.period;
   const char = group ? `${character}(${group})` : character;
   return [char, colour, period ? `${period}s` : null].filter(Boolean).join(' ');
 }
@@ -347,27 +349,91 @@ function wreckBoatingEffect(category, waterLevel) {
   return [categoryEffect, water, fallback].filter(Boolean).join(' ') || null;
 }
 
-function lightSectorsFromTags(tags) {
+/** Mirror clockwise-from-north sector limits east-to-west, keeping north and south fixed. */
+export function mirrorLightSectorBearings(start, end) {
+  if (![start, end].every((value) => Number.isFinite(value) && value >= 0 && value <= 360)) return null;
+  const mirror = (bearing) => (360 - bearing) % 360;
+  return [mirror(end), mirror(start)];
+}
+
+/** Geographic arc for clockwise-from-north OSM sector bearings; invalid or zero-width sectors are omitted. */
+export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees = 4) {
+  if (![lat, lon, start, end, radiusMeters, stepDegrees].every(Number.isFinite) ||
+    Math.abs(lat) > 90 || Math.abs(lon) > 180 || start < 0 || start > 360 || end < 0 || end > 360 ||
+    radiusMeters <= 0 || stepDegrees <= 0) return [];
+  const rawSpan = end - start;
+  const span = Math.abs(rawSpan) === 360 ? 360 : (rawSpan + 360) % 360;
+  if (span <= 0) return [];
+  const steps = Math.max(2, Math.ceil(span / stepDegrees));
+  const radius = 6_371_000;
+  const latitude = lat * Math.PI / 180;
+  const longitude = lon * Math.PI / 180;
+  return Array.from({ length: steps + 1 }, (_, index) => {
+    const bearing = (start + span * index / steps) * Math.PI / 180;
+    const angularDistance = radiusMeters / radius;
+    const destinationLatitude = Math.asin(
+      Math.sin(latitude) * Math.cos(angularDistance) +
+      Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),
+    );
+    const destinationLongitude = longitude + Math.atan2(
+      Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
+      Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
+    );
+    return /** @type {[number, number]} */ ([
+      destinationLatitude * 180 / Math.PI,
+      ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180,
+    ]);
+  });
+}
+
+const LIGHT_SECTOR_FIELDS = {
+  character: 'character',
+  colour: 'colour',
+  group: 'group',
+  period: 'period',
+  sequence: 'sequence',
+  sector_start: 'start',
+  sector_end: 'end',
+  range: 'range',
+  visibility: 'visibility',
+  exhibition: 'exhibition',
+  category: 'category',
+  orientation: 'orientation',
+  height: 'height',
+  multiple: 'multiple',
+};
+
+/** Merge split records for the same light, keeping preferred values and filling only missing attributes. */
+export function mergeLightSectors(preferred = [], supplemental = []) {
   const sectors = new Map();
-  const fields = {
-    character: 'character',
-    colour: 'colour',
-    group: 'group',
-    period: 'period',
-    sequence: 'sequence',
-    sector_start: 'start',
-    sector_end: 'end',
-    range: 'range',
-  };
-  for (const [key, rawValue] of Object.entries(tags)) {
-    const match = /^seamark:light:(\d+):(character|colour|group|period|sequence|sector_start|sector_end|range)$/.exec(key);
-    if (!match || rawValue === undefined || rawValue === null || String(rawValue).trim() === '') continue;
-    const sector = Number(match[1]);
-    const record = sectors.get(sector) ?? { sector };
-    record[fields[match[2]]] = String(rawValue).trim();
-    sectors.set(sector, record);
+  for (const sector of [...preferred, ...supplemental]) {
+    if (!Number.isInteger(sector?.sector) || sector.sector < 1) continue;
+    const current = sectors.get(sector.sector) ?? { sector: sector.sector };
+    for (const [key, value] of Object.entries(sector)) {
+      if (key === 'sector' || value === undefined || value === null || String(value).trim() === '') continue;
+      if (current[key] === undefined || current[key] === null || String(current[key]).trim() === '') current[key] = value;
+    }
+    sectors.set(sector.sector, current);
   }
   return [...sectors.values()].sort((a, b) => a.sector - b.sector);
+}
+
+function lightSectorsFromTags(tags) {
+  const sectors = new Map();
+  const shared = {};
+  for (const [key, rawValue] of Object.entries(tags)) {
+    if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') continue;
+    const value = String(rawValue).trim();
+    const match = /^seamark:light:(?:(\d+):)?(character|colour|group|period|sequence|sector_start|sector_end|range|visibility|exhibition|category|orientation|height|multiple)$/.exec(key);
+    if (!match) continue;
+    const sector = match[1] ? Number(match[1]) : 1;
+    const record = sectors.get(sector) ?? { sector };
+    const field = LIGHT_SECTOR_FIELDS[match[2]];
+    if (match[1]) record[field] = value;
+    else shared[field] = value;
+    sectors.set(sector, record);
+  }
+  return mergeLightSectors([...sectors.values()].map((sector) => ({ ...shared, ...sector })));
 }
 
 export function distanceMeters(aLat, aLon, bLat, bLon) {
@@ -545,8 +611,9 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
   ]);
   const markColour = markColourTypes.has(type) ? firstTag(tags, [`seamark:${type}:colour`]) : null;
   const markColourPattern = markColourTypes.has(type) ? firstTag(tags, [`seamark:${type}:colour_pattern`]) : null;
-  const lightCharacter = firstTag(tags, ['seamark:light:character']);
-  const lightColour = firstTag(tags, ['seamark:light:colour']);
+  const parsedLightSectors = lightSectorsFromTags(tags);
+  const lightCharacter = firstTag(tags, ['seamark:light:character']) ?? parsedLightSectors.find((sector) => sector.character)?.character ?? null;
+  const lightColour = firstTag(tags, ['seamark:light:colour']) ?? parsedLightSectors.find((sector) => sector.colour)?.colour ?? null;
   const topmarkColour = firstTag(tags, ['seamark:topmark:colour']);
   const buoyageSystem = firstTag(tags, [`seamark:${type}:system`, 'seamark:buoy_lateral:system', 'seamark:beacon_lateral:system']);
   const shape = firstTag(tags, [`seamark:${type}:shape`]);
@@ -575,7 +642,7 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
     markCategory: firstTag(tags, [`seamark:${type}:category`, 'seamark:category']),
     light: lightText(tags),
     lightCharacter,
-    lightSectors: lightSectorsFromTags(tags),
+    lightSectors: parsedLightSectors,
     buoyageSystem,
     wreckBoatingEffect: wreck ? wreckBoatingEffect(tags['seamark:wreck:category'], tags['seamark:wreck:water_level']) : null,
     colour: markColour,
@@ -649,6 +716,7 @@ function richness(navaid) {
   for (const key of ['name', 'light', 'colour', 'shape', 'height', 'range', 'description']) {
     if (navaid[key]) score += 1;
   }
+  score += (navaid.lightSectors?.length ?? 0) * 2;
   if (navaid.source === 'osm') score += 2;
   return score;
 }
@@ -706,9 +774,12 @@ export function dedupeNavaids(items, options = {}) {
     }
 
     removed += 1;
-    if (richness(item) > richness(accepted[duplicateOf])) {
-      accepted[duplicateOf] = item;
-    }
+    const previous = accepted[duplicateOf];
+    const preferred = richness(item) > richness(previous) ? item : previous;
+    accepted[duplicateOf] = {
+      ...preferred,
+      lightSectors: mergeLightSectors(preferred.lightSectors ?? [], preferred === item ? previous.lightSectors ?? [] : item.lightSectors ?? []),
+    };
   }
 
   return { navaids: accepted, removed };

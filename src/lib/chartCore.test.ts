@@ -7,6 +7,9 @@ import {
   cellBounds,
   cellKey,
   ialaRegion,
+  lightSectorArc,
+  mirrorLightSectorBearings,
+  mergeLightSectors,
   normalizeElement,
   selectVisibleNavaids,
 } from '../../shared/navaid-core.mjs';
@@ -40,6 +43,46 @@ function mark(overrides: Partial<Navaid> & { category: NavaidCategory }): Navaid
     region: overrides.region ?? 'solent',
   };
 }
+
+describe('sector light geometry', () => {
+  it('uses north-clockwise bearings and wraps sectors through north', () => {
+    const arc = lightSectorArc(0, 0, 350, 10, 1000, 10);
+    expect(arc.length).toBeGreaterThan(2);
+    expect(arc[0][1]).toBeCloseTo(-0.00157, 4);
+    expect(arc.at(-1)![1]).toBeCloseTo(0.00157, 4);
+    expect(arc[Math.floor(arc.length / 2)][0]).toBeGreaterThan(0.008);
+  });
+
+  it('mirrors east and west bearings while keeping north and south fixed', () => {
+    expect(mirrorLightSectorBearings(0, 0)).toEqual([0, 0]);
+    expect(mirrorLightSectorBearings(180, 180)).toEqual([180, 180]);
+    expect(mirrorLightSectorBearings(90, 90)).toEqual([270, 270]);
+    expect(mirrorLightSectorBearings(270, 270)).toEqual([90, 90]);
+    expect(mirrorLightSectorBearings(230, 260)).toEqual([100, 130]);
+    expect(mirrorLightSectorBearings(-1, 90)).toBeNull();
+  });
+
+  it('rejects sectors without valid bearings or positive angular span', () => {
+    expect(lightSectorArc(50, -1, 20, 20, 1000)).toEqual([]);
+    expect(lightSectorArc(50, -1, -1, 20, 1000)).toEqual([]);
+  });
+
+  it('merges records for each sector without losing unique sectors or filled values', () => {
+    expect(mergeLightSectors(
+      [{ sector: 1, character: 'Fl', colour: 'red', start: '340' }, { sector: 3, colour: 'green' }],
+      [{ sector: 1, end: '020', range: '4' }, { sector: 2, character: 'F', colour: 'white' }],
+    )).toEqual([
+      { sector: 1, character: 'Fl', colour: 'red', start: '340', end: '020', range: '4' },
+      { sector: 2, character: 'F', colour: 'white' },
+      { sector: 3, colour: 'green' },
+    ]);
+  });
+
+  it('renders a full-circle sector and north-crossing span', () => {
+    expect(lightSectorArc(0, 0, 0, 360, 1000)).toHaveLength(91);
+    expect(lightSectorArc(0, 0, 350, 10, 1000)).toHaveLength(6);
+  });
+});
 
 describe('classification', () => {
   it('separates port and starboard lateral marks', () => {
@@ -147,6 +190,24 @@ describe('classification', () => {
 
   it('keeps lit nodes that only carry light tags', () => {
     expect(classifyTags({ 'seamark:light:character': 'Fl' })?.category).toBe('light');
+  });
+
+  it('keeps separate observations of one aid while combining their sector attributes', () => {
+    const sparse = normalizeElement({ type: 'node', id: 100, lat: 50, lon: -1, tags: {
+      'seamark:type': 'light_minor', 'seamark:name': 'Test light',
+      'seamark:light:1:character': 'Fl', 'seamark:light:1:sector_start': '340',
+    } }) as Navaid;
+    const detail = normalizeElement({ type: 'node', id: 101, lat: 50, lon: -1, tags: {
+      'seamark:type': 'light_minor', 'seamark:name': 'Test light',
+      'seamark:light:1:colour': 'red', 'seamark:light:1:sector_end': '020',
+      'seamark:light:2:colour': 'white', 'seamark:light:2:sector_start': '020', 'seamark:light:2:sector_end': '090',
+    } }) as Navaid;
+    const result = dedupeNavaids([sparse, detail]);
+    expect(result.navaids).toHaveLength(1);
+    expect(result.navaids[0].lightSectors).toEqual([
+      { sector: 1, character: 'Fl', start: '340', colour: 'red', end: '020' },
+      { sector: 2, colour: 'white', start: '020', end: '090' },
+    ]);
   });
 
   it('plots anchorages, anchor berths and calling-in points', () => {
@@ -287,6 +348,32 @@ describe('normalisation', () => {
     expect(wreck.wreckBoatingEffect).toContain('not a clearance or safe-passage guarantee');
     expect(wreck.description).toContain('Chart source classifies this wreck');
     expect(wreck.description).toContain('Charted water level: submerged');
+  });
+
+  it('parses separate numbered sectors, with sector-specific range and directional data', () => {
+    const light = normalizeElement({
+      type: 'node', id: 29, lat: 50.7, lon: -1.3,
+      tags: {
+        'seamark:type': 'light_major',
+        'seamark:light:1:character': 'Fl',
+        'seamark:light:1:colour': 'green',
+        'seamark:light:1:sector_start': '230',
+        'seamark:light:1:sector_end': '260',
+        'seamark:light:1:range': '12',
+        'seamark:light:2:character': 'Fl',
+        'seamark:light:2:colour': 'white',
+        'seamark:light:2:sector_start': '260',
+        'seamark:light:2:sector_end': '280',
+        'seamark:light:2:range': '8.5',
+        'seamark:light:2:visibility': '8',
+        'seamark:light:2:orientation': '270',
+      },
+    }) as Navaid;
+    expect(light.lightSectors).toEqual([
+      { sector: 1, character: 'Fl', colour: 'green', start: '230', end: '260', range: '12' },
+      { sector: 2, character: 'Fl', colour: 'white', start: '260', end: '280', range: '8.5', visibility: '8', orientation: '270' },
+    ]);
+    expect(light.lit).toBe(true);
   });
 
   it('does not infer a steady light when the source has no character code', () => {

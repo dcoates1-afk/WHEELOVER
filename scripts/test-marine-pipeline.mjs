@@ -20,9 +20,9 @@ const paths = {
 };
 try {
   const sourcePath = join(dir, 'marine-source.json');
-  const planetFingerprint = '95507771401:638964900000000000';
+  const planetFingerprint = '95507771401:638964900000000000:4';
   await writeMarineSource(sourcePath, planetFingerprint);
-  assert.deepEqual(JSON.parse(await readFile(sourcePath, 'utf8')), { version: 1, planetFingerprint });
+  assert.deepEqual(JSON.parse(await readFile(sourcePath, 'utf8')), { version: 4, planetFingerprint });
   await assert.rejects(writeMarineSource(sourcePath, '{ invalid json }'), /Invalid planet fingerprint/);
 
   await writeFile(paths.planet, 'old planet');

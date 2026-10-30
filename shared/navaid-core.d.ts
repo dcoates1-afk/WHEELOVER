@@ -53,7 +53,11 @@ export interface Navaid {
   /** Exact source light-character code, e.g. F, Fl, Iso; missing is not assumed steady. */
   lightCharacter?: string | null;
   /** Separate numbered light sectors, including any encoded bearing limits. */
-  lightSectors?: { sector: number; character?: string; colour?: string; group?: string; period?: string; sequence?: string; start?: string; end?: string; range?: string }[];
+  lightSectors?: {
+    sector: number; character?: string; colour?: string; group?: string; period?: string; sequence?: string;
+    start?: string; end?: string; range?: string; visibility?: string; exhibition?: string; category?: string;
+    orientation?: string; height?: string; multiple?: string;
+  }[];
   /** Encoded buoyage system (e.g. IALA-A/B), when supplied by the source. */
   buoyageSystem?: string | null;
   /** Cautious plain-language surface-navigation effect from wreck tags only. */
@@ -140,6 +144,8 @@ export const SHOW_ALL_LIMIT: number;
 export const DEFAULT_MARK_LIMIT: number;
 
 export function ialaRegion(lat: number, lon: number): 'A' | 'B';
+export function mirrorLightSectorBearings(start: number, end: number): [number, number] | null;
+export function lightSectorArc(lat: number, lon: number, start: number, end: number, radiusMeters: number, stepDegrees?: number): [number, number][];
 export function classifyTags(tags: NavaidTagMap): ClassifiedMark | null;
 export function lightText(tags: NavaidTagMap): string | null;
 export function normalizeElement(

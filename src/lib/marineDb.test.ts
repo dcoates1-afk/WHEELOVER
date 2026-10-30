@@ -10,6 +10,7 @@ const manifest = validateMarineManifest({
   layers: {
     navaids: { count: 0, shards: [] },
     ferries: { count: 1, shards: [{ path: 'ferries/28_35.json', bounds: [50, -5, 55, 0], count: 1 }] },
+    bridges: { count: 0, shards: [] },
     tss: { count: 0, shards: [] },
   },
 });
@@ -26,6 +27,8 @@ describe('worldwide marine archive index', () => {
     expect(marineShardsForBounds(manifest!, 'ferries', [51, -2, 52, -1])).toHaveLength(1);
     expect(marineShardsForBounds(manifest!, 'ferries', [20, 20, 21, 21])).toHaveLength(0);
     expect(marineShardsForBounds(manifest!, 'tss', [51, -2, 52, -1])).toHaveLength(0);
+    expect(marineShardsForBounds(manifest!, 'bridges', [51, -2, 52, -1])).toHaveLength(0);
+    expect(marineShardsForBounds(manifest!, 'bridges', [20, 20, 21, 21])).toHaveLength(0);
   });
 
   it('starts ferries and TSS enabled so route data remains visible by default', () => {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Convert an OSM-derived GeoJSON FeatureCollection or GeoJSON Text Sequence into
- * viewport-addressed NAVAID, ferry and TSS data. GeoJSONSeq is streamed for planet input.
+ * viewport-addressed NAVAID, ferry, tidal-bridge and TSS data. GeoJSONSeq is streamed for planet input.
  *
  *   node scripts/build-marine-db.mjs extract.geojsonseq
  *   node scripts/build-marine-db.mjs extract.geojsonseq --out public/marine-db
@@ -10,7 +10,7 @@ import { createHash } from 'node:crypto';
 import { closeSync, createReadStream, mkdirSync, openSync, readSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { rename } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { normalizeElement } from '../shared/navaid-core.mjs';
+import { mergeLightSectors, normalizeElement } from '../shared/navaid-core.mjs';
 
 async function renameWithRetry(source, destination) {
   for (let attempt = 0; ; attempt += 1) {
@@ -131,9 +131,11 @@ function writeShardTree(layer, layerDir, shardBounds, entries, shards, depth = 0
   shards.push({ path, bounds: shardBounds, count: entries.length });
 }
 
-const cells = { navaids: new Map(), ferries: new Map(), tss: new Map() };
-const featureIds = { navaids: new Set(), ferries: new Set(), tss: new Set() };
-const featureById = { navaids: new Map(), ferries: new Map(), tss: new Map() };
+const cells = { navaids: new Map(), ferries: new Map(), bridges: new Map(), tss: new Map() };
+const featureIds = { navaids: new Set(), ferries: new Set(), bridges: new Set(), tss: new Set() };
+const featureById = { navaids: new Map(), ferries: new Map(), bridges: new Map(), tss: new Map() };
+const bridgeCandidates = new Map();
+const tidalWaterByCell = new Map();
 let inputCount = 0;
 let dropped = 0;
 
@@ -149,6 +151,22 @@ function uniquePaths(paths) {
 
 function addToCells(layer, item) {
   const previous = featureById[layer].get(item.id);
+  if (previous && layer === 'navaids') {
+    for (const cell of cellsFor(previous.bounds, CELL_SIZE)) {
+      const key = cellId(cell);
+      const bucket = cells[layer].get(key);
+      if (bucket) cells[layer].set(key, bucket.filter((entry) => entry.id !== item.id));
+    }
+    const first = previous.navaid ?? {};
+    const next = item.navaid ?? {};
+    const mergedNavaid = {
+      ...first,
+      ...Object.fromEntries(Object.entries(next).filter(([, value]) => value !== null && value !== undefined && value !== '')),
+      lightSectors: mergeLightSectors(first.lightSectors ?? [], next.lightSectors ?? []),
+    };
+    const paths = uniquePaths([...(previous.paths ?? []), ...(item.paths ?? [])]);
+    item = { ...previous, ...item, bounds: boundsOf(paths), path: paths.flat(), paths, navaid: mergedNavaid };
+  }
   if (previous && layer === 'tss') {
     for (const cell of cellsFor(previous.bounds, CELL_SIZE)) {
       const key = cellId(cell);
@@ -179,14 +197,46 @@ function addToCells(layer, item) {
   }
 }
 
+function expandTags(properties) {
+  const tags = { ...(properties.tags && typeof properties.tags === 'object' ? properties.tags : properties) };
+  // GDAL's OSM driver puts unlisted keys into HSTORE. all_tags includes
+  // both configured fields and unlisted tags, so numbered sector attributes
+  // survive GDAL's GeoJSON export even when not explicitly listed above.
+  const decode = (quoted) => {
+    try { return JSON.parse(quoted); } catch { return quoted.slice(1, -1); }
+  };
+  for (const encoded of [properties.other_tags, properties.all_tags]) {
+    if (typeof encoded !== 'string') continue;
+    const text = encoded.trim();
+    if (text.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(text);
+        for (const [key, value] of Object.entries(parsed)) if (tags[key] === undefined) tags[key] = String(value);
+        continue;
+      } catch {}
+    }
+    for (const match of text.matchAll(/("(?:[^"\\]|\\.)*")\s*=>\s*("(?:[^"\\]|\\.)*")/g)) {
+      const key = decode(match[1]);
+      if (tags[key] === undefined) tags[key] = decode(match[2]);
+    }
+  }
+  return tags;
+}
+
 function addNavaid(feature, properties, tags, seamark) {
   if (seamark === 'ferry_route' || (typeof seamark === 'string' && seamark.startsWith('separation_'))) return false;
   const coordinates = collectPaths(feature.geometry).map(toPath).filter((path) => path.length > 0);
   const rawBounds = boundsOf(coordinates);
   if (!rawBounds) return false;
-  const osmId = String(properties['@id'] ?? feature.id ?? properties.osm_id ?? '');
-  const match = osmId.match(/^([nwr])(-?\d+)$/);
-  const type = match ? ({ n: 'node', w: 'way', r: 'relation' })[match[1]] : feature.geometry?.type === 'Point' ? 'node' : 'way';
+  const explicitId = String(properties.osm_ref ?? properties['@id'] ?? feature.id ?? '');
+  const match = explicitId.match(/^(?:([nwr])|node\/|way\/|relation\/)(-?\d+)$/) ?? explicitId.match(/(?:^|\/)([nwr])(-?\d+)$/);
+  const wayId = properties.osm_way_id;
+  const numericId = properties.osm_id;
+  const matchedType = match?.[1] ?? (explicitId.startsWith('node/') ? 'n' : explicitId.startsWith('relation/') ? 'r' : explicitId.startsWith('way/') ? 'w' : null);
+  const sourceType = matchedType ?? (wayId != null ? 'w' : numericId != null ? 'r' : feature.geometry?.type === 'Point' ? 'n' : 'w');
+  const sourceNumber = match?.[2] ?? (wayId != null ? String(wayId) : numericId != null ? String(numericId) : '');
+  const osmId = sourceNumber ? `${sourceType}${sourceNumber}` : explicitId;
+  const type = ({ n: 'node', w: 'way', r: 'relation' })[sourceType] ?? (feature.geometry?.type === 'Point' ? 'node' : 'way');
   const tagsForCore = { ...tags };
   if (tagsForCore.seamark_type && !tagsForCore['seamark:type']) tagsForCore['seamark:type'] = tagsForCore.seamark_type;
   const center = [(rawBounds[0] + rawBounds[2]) / 2, (rawBounds[1] + rawBounds[3]) / 2];
@@ -202,7 +252,7 @@ function addNavaid(feature, properties, tags, seamark) {
     : undefined;
   const element = {
     type,
-    id: match ? Number(match[2]) : undefined,
+    id: sourceNumber && /^\d+$/.test(sourceNumber) ? Number(sourceNumber) : undefined,
     tags: tagsForCore,
     lat: feature.geometry?.type === 'Point' ? feature.geometry.coordinates[1] : undefined,
     lon: feature.geometry?.type === 'Point' ? feature.geometry.coordinates[0] : undefined,
@@ -220,16 +270,138 @@ function addNavaid(feature, properties, tags, seamark) {
   return true;
 }
 
+function isTidalWater(tags) {
+  const waterway = String(tags.waterway ?? '').toLowerCase();
+  return String(tags.tidal ?? '').toLowerCase() === 'yes' || tags['tidal:range'] !== undefined ||
+    String(tags.water ?? '').toLowerCase() === 'tidal' || waterway === 'tidal_channel';
+}
+
+function bridgeIdentity(feature, properties) {
+  const raw = String(properties.osm_ref ?? properties['@id'] ?? feature.id ?? '');
+  const match = raw.match(/^(?:([nwr])|node\/|way\/|relation\/)(\d+)$/);
+  if (match) {
+    const prefix = match[1] ?? (raw.startsWith('node/') ? 'n' : raw.startsWith('relation/') ? 'r' : 'w');
+    return { id: `${prefix}${match[2]}`, kind: prefix === 'n' ? 'node' : prefix === 'r' ? 'relation' : 'way', number: match[2] };
+  }
+  if (properties.osm_way_id != null && /^\d+$/.test(String(properties.osm_way_id))) {
+    return { id: `w${properties.osm_way_id}`, kind: 'way', number: String(properties.osm_way_id) };
+  }
+  if (properties.osm_id != null && /^\d+$/.test(String(properties.osm_id))) {
+    return { id: `r${properties.osm_id}`, kind: 'relation', number: String(properties.osm_id) };
+  }
+  return null;
+}
+
+function lineSegments(path) {
+  return path.slice(1).map((point, index) => [path[index], point]);
+}
+
+function segmentsIntersect(a, b, c, d) {
+  const cross = (p, q, r) => (q[1] - p[1]) * (r[0] - p[0]) - (q[0] - p[0]) * (r[1] - p[1]);
+  const onSegment = (p, q, r) => Math.min(p[0], r[0]) - 1e-8 <= q[0] && q[0] <= Math.max(p[0], r[0]) + 1e-8 && Math.min(p[1], r[1]) - 1e-8 <= q[1] && q[1] <= Math.max(p[1], r[1]) + 1e-8;
+  const abC = cross(a, b, c), abD = cross(a, b, d), cdA = cross(c, d, a), cdB = cross(c, d, b);
+  return (abC * abD < 0 && cdA * cdB < 0) ||
+    (Math.abs(abC) <= 1e-8 && onSegment(a, c, b)) || (Math.abs(abD) <= 1e-8 && onSegment(a, d, b)) ||
+    (Math.abs(cdA) <= 1e-8 && onSegment(c, a, d)) || (Math.abs(cdB) <= 1e-8 && onSegment(c, b, d));
+}
+
+function pointSegmentDistanceMeters(point, start, end) {
+  const meanLat = ((point[0] + start[0] + end[0]) / 3) * Math.PI / 180;
+  const project = ([lat, lon]) => [lon * 111320 * Math.cos(meanLat), lat * 110574];
+  const p = project(point), a = project(start), b = project(end);
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+}
+
+function tidalBridgeCrosses(paths, bounds, waterCellIndex) {
+  const latitudePad = 0.001;
+  const longitudePad = 0.001 / Math.max(0.05, Math.cos(((bounds[0] + bounds[2]) / 2) * Math.PI / 180));
+  const nearby = new Set();
+  for (const cell of cellsFor([
+    Math.max(-90, bounds[0] - latitudePad), Math.max(-180, bounds[1] - longitudePad),
+    Math.min(90, bounds[2] + latitudePad), Math.min(180, bounds[3] + longitudePad),
+  ], CELL_SIZE)) {
+    for (const water of waterCellIndex.get(cellId(cell)) ?? []) nearby.add(water);
+  }
+  const paddedBounds = [
+    bounds[0] - latitudePad,
+    bounds[1] - longitudePad,
+    bounds[2] + latitudePad,
+    bounds[3] + longitudePad,
+  ];
+  return [...nearby].some((water) => {
+    if (!intersectsBounds(paddedBounds, water.bounds)) return false;
+    for (const bridgePath of paths) for (const waterPath of water.paths) {
+      for (const [a, b] of lineSegments(bridgePath)) for (const [c, d] of lineSegments(waterPath)) {
+        if (segmentsIntersect(a, b, c, d) || pointSegmentDistanceMeters(a, c, d) <= 100 ||
+          pointSegmentDistanceMeters(b, c, d) <= 100 || pointSegmentDistanceMeters(c, a, b) <= 100 ||
+          pointSegmentDistanceMeters(d, a, b) <= 100) return true;
+      }
+      if (water.area && waterPath.length >= 4) {
+        const pointInside = ([lat, lon]) => {
+          let inside = false;
+          for (let i = 0, j = waterPath.length - 1; i < waterPath.length; j = i++) {
+            const [yi, xi] = waterPath[i], [yj, xj] = waterPath[j];
+            if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+          }
+          return inside;
+        };
+        if (bridgePath.some(pointInside) || lineSegments(bridgePath).some(([a, b]) =>
+          pointInside([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]),
+        )) return true;
+      }
+    }
+    return false;
+  });
+}
+
 function addFeature(feature) {
   inputCount += 1;
   const properties = feature?.properties ?? {};
-  const tags = properties.tags && typeof properties.tags === 'object' ? properties.tags : properties;
+  const tags = expandTags(properties);
   const seamark = tags['seamark:type'] ?? tags.seamark_type ?? properties.seamark_type;
   const isFerry = tags.route === 'ferry' || seamark === 'ferry_route';
   const isTss = typeof seamark === 'string' && seamark.startsWith('separation_');
+  const isBridge = seamark === 'bridge' || (tags.bridge != null && !['no', 'false', '0'].includes(String(tags.bridge).toLowerCase()));
   if (tssOnly && !isTss) return;
+  if (!tssOnly && isTidalWater(tags)) {
+    const area = ['Polygon', 'MultiPolygon'].includes(feature.geometry?.type) || tags.natural === 'water' || tags.waterway === 'riverbank';
+    for (const rawPath of collectPaths(feature.geometry)) {
+      const path = toPath(rawPath);
+      if (path.length < 2) continue;
+      const bounds = boundsOf([path]);
+      if (!bounds) continue;
+      const water = { paths: [path], bounds, area };
+      for (const cell of cellsFor(bounds, CELL_SIZE)) {
+        const key = cellId(cell);
+        const bucket = tidalWaterByCell.get(key) ?? [];
+        bucket.push(water);
+        tidalWaterByCell.set(key, bucket);
+      }
+    }
+  }
+  if (!tssOnly && isBridge && !isFerry && !isTss) {
+    const paths = collectLinePaths(feature.geometry).map(toPath).filter((path) => path.length >= 2);
+    const bounds = boundsOf(paths);
+    const identity = bridgeIdentity(feature, properties);
+    if (bounds && identity) {
+      const previous = bridgeCandidates.get(identity.id);
+      const name = String(tags.name ?? tags['seamark:name'] ?? 'Bridge').trim();
+      const details = Object.fromEntries(Object.entries(tags).filter(([key, value]) =>
+        /^(seamark:bridge:|bridge:|operator$|opening_hours$|description$|note$|source$)/.test(key) && typeof value === 'string' && value.trim(),
+      ));
+      bridgeCandidates.set(identity.id, {
+        ...previous,
+        ...identity,
+        name: previous && previous.name !== 'Bridge' ? previous.name : name,
+        paths: uniquePaths([...(previous?.paths ?? []), ...paths]),
+        details: { ...(previous?.details ?? {}), ...details },
+      });
+    }
+  }
   if (!isFerry && !isTss) {
-    addNavaid(feature, properties, tags, seamark);
+    if (!isBridge) addNavaid(feature, properties, tags, seamark);
     return;
   }
   const paths = (isTss ? collectLinePaths(feature.geometry) : collectPaths(feature.geometry)).map(toPath).filter((path) => path.length > 0);
@@ -331,9 +503,21 @@ async function* readFeatures(path) {
 }
 
 for await (const feature of readFeatures(resolve(inputPath))) addFeature(feature);
+if (!tssOnly) {
+  for (const bridge of bridgeCandidates.values()) {
+    const bounds = boundsOf(bridge.paths);
+    if (!bounds || !tidalBridgeCrosses(bridge.paths, bounds, tidalWaterByCell)) continue;
+    const flat = bridge.paths.flat();
+    const sourceUrl = `https://www.openstreetmap.org/${bridge.kind}/${bridge.number}`;
+    addToCells('bridges', {
+      id: `osm:${bridge.kind}/${bridge.number}`, type: 'bridge', name: bridge.name, bounds, path: flat, paths: bridge.paths,
+      details: bridge.details, sourceUrl,
+    });
+  }
+}
 const cellSize = CELL_SIZE;
-const denseCellCounts = { navaids: 0, ferries: 0, tss: 0 };
-for (const layer of ['navaids', 'ferries', 'tss']) denseCellCounts[layer] = [...cells[layer].values()].filter((entries) => entries.length > MAX_FEATURES_PER_CELL).length;
+const denseCellCounts = { navaids: 0, ferries: 0, bridges: 0, tss: 0 };
+for (const layer of ['navaids', 'ferries', 'bridges', 'tss']) denseCellCounts[layer] = [...cells[layer].values()].filter((entries) => entries.length > MAX_FEATURES_PER_CELL).length;
 console.log(`[marine-db] writing viewport shards with ${cellSize}° base cells`);
 const generatedAt = new Date().toISOString();
 const sourceStat = statSync(resolve(inputPath));
@@ -346,7 +530,7 @@ if (tssOnly) {
 }
 const stageDir = `${outDir}.${version}.tmp`;
 rmSync(stageDir, { recursive: true, force: true });
-const outputLayers = tssOnly ? ['tss'] : ['navaids', 'ferries', 'tss'];
+const outputLayers = tssOnly ? ['tss'] : ['navaids', 'ferries', 'bridges', 'tss'];
 for (const layer of outputLayers) {
   const shards = [];
   const layerDir = resolve(stageDir, layer);
@@ -393,4 +577,4 @@ if (tssOnly) {
     throw error;
   }
 }
-console.log(`[marine-db] ${inputCount} features → ${manifest.layers.navaids.count} NAVAIDs, ${manifest.layers.ferries.count} ferries, ${manifest.layers.tss.count} TSS; ${manifest.layers.navaids.shards.length + manifest.layers.ferries.shards.length + manifest.layers.tss.shards.length} shards; ${dropped} dropped; ${outDir}`);
+console.log(`[marine-db] ${inputCount} features → ${manifest.layers.navaids.count} NAVAIDs/seamarks, ${manifest.layers.ferries.count} ferries, ${manifest.layers.bridges?.count ?? 0} tidal bridges, ${manifest.layers.tss.count} TSS; ${manifest.layers.navaids.shards.length + manifest.layers.ferries.shards.length + (manifest.layers.bridges?.shards.length ?? 0) + manifest.layers.tss.shards.length} shards; ${dropped} dropped; ${outDir}`);

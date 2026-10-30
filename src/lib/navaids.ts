@@ -20,6 +20,11 @@ export interface SymbolSpec {
   label: string;
 }
 
+export interface MarkSymbolSpec extends SymbolSpec {
+  /** Edge of the SVG viewport in chart units: 32 plain, 56 with signal annotations. */
+  units: number;
+}
+
 const RED = '#e23b3b';
 const GREEN = '#26a65b';
 const YELLOW = '#f4c531';
@@ -321,6 +326,178 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B'): SymbolSp
   }
 }
 
+const DEFAULT_LIGHT_MARK = '#ffd166';
+
+/** Chart light colours, keyed by the words seamark:light:colour uses. */
+const LIGHT_COLOURS: Record<string, string> = {
+  white: '#f4f7f8',
+  red: '#e23b3b',
+  green: '#26a65b',
+  yellow: '#f4c531',
+  amber: '#f4c531',
+  orange: '#ff8a3d',
+  blue: '#3aa0ff',
+  violet: '#c08bff',
+  purple: '#c08bff',
+  magenta: '#ff43d0',
+};
+
+/** These categories are already drawn as a light, so they need no extra flare. */
+const LIGHT_SYMBOL_CATEGORIES = new Set<NavaidCategory>([
+  'major_light',
+  'light',
+  'transit_front',
+  'transit_rear',
+  'range',
+]);
+
+/** Colour of the small flare drawn off a lit aid, taken from the mapped light. */
+export function lightSymbolColour(mark: Navaid): string {
+  const candidates: (string | null | undefined)[] = [
+    mark.lightColour,
+    ...(mark.lightSectors ?? []).map((sector) => sector.colour),
+  ];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    for (const word of candidate.toLowerCase().split(/[^a-z]+/)) {
+      const hex = LIGHT_COLOURS[word];
+      if (hex) return hex;
+    }
+  }
+  // A lit aid whose colour is not mapped is still a light; amber says so
+  // without inventing a colour the source never gave.
+  return DEFAULT_LIGHT_MARK;
+}
+
+/** The three extra chart cues a mark can carry, as plain values. */
+export interface MarkSignals {
+  /** Light colour for the 135° flare, or null when the symbol already is a light. */
+  light: string | null;
+  /** Lower-case sound-signal label, or null when there is no fog signal. */
+  sound: string | null;
+  racon: boolean;
+}
+
+export function markSignals(mark: Navaid): MarkSignals {
+  const hasLight = Boolean(
+    mark.light || mark.lightCharacter || mark.lit || (mark.lightSectors?.length ?? 0) > 0,
+  );
+  const sound = mark.fogSignal
+    ? (mark.fogSignalCategory ? mark.fogSignalCategory.replace(/_/g, ' ') : 'sound')
+    : null;
+  const racon = Boolean(
+    mark.radarTransponderCategory || mark.radarTransponderGroup ||
+    mark.radarTransponderPeriod || mark.radarTransponderSequence,
+  );
+  return {
+    light: hasLight && !LIGHT_SYMBOL_CATEGORIES.has(mark.category) ? lightSymbolColour(mark) : null,
+    sound,
+    racon,
+  };
+}
+
+// Annotated symbols need room outside the 32-unit aid box: a flare at 135° and
+// a sound beam at 225°. Centring the aid in a 56-unit box keeps the marker's
+// anchor on the mark itself while leaving both corners visible.
+const ANNOTATED_VIEWBOX = '-12 -12 56 56';
+const ANNOTATED_UNITS = 56;
+
+/**
+ * A beam of light on the 135° (south-east) bearing, in the mapped light colour:
+ * the lamp sits just clear of the aid and the light fans outward, the way a
+ * chart shows a light's throw rather than a decorative star.
+ */
+function lightAnnotation(colour: string): string {
+  const ux = Math.SQRT1_2;
+  const uy = Math.SQRT1_2;
+  const px = Math.SQRT1_2;
+  const py = -Math.SQRT1_2;
+  const point = (radius: number, side: number) =>
+    `${(16 + ux * radius + px * side).toFixed(2)} ${(16 + uy * radius + py * side).toFixed(2)}`;
+  const lamp = point(13.6, 0);
+  const beam = `M${lamp} L${point(23, 4)} L${point(23, -4)} Z`;
+  return `<g data-mark-annotation="light">` +
+    `<path d="${beam}" fill="${colour}" fill-opacity=".9" stroke="#04141f" stroke-width=".9" stroke-linejoin="round"/>` +
+    `<circle cx="${(16 + ux * 13.6).toFixed(2)}" cy="${(16 + uy * 13.6).toFixed(2)}" r="1.8" fill="${colour}" stroke="#04141f" stroke-width=".9"/>` +
+    `</g>`;
+}
+
+/**
+ * Three short lines leaving the aid on the 225° (south-west) bearing, with the
+ * signal named above them — the chart cue for a bell or horn.
+ */
+function soundAnnotation(label: string): string {
+  // Three radiating lines on the 225° bearing, like the chart's sound cue.
+  const point = (bearing: number, radius: number) => {
+    const radians = (bearing * Math.PI) / 180;
+    return `${(16 + radius * Math.sin(radians)).toFixed(2)} ${(16 - radius * Math.cos(radians)).toFixed(2)}`;
+  };
+  const lines = [13.5, 17.5, 21.5].map((radius) => {
+    const path = `M${point(205, radius)} A${radius} ${radius} 0 0 1 ${point(245, radius)}`;
+    // Dark halo under a light stroke, matching the rest of the chart ink.
+    return `<path d="${path}" fill="none" stroke="#04141f" stroke-width="3.2" stroke-linecap="round"/>` +
+      `<path d="${path}" fill="none" stroke="#f4f7f8" stroke-width="1.5" stroke-linecap="round"/>`;
+  }).join('');
+  const fontSize = label.length > 5 ? 7 : 8;
+  return `<g data-mark-annotation="sound">${lines}<text x="-11" y="21.6" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="${fontSize}" font-weight="600" letter-spacing=".2" fill="#f4f7f8" stroke="#04141f" stroke-width="1.6" paint-order="stroke" stroke-linejoin="round">${escapeXml(label)}</text></g>`;
+}
+
+function escapeXml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Thin ring around the aid: a mapped radar transponder (racon). */
+function raconAnnotation(): string {
+  return `<g data-mark-annotation="racon"><circle cx="16" cy="16" r="14" fill="none" stroke="#04141f" stroke-width="3.4" opacity=".55"/><circle cx="16" cy="16" r="14" fill="none" stroke="#9be7ff" stroke-width="1.5"/></g>`;
+}
+
+/**
+ * The chart symbol for one mapped aid, with the light, sound-signal and racon
+ * cues the source actually records. Nothing is inferred: a mark with no mapped
+ * light, bell/horn or racon is drawn exactly as before.
+ */
+export function symbolForMark(mark: Navaid, region: 'A' | 'B'): MarkSymbolSpec {
+  const base = symbolFor(mark.category, region);
+  const signals = markSignals(mark);
+  if (!signals.light && !signals.sound && !signals.racon) {
+    return { ...base, units: 32 };
+  }
+  const overlay = [
+    signals.racon ? raconAnnotation() : '',
+    signals.light ? lightAnnotation(signals.light) : '',
+    signals.sound ? soundAnnotation(signals.sound) : '',
+  ].join('');
+  const svg = base.svg
+    .replace('viewBox="0 0 32 32"', `viewBox="${ANNOTATED_VIEWBOX}"`)
+    .replace('width="32" height="32"', `width="${ANNOTATED_UNITS}" height="${ANNOTATED_UNITS}"`)
+    .replace('</svg>', `${overlay}</svg>`);
+  return { svg, label: base.label, units: ANNOTATED_UNITS };
+}
+
+/** Human wording for a mapped fog signal, e.g. "bell · every 30 s". */
+export function soundSignalText(mark: Navaid): string | null {
+  if (!mark.fogSignal) return null;
+  const kind = mark.fogSignalCategory
+    ? mark.fogSignalCategory.replace(/_/g, ' ')
+    : 'Mapped sound signal (kind not stated)';
+  const parts = [kind];
+  if (mark.fogSignalGroup) parts.push(`group ${mark.fogSignalGroup}`);
+  if (mark.fogSignalPeriod) parts.push(`${mark.fogSignalPeriod} s period`);
+  return parts.join(' · ');
+}
+
+/** Human wording for a mapped radar transponder (racon). */
+export function raconText(mark: Navaid): string | null {
+  if (!markSignals(mark).racon) return null;
+  const kind = mark.radarTransponderCategory
+    ? mark.radarTransponderCategory.replace(/_/g, ' ')
+    : 'racon';
+  const parts = [kind];
+  if (mark.radarTransponderGroup) parts.push(`group ${mark.radarTransponderGroup}`);
+  if (mark.radarTransponderPeriod) parts.push(`${mark.radarTransponderPeriod} s period`);
+  return parts.join(' · ');
+}
+
 export function quickInfo(navaid: Navaid, region: 'A' | 'B'): string {
   const label = CATEGORY_LABELS[navaid.category] ?? 'Mark';
   const parts = [label];
@@ -332,6 +509,11 @@ export function quickInfo(navaid: Navaid, region: 'A' | 'B'): string {
   if (navaid.callsign) parts.push(`Call ${navaid.callsign}`);
   if (navaid.light) parts.push(navaid.light);
   else if (navaid.colour) parts.push(navaid.colour);
+  const sound = navaid.fogSignal
+    ? (navaid.fogSignalCategory?.replace(/_/g, ' ') ?? 'sound signal')
+    : null;
+  if (sound) parts.push(`${sound} signal`);
+  if (markSignals(navaid).racon) parts.push('racon');
   parts.push(ialaRegion(navaid.lat, navaid.lon) === region ? 'Tap for full reference' : 'Tap for full reference');
   return parts.join(' · ');
 }

@@ -1461,6 +1461,13 @@ ul {
   height: 34px;
 }
 
+/* A symbol with light, sound or racon cues uses a wider viewport so the cues
+   keep their chart positions; the aid itself stays the same size. */
+.sheet-symbol-annotated svg {
+  width: 44px;
+  height: 44px;
+}
+
 .sheet-sub {
   margin-top: 4px;
   font-size: 12px;

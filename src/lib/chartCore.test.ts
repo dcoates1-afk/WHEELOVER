@@ -255,6 +255,71 @@ describe('normalisation', () => {
     expect(navaid.colour).toBe('red');
     expect(navaid.lightSectors).toEqual([{ sector: 1, character: 'Fl', colour: 'red', group: '3', period: '10', start: '045', end: '090' }]);
     expect(navaid.source).toBe('osm');
+    expect(navaid.fogSignal).toBe(false);
+    expect(navaid.radarReflector).toBe(false);
+  });
+
+  it('keeps mapped sound-signal, racon and reflector attributes apart from the light', () => {
+    const navaid = normalizeElement({
+      type: 'node',
+      id: 43,
+      lat: 50.7,
+      lon: -1.3,
+      tags: {
+        'seamark:type': 'buoy_lateral',
+        'seamark:buoy_lateral:category': 'starboard',
+        'seamark:fog_signal:category': 'bell',
+        'seamark:fog_signal:group': '2',
+        'seamark:fog_signal:period': '30',
+        'seamark:radar_transponder:category': 'racon',
+        'seamark:radar_transponder:period': '60',
+        'seamark:radar_reflector': 'yes',
+      },
+    }) as Navaid;
+
+    expect(navaid.fogSignal).toBe(true);
+    expect(navaid.fogSignalCategory).toBe('bell');
+    expect(navaid.fogSignalGroup).toBe('2');
+    expect(navaid.fogSignalPeriod).toBe('30');
+    expect(navaid.radarTransponderCategory).toBe('racon');
+    expect(navaid.radarTransponderPeriod).toBe('60');
+    expect(navaid.radarReflector).toBe(true);
+    // These are separate charted facts: no light is invented from them.
+    expect(navaid.light).toBeNull();
+    expect(navaid.lit).toBe(false);
+  });
+
+  it('keeps a sound signal or racon when dedupe prefers a record without them', () => {
+    const plain = normalizeElement({
+      type: 'node',
+      id: 44,
+      lat: 50.7,
+      lon: -1.3,
+      tags: {
+        name: 'Bell Buoy',
+        'seamark:type': 'buoy_lateral',
+        'seamark:buoy_lateral:category': 'starboard',
+        'seamark:buoy_lateral:colour': 'green',
+      },
+    }) as Navaid;
+    const signalled = normalizeElement({
+      type: 'node',
+      id: 45,
+      lat: 50.7001,
+      lon: -1.3001,
+      tags: {
+        'seamark:type': 'buoy_lateral',
+        'seamark:buoy_lateral:category': 'starboard',
+        'seamark:fog_signal:category': 'horn',
+        'seamark:radar_transponder:category': 'racon',
+      },
+    }) as Navaid;
+
+    const { navaids } = dedupeNavaids([plain, signalled], { distanceM: 40 });
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].fogSignal).toBe(true);
+    expect(navaids[0].fogSignalCategory).toBe('horn');
+    expect(navaids[0].radarTransponderCategory).toBe('racon');
   });
 
   it('keeps the VHF channel of a calling-in point and the details of a berth', () => {

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { minZoomFor, priorityFor } from '../../shared/navaid-core.mjs';
-import { quickInfo, symbolFor } from './navaids';
+import {
+  quickInfo,
+  raconText,
+  soundSignalText,
+  symbolFor,
+  symbolForMark,
+} from './navaids';
 import type { Navaid } from './navaidTypes';
 
 describe('light symbols', () => {
@@ -269,5 +275,142 @@ describe('quick info', () => {
     expect(quickInfo({ ...base, category: 'light', name: 'Inner Beacon' }, 'A')).toContain(
       'Minor light · Inner Beacon',
     );
+  });
+});
+
+function buoy(overrides: Partial<Navaid> = {}): Navaid {
+  return {
+    id: 'osm:node/9',
+    lat: 50.7,
+    lon: -1.2,
+    category: 'lateral_starboard',
+    form: 'buoy',
+    name: null,
+    light: null,
+    colour: 'green',
+    shape: 'cone',
+    height: null,
+    range: null,
+    path: null,
+    transitBearing: null,
+    transitDistanceM: null,
+    transitPartner: null,
+    transitPartnerName: null,
+    channel: null,
+    description: null,
+    lit: null,
+    priority: 50,
+    source: 'osm',
+    updated: null,
+    region: null,
+    ...overrides,
+  };
+}
+
+describe('signal annotations on chart marks', () => {
+  it('leaves a mark with no mapped signals exactly as before', () => {
+    const spec = symbolForMark(buoy(), 'A');
+    expect(spec.units).toBe(32);
+    expect(spec.svg).toBe(symbolFor('lateral_starboard', 'A').svg);
+    expect(spec.svg).not.toContain('data-mark-annotation');
+  });
+
+  it('throws a light beam on the 135° bearing in the mapped light colour', () => {
+    const spec = symbolForMark(buoy({
+      light: 'Fl(2) red 10s',
+      lightCharacter: 'Fl',
+      lightColour: 'red',
+      lit: true,
+    }), 'A');
+
+    expect(spec.units).toBe(56);
+    expect(spec.svg).toContain('data-mark-annotation="light"');
+    // A beam from the lamp towards the south-east corner, not a star.
+    expect(spec.svg).toContain('M25.62 25.62 L35.09 29.44 L29.44 35.09 Z');
+    expect(spec.svg).toContain('fill="#e23b3b"');
+    expect(spec.svg).toContain('r="1.8"');
+    // The aid itself is unchanged apart from the wider viewport.
+    expect(spec.svg).toContain('M12 7 H20 L23 11 L18 25 H14 L9 11 Z');
+  });
+
+  it('falls back to the first mapped sector colour for the flare', () => {
+    const spec = symbolForMark(buoy({
+      lit: true,
+      lightCharacter: 'Iso',
+      lightSectors: [{ sector: 1, colour: 'green' }],
+    }), 'A');
+    expect(spec.svg).toContain('data-mark-annotation="light"');
+    expect(spec.svg).toContain('fill="#26a65b"');
+  });
+
+  it('does not add a second flare to symbols that are already a light', () => {
+    const spec = symbolForMark(buoy({ category: 'major_light', lit: true, light: 'Fl 5s' }), 'A');
+    expect(spec.svg).not.toContain('data-mark-annotation="light"');
+  });
+
+  it('draws three sound lines on the 225° bearing and names the signal above them', () => {
+    const spec = symbolForMark(buoy({
+      fogSignal: true,
+      fogSignalCategory: 'bell',
+      fogSignalGroup: '2',
+      fogSignalPeriod: '30',
+    }), 'A');
+
+    const group = spec.svg.match(/<g data-mark-annotation="sound">([\s\S]*?)<\/g>/)?.[1] ?? '';
+    const arcs = [...group.matchAll(
+      /M(-?[\d.]+) (-?[\d.]+) A[\d.]+ [\d.]+ 0 0 1 (-?[\d.]+) (-?[\d.]+)/g,
+    )];
+    // Three radiating lines, each drawn twice: a dark halo under a light stroke.
+    expect(arcs).toHaveLength(6);
+    for (const [, x1, y1, x2, y2] of arcs) {
+      // South-west of the aid: every end lies left of and below its centre.
+      expect(Number(x1)).toBeLessThan(16);
+      expect(Number(y1)).toBeGreaterThan(16);
+      expect(Number(x2)).toBeLessThan(16);
+      expect(Number(y2)).toBeGreaterThan(16);
+    }
+    expect(group).toContain('>bell</text>');
+    expect(group).toContain('y="21.6"');
+    expect(group).toContain('stroke="#f4f7f8" stroke-width="1.5"');
+  });
+
+  it('labels a horn signal as a horn', () => {
+    const spec = symbolForMark(buoy({
+      fogSignal: true,
+      fogSignalCategory: 'horn',
+    }), 'A');
+    expect(spec.svg).toContain('>horn</text>');
+  });
+
+  it('rings a marked radar transponder', () => {
+    const spec = symbolForMark(buoy({
+      radarTransponderCategory: 'racon',
+      radarTransponderGroup: '1',
+      radarTransponderPeriod: '60',
+    }), 'A');
+    expect(spec.svg).toContain('data-mark-annotation="racon"');
+    expect(spec.svg).toContain('r="14"');
+    return expect(spec.units).toBe(56);
+  });
+});
+
+describe('signal wording for the mark sheet', () => {
+  it('describes a mapped bell with its group and period', () => {
+    expect(soundSignalText(buoy({
+      fogSignal: true,
+      fogSignalCategory: 'bell',
+      fogSignalGroup: '2',
+      fogSignalPeriod: '30',
+    }))).toBe('bell · group 2 · 30 s period');
+    expect(soundSignalText(buoy())).toBeNull();
+    expect(soundSignalText(buoy({ fogSignal: true }))).toBe('Mapped sound signal (kind not stated)');
+  });
+
+  it('describes a mapped racon separately from a radar reflector', () => {
+    expect(raconText(buoy({
+      radarTransponderCategory: 'racon',
+      radarTransponderPeriod: '60',
+    }))).toBe('racon · 60 s period');
+    expect(raconText(buoy({ radarReflector: true }))).toBeNull();
   });
 });

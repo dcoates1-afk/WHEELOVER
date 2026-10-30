@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { distanceMeters } from '../../shared/navaid-core.mjs';
-import { ialaRegion, formatPosition, symbolFor, CATEGORY_LABELS } from '../lib/navaids';
+import {
+  ialaRegion,
+  formatPosition,
+  symbolForMark,
+  soundSignalText,
+  raconText,
+  CATEGORY_LABELS,
+} from '../lib/navaids';
 import type { Navaid, NavaidCategory } from '../lib/navaids';
 
 /**
@@ -38,6 +45,19 @@ function displayValue(value: unknown): string | null {
   if (value === null || value === undefined || value === '' || value === 'n/a') return null;
   if (typeof value === 'number' && value === 0) return null;
   return String(value);
+}
+
+/**
+ * Dataset labels can carry a navigation caveat in brackets. Those caveats live
+ * on the disclaimer page now, so a data row shows the source without repeating
+ * them.
+ */
+function sourceLabel(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value
+    .replace(/\s*\([^()]*(?:not certified|not for navigation|converted GIS feature)[^()]*\)/i, '')
+    .trim();
+  return trimmed || value;
 }
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
@@ -79,7 +99,7 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
   }, [isWreck, mark.id, mark.lat, mark.lon]);
 
   const region = ialaRegion(mark.lat, mark.lon);
-  const spec = symbolFor(mark.category, region);
+  const spec = symbolForMark(mark, region);
   // One light of a transit is often unnamed in OSM while its partner carries
   // the name; borrow it so the sheet reads "Inskip Islands rear light" instead
   // of repeating the class label as both eyebrow and title.
@@ -146,7 +166,11 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
       >
         <div className="sheet-grabber" aria-hidden="true" />
         <header className="sheet-head">
-          <span className="sheet-symbol" dangerouslySetInnerHTML={{ __html: spec.svg }} aria-hidden="true" />
+          <span
+            className={`sheet-symbol${spec.units > 32 ? ' sheet-symbol-annotated' : ''}`}
+            dangerouslySetInnerHTML={{ __html: spec.svg }}
+            aria-hidden="true"
+          />
           <div>
             <p className="eyebrow">{CATEGORY_LABELS[mark.category]}</p>
             <h2>{title}</h2>
@@ -188,6 +212,17 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
           <Row label="Signal group" value={mark.lightGroup} />
           <Row label="Signal period" value={mark.lightPeriod ? `${mark.lightPeriod} s` : null} />
           <Row label="Flash sequence" value={mark.lightSequence} />
+          <Row label="Sound signal (bell / horn)" value={soundSignalText(mark)} />
+          <Row
+            label="Sound-signal sequence"
+            value={mark.fogSignalSequence ? `${mark.fogSignalSequence} (coded timing)` : null}
+          />
+          <Row label="Radar transponder (racon)" value={raconText(mark)} />
+          <Row
+            label="Racon sequence"
+            value={mark.radarTransponderSequence ? `${mark.radarTransponderSequence} (coded timing)` : null}
+          />
+          <Row label="Radar reflector" value={mark.radarReflector ? 'Yes — passive reflector, not a transponder' : null} />
           <Row label="VHF channel" value={mark.channel ? `Ch ${mark.channel}` : null} />
           <Row label="Radio callsign" value={mark.callsign} />
           <Row label="Transit role" value={transitRole} />
@@ -280,7 +315,7 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
               <Row label="NOAA chart source date" value={mark.wreckChartSurveyDate} />
               <Row label="NOAA vertical datum code" value={mark.wreckChartVerticalDatum} />
               <Row label="NOAA wreck exposure code" value={mark.wreckChartExposed} />
-              <Row label="NOAA source" value={mark.wreckChartSource} />
+              <Row label="NOAA source" value={sourceLabel(mark.wreckChartSource)} />
               <Row label="Dive site (community mapped)" value={mark.diveSite ? 'Yes' : null} />
               <Row label="Typical dive depth" value={mark.diveDepth} />
               <Row label="Maximum reported dive depth" value={mark.diveMaxDepth} />

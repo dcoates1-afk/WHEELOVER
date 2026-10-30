@@ -421,6 +421,9 @@ export default function App() {
         }
       }
       if (!global.lightSectors?.length && local.lightSectors?.length) enriched.lightSectors = local.lightSectors;
+      // Booleans are not empty strings, so the field sweep above skips them.
+      if (!global.fogSignal && local.fogSignal) enriched.fogSignal = local.fogSignal;
+      if (!global.radarReflector && local.radarReflector) enriched.radarReflector = local.radarReflector;
       merged.set(local.id, enriched);
     }
     return annotateTransits(filterNavaidsByGroups([...merged.values()], preferences.hiddenGroups));

@@ -6,7 +6,7 @@ import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type Mari
 import type { ChartFeature } from '../lib/overpass';
 import { distanceMeters, lightSectorArc, mirrorLightSectorBearings } from '../../shared/navaid-core.mjs';
 import type { ProtectedAreaFeature } from '../lib/protectedAreas';
-import { ialaRegion, quickInfo, symbolFor } from '../lib/navaids';
+import { ialaRegion, quickInfo, symbolForMark } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
 import { vesselCourse, vesselIconSize, vesselIconSvg, vesselIsMoving, vesselTooltipHtml } from '../lib/aisVessel';
 import { loadNoaaTile, noaaTileUrl, tileBounds } from '../lib/noaaChart';
@@ -1080,7 +1080,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       // symbol. Sector bearings are source data; no missing limit is inferred.
       addLightSectors(group, mark, props.zoom);
       const region = ialaRegion(mark.lat, mark.lon);
-      const spec = symbolFor(mark.category, region);
+      const spec = symbolForMark(mark, region);
       // Major lights read as the more important aid: slightly larger star. A
       // wreck's hull sits low in its box, so it gets a little more room to stay
       // legible beside the hazard spheres it is decluttered against.
@@ -1094,16 +1094,22 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
               mark.category === 'transit_rear'
             ? baseSize + 2
             : baseSize;
-      const html = spec.svg.replace('width="32" height="32"', `width="${size}" height="${size}"`);
+      // A mark carrying a light flare, sound beam or racon ring needs a wider
+      // box than the aid itself; the aid stays the same size on screen and the
+      // extra room holds the chart cues.
+      const iconPx = Math.round((size * spec.units) / 32);
+      const html = spec.svg.replace(
+        /(<svg[^>]*?)width="\d+" height="\d+"/,
+        `$1width="${iconPx}" height="${iconPx}"`,
+      );
       // Each leading-light symbol represents one mapped light at its own
       // feature coordinate; the connecting line shows their alignment.
-      const anchorY = size / 2;
       const marker = L.marker([mark.lat, mark.lon], {
         icon: L.divIcon({
           className: 'marnav-mark-wrap',
           html,
-          iconSize: [size, size],
-          iconAnchor: [size / 2, anchorY],
+          iconSize: [iconPx, iconPx],
+          iconAnchor: [iconPx / 2, iconPx / 2],
         }),
         keyboard: true,
         title: spec.label,
@@ -1112,7 +1118,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       marker.setZIndexOffset(mark.priority * 10);
       marker.bindTooltip(quickInfo(mark, ialaRegion(mark.lat, mark.lon)), {
         direction: 'top',
-        offset: [0, -14],
+        offset: [0, -(Math.round(size / 2) + 2)],
         className: 'marnav-tip',
         opacity: 1,
       });

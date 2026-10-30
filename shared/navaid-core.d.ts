@@ -73,6 +73,19 @@ export interface Navaid {
   lightGroup?: string | null;
   lightPeriod?: string | null;
   lightSequence?: string | null;
+  /** True when the source maps any fog (sound) signal on this aid. */
+  fogSignal?: boolean;
+  /** Mapped sound-signal kind, e.g. bell, horn, whistle, siren. */
+  fogSignalCategory?: string | null;
+  fogSignalGroup?: string | null;
+  fogSignalPeriod?: string | null;
+  fogSignalSequence?: string | null;
+  /** Mapped radar transponder (racon) kind; presence is signalled by a circle. */
+  radarTransponderCategory?: string | null;
+  radarTransponderGroup?: string | null;
+  radarTransponderPeriod?: string | null;
+  radarTransponderSequence?: string | null;
+  radarReflector?: boolean;
   verticalDatum?: string | null;
   positionQuality?: string | null;
   sourceCitation?: string | null;

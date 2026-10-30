@@ -622,6 +622,21 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
   const lightGroup = firstTag(tags, ['seamark:light:group']);
   const lightPeriod = firstTag(tags, ['seamark:light:period']);
   const lightSequence = firstTag(tags, ['seamark:light:sequence']);
+  // Sound and radar signals are separate charted facts from the light. They are
+  // kept apart so the cushion symbol can show a bell/horn or racon without
+  // implying anything about the aid's light.
+  const fogSignalCategory = firstTag(tags, ['seamark:fog_signal:category']);
+  const fogSignalGroup = firstTag(tags, ['seamark:fog_signal:group']);
+  const fogSignalPeriod = firstTag(tags, ['seamark:fog_signal:period']);
+  const fogSignalSequence = firstTag(tags, ['seamark:fog_signal:sequence']);
+  const radarTransponderCategory = firstTag(tags, ['seamark:radar_transponder:category']);
+  const radarTransponderGroup = firstTag(tags, ['seamark:radar_transponder:group']);
+  const radarTransponderPeriod = firstTag(tags, ['seamark:radar_transponder:period']);
+  const radarTransponderSequence = firstTag(tags, ['seamark:radar_transponder:sequence']);
+  const hasFogSignal = Boolean(
+    fogSignalCategory || fogSignalGroup || fogSignalPeriod || fogSignalSequence ||
+    tags['seamark:fog_signal'] === 'yes',
+  );
   const verticalDatum = firstTag(tags, [`seamark:${type}:vertical_datum`, 'seamark:light:vertical_datum']);
   const positionQuality = firstTag(tags, ['seamark:position:quality', 'seamark:quality:position']);
   const sourceCitation = firstTag(tags, ['source', 'seamark:source']);
@@ -655,6 +670,16 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
     lightGroup,
     lightPeriod,
     lightSequence,
+    fogSignal: hasFogSignal,
+    fogSignalCategory,
+    fogSignalGroup,
+    fogSignalPeriod,
+    fogSignalSequence,
+    radarTransponderCategory,
+    radarTransponderGroup,
+    radarTransponderPeriod,
+    radarTransponderSequence,
+    radarReflector: tags['seamark:radar_reflector'] === 'yes' || tags['seamark:radar_reflector'] === 'true',
     verticalDatum,
     positionQuality,
     sourceCitation,
@@ -713,7 +738,10 @@ function normName(name) {
 
 function richness(navaid) {
   let score = 0;
-  for (const key of ['name', 'light', 'colour', 'shape', 'height', 'range', 'description']) {
+  for (const key of [
+    'name', 'light', 'colour', 'shape', 'height', 'range', 'description',
+    'fogSignalCategory', 'radarTransponderCategory',
+  ]) {
     if (navaid[key]) score += 1;
   }
   score += (navaid.lightSectors?.length ?? 0) * 2;
@@ -776,9 +804,22 @@ export function dedupeNavaids(items, options = {}) {
     removed += 1;
     const previous = accepted[duplicateOf];
     const preferred = richness(item) > richness(previous) ? item : previous;
+    const other = preferred === item ? previous : item;
     accepted[duplicateOf] = {
       ...preferred,
-      lightSectors: mergeLightSectors(preferred.lightSectors ?? [], preferred === item ? previous.lightSectors ?? [] : item.lightSectors ?? []),
+      lightSectors: mergeLightSectors(preferred.lightSectors ?? [], other.lightSectors ?? []),
+      // A duplicate record may be the only one carrying the sound or racon
+      // signal; keeping both halves avoids silently dropping a charted aid.
+      fogSignal: preferred.fogSignal || other.fogSignal,
+      fogSignalCategory: preferred.fogSignalCategory ?? other.fogSignalCategory,
+      fogSignalGroup: preferred.fogSignalGroup ?? other.fogSignalGroup,
+      fogSignalPeriod: preferred.fogSignalPeriod ?? other.fogSignalPeriod,
+      fogSignalSequence: preferred.fogSignalSequence ?? other.fogSignalSequence,
+      radarTransponderCategory: preferred.radarTransponderCategory ?? other.radarTransponderCategory,
+      radarTransponderGroup: preferred.radarTransponderGroup ?? other.radarTransponderGroup,
+      radarTransponderPeriod: preferred.radarTransponderPeriod ?? other.radarTransponderPeriod,
+      radarTransponderSequence: preferred.radarTransponderSequence ?? other.radarTransponderSequence,
+      radarReflector: preferred.radarReflector || other.radarReflector,
     };
   }
 

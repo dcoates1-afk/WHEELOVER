@@ -246,7 +246,7 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
               <p className="menu-note" data-tide-source={tide.source}>
                 {tide.source === 'noaa'
                   ? `${tide.label} · ${Math.round(tide.distanceKm ?? 0)} km away · ${tide.datum}`
-                  : `${tide.label} · heights above ${tide.datum} · ~8 km model, not chart datum`}
+                  : `${tide.label} · heights above ${tide.datum}`}
               </p>
               {tide.heightNow !== null && (
                 <p className="tide-now" data-tide-now={tide.heightNow.toFixed(2)}>
@@ -317,7 +317,7 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
             </>
           ) : modelCurrent ? (
             <>
-              <p className="menu-note">Open-Meteo surface-current model · ~8 km · includes tidal flow</p>
+              <p className="menu-note">Open-Meteo surface-current model · ~8 km</p>
               <div
                 className="current-readout"
                 data-current-source="model"
@@ -338,7 +338,6 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
                           modelCurrent.setDegrees ?? 0,
                         )}°`}
                   </p>
-                  <p className="metric-sub">surface drift, not a harmonic prediction</p>
                 </div>
                 <Sparkline points={modelSpark} colour="#5cc9f0" />
               </div>
@@ -349,11 +348,6 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
         </>
       )}
 
-      <p className="menu-note disclaimer">
-        Forecast, sea-level and ocean-current model data from Open-Meteo (Météo-France SMOC). US tide and current
-        predictions from NOAA CO-OPS; model heights are above mean sea level, not chart datum. Always cross-check
-        against official sources before passage planning.
-      </p>
     </div>
   );
 }

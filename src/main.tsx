@@ -3,9 +3,11 @@ import 'leaflet/dist/leaflet.css';
 import './styles.css';
 import App from './App';
 import LandingPage from './LandingPage';
+import DisclaimerPage from './DisclaimerPage';
 
 const isAppRoute = window.location.pathname === '/app' || window.location.pathname.startsWith('/app/');
-const RootView = isAppRoute ? App : LandingPage;
+const isDisclaimerRoute = window.location.pathname === '/disclaimer';
+const RootView = isAppRoute ? App : isDisclaimerRoute ? DisclaimerPage : LandingPage;
 
 if (isAppRoute && window.location.pathname !== '/app') {
   window.history.replaceState(null, '', `/app${window.location.search}${window.location.hash}`);
@@ -20,12 +22,15 @@ if (!isAppRoute) {
   viewport?.setAttribute('content', 'width=device-width, initial-scale=1.0');
 }
 
-const title = isAppRoute ? 'WHEELOVER — Maritime Navigation and Planning' : 'WHEELOVER — Know your course. Own your passage.';
+const title = isAppRoute ? 'WHEELOVER — Maritime Navigation and Planning' : isDisclaimerRoute ? 'Open-data disclaimer — WHEELOVER' : 'WHEELOVER — Know your course. Own your passage.';
+
 document.title = title;
 const description = document.querySelector('meta[name="description"]');
 description?.setAttribute('content', isAppRoute
   ? 'WHEELOVER — Maritime Navigation and Planning. Explore nautical charts, navigation aids, live AIS, tides and marine weather.'
-  : 'Know your course. Own your passage. A thoughtful chartplotter for curious sailors: charts, planning, traffic and conditions.');
+  : isDisclaimerRoute
+    ? 'Sources, limitations and important safety information for open-data overlays and tools in WHEELOVER.'
+    : 'Know your course. Own your passage. A thoughtful chartplotter for curious sailors: charts, planning, traffic and conditions.');
 
 import.meta.env.DEV && console.info(`[WHEELOVER] ${isAppRoute ? 'chart app' : 'product website'} loaded`);
 

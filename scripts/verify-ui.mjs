@@ -153,9 +153,11 @@ async function run() {
   console.log('step: menu');
   await openMenu(page);
   const menuText = await page.locator('.menu-panel').textContent();
-  for (const section of ['Base chart', 'Overlays', 'Public places', 'Vessel position', 'Stations', 'Mark database']) {
+  for (const section of ['Base chart', 'Map options', 'Public places', 'Vessel position', 'Stations', 'Mark database']) {
     check(`menu exposes “${section}”`, menuText.includes(section));
   }
+  check('menu is a right-side drawer with section shortcuts', await page.locator('.menu-panel').evaluate((element) => getComputedStyle(element).left !== '0px') && await page.locator('.menu-shortcuts button').count() >= 5);
+  check('menu sections use collapsible disclosure rows', await page.locator('.menu-section > summary.section-summary').count() >= 7);
   check(
     'menu offers standard, satellite, nautical, relief and NOAA bases',
     ['Standard chart', 'Satellite', 'Nautical', 'Relief', 'NOAA ENC', 'NOAA Raster'].every((label) =>

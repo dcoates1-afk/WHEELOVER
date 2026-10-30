@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { COLREGS, REGIONAL_NOTES } from '../data/colregs';
+import { REGIONAL_NOTES } from '../data/colregs';
 import { ALL_PARTS, partNames, searchColregs } from '../lib/colregsSearch';
 
 export function ColregsPanel() {
@@ -36,7 +36,7 @@ export function ColregsPanel() {
       </div>
 
       <p className="menu-note">
-        {results.length} rule{results.length === 1 ? '' : 's'} · summaries, not the legal text
+        {results.length} rule{results.length === 1 ? '' : 's'} · study summaries
       </p>
 
       <ul className="rule-list">
@@ -83,10 +83,6 @@ export function ColregsPanel() {
         ))}
       </ul>
 
-      <p className="menu-note disclaimer">
-        This guide is a study aid bundled offline with WHEELOVER ({COLREGS.length} entries). It is not a substitute for the
-        official convention or local notices to mariners. UK mariners rely on MGN 335 for COLREGs guidance.
-      </p>
     </div>
   );
 }

@@ -25,6 +25,10 @@ $Filtered = Join-Path $WorkDir "marine-filtered.osm.pbf"
 $GeoJsonSeq = Join-Path $WorkDir "marine.geojsonseq"
 $FilteredWays = Join-Path $WorkDir "marine-lines.geojsonseq"
 $FerryRelations = Join-Path $WorkDir "ferry-relations.geojsonseq"
+$TssLines = Join-Path $WorkDir "tss-lines-v2.geojsonseq"
+$TssPolygons = Join-Path $WorkDir "tss-polygons-v2.geojsonseq"
+$TssMultiLines = Join-Path $WorkDir "tss-multilines-v2.geojsonseq"
+$TssOtherRelations = Join-Path $WorkDir "tss-other-relations-v2.geojsonseq"
 $MergedGeoJsonSeq = Join-Path $WorkDir "marine-with-ferry-relations.geojsonseq"
 $MarineSource = Join-Path $WorkDir "marine-source.json"
 $PipelineCli = Join-Path $PSScriptRoot "marine-pipeline-cli.mjs"
@@ -84,7 +88,7 @@ if (-not $ReuseFiltered -and $AdoptCompletedFilter) {
   if ($LASTEXITCODE -ne 0) { throw "Completed filtered PBF failed validation; preserve all inputs and intermediates." }
   node $PipelineCli write-source $MarineSource $PlanetFingerprint
   if ($LASTEXITCODE -ne 0) { throw "Could not record the completed filtered PBF's source fingerprint." }
-  foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $MergedGeoJsonSeq)) {
+  foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $TssLines, $TssPolygons, $TssMultiLines, $TssOtherRelations, $MergedGeoJsonSeq)) {
     if (Test-Path $Stale) { Remove-Item -LiteralPath $Stale -Force }
   }
   $ReuseFiltered = $true
@@ -99,7 +103,7 @@ if (-not $ReuseFiltered) {
   Move-Item -LiteralPath $PartialFiltered -Destination $Filtered
   node $PipelineCli write-source $MarineSource $PlanetFingerprint
   if ($LASTEXITCODE -ne 0) { throw "Could not record the filtered data's source fingerprint." }
-  foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $MergedGeoJsonSeq)) {
+  foreach ($Stale in @($GeoJsonSeq, $FilteredWays, $FerryRelations, $TssLines, $TssPolygons, $TssMultiLines, $TssOtherRelations, $MergedGeoJsonSeq)) {
     if (Test-Path $Stale) { Remove-Item -LiteralPath $Stale -Force }
   }
 }
@@ -115,6 +119,9 @@ if (-not (Test-Path $GeoJsonSeq)) {
 
 # GDAL's OSM driver assembles ferry route relations in multilinestrings. Export
 # them separately because osmium export intentionally drops general relations.
+# It also puts seamark TSS geometry in its lines/multipolygons layers, so export
+# those layers explicitly; the osmium export below does not reliably emit these
+# general relations and area geometries.
 $env:OSM_CONFIG_FILE = $GdalConfig
 if (-not (Test-Path $FilteredWays)) {
   Write-Host "Exporting tagged ferry ways from GDAL's lines layer."
@@ -132,13 +139,51 @@ if (-not (Test-Path $FerryRelations)) {
   if ($LASTEXITCODE -ne 0) { throw "GDAL ferry-relation export failed ($LASTEXITCODE)." }
   Move-Item -LiteralPath $PartialRelations -Destination $FerryRelations
 }
-if (-not (Test-Path $MergedGeoJsonSeq)) {
+if (-not (Test-Path $TssLines)) {
+  Write-Host "Exporting TSS line geometries from GDAL's reconstructed lines layer."
+  $PartialTssLines = "$TssLines.partial"
+  if (Test-Path $PartialTssLines) { Remove-Item -LiteralPath $PartialTssLines -Force }
+  & ogr2ogr -f GeoJSONSeq $PartialTssLines $Filtered -dialect SQLite -sql "SELECT *, 'w' || osm_id AS osm_ref FROM lines WHERE seamark_type LIKE 'separation_%'"
+  if ($LASTEXITCODE -ne 0) { throw "GDAL TSS line export failed ($LASTEXITCODE)." }
+  Move-Item -LiteralPath $PartialTssLines -Destination $TssLines
+}
+if (-not (Test-Path $TssPolygons)) {
+  Write-Host "Exporting TSS polygon geometries from GDAL's multipolygons layer."
+  $PartialTssPolygons = "$TssPolygons.partial"
+  if (Test-Path $PartialTssPolygons) { Remove-Item -LiteralPath $PartialTssPolygons -Force }
+  & ogr2ogr -f GeoJSONSeq $PartialTssPolygons $Filtered -dialect SQLite -sql "SELECT *, CASE WHEN osm_way_id IS NOT NULL THEN 'w' || osm_way_id ELSE 'r' || osm_id END AS osm_ref FROM multipolygons WHERE seamark_type LIKE 'separation_%'"
+  if ($LASTEXITCODE -ne 0) { throw "GDAL TSS polygon export failed ($LASTEXITCODE)." }
+  Move-Item -LiteralPath $PartialTssPolygons -Destination $TssPolygons
+}
+if (-not (Test-Path $TssMultiLines)) {
+  Write-Host "Exporting TSS relation lines from GDAL's multilinestrings layer."
+  $PartialTssMultiLines = "$TssMultiLines.partial"
+  if (Test-Path $PartialTssMultiLines) { Remove-Item -LiteralPath $PartialTssMultiLines -Force }
+  & ogr2ogr -f GeoJSONSeq $PartialTssMultiLines $Filtered -dialect SQLite -sql "SELECT *, 'r' || osm_id AS osm_ref FROM multilinestrings WHERE seamark_type LIKE 'separation_%'"
+  if ($LASTEXITCODE -ne 0) { throw "GDAL TSS multilinestring export failed ($LASTEXITCODE)." }
+  Move-Item -LiteralPath $PartialTssMultiLines -Destination $TssMultiLines
+}
+if (-not (Test-Path $TssOtherRelations)) {
+  Write-Host "Exporting other TSS relation geometries from GDAL's other_relations layer."
+  $PartialTssOtherRelations = "$TssOtherRelations.partial"
+  if (Test-Path $PartialTssOtherRelations) { Remove-Item -LiteralPath $PartialTssOtherRelations -Force }
+  & ogr2ogr -f GeoJSONSeq $PartialTssOtherRelations $Filtered -dialect SQLite -sql "SELECT *, 'r' || osm_id AS osm_ref FROM other_relations WHERE seamark_type LIKE 'separation_%'"
+  if ($LASTEXITCODE -ne 0) { throw "GDAL TSS other-relations export failed ($LASTEXITCODE)." }
+  Move-Item -LiteralPath $PartialTssOtherRelations -Destination $TssOtherRelations
+}
+$MarineSources = @($GeoJsonSeq, $FilteredWays, $FerryRelations, $TssLines, $TssPolygons, $TssMultiLines, $TssOtherRelations)
+$RebuildMerged = -not (Test-Path $MergedGeoJsonSeq)
+if (-not $RebuildMerged) {
+  $MergedTime = (Get-Item -LiteralPath $MergedGeoJsonSeq).LastWriteTimeUtc
+  $RebuildMerged = @($MarineSources | Where-Object { (Get-Item -LiteralPath $_).LastWriteTimeUtc -gt $MergedTime }).Count -gt 0
+}
+if ($RebuildMerged) {
   Write-Host "Combining marine features into the streamed builder input."
   $PartialMerged = "$MergedGeoJsonSeq.partial"
   if (Test-Path $PartialMerged) { Remove-Item -LiteralPath $PartialMerged -Force }
   $Output = [System.IO.File]::Create($PartialMerged)
   try {
-    foreach ($Source in @($GeoJsonSeq, $FilteredWays, $FerryRelations)) {
+    foreach ($Source in $MarineSources) {
       $Input = [System.IO.File]::OpenRead($Source)
       try { $Input.CopyTo($Output) } finally { $Input.Dispose() }
       $Output.WriteByte(10)

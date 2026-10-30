@@ -181,9 +181,5 @@ export function poiPopupContent(poi: Poi): HTMLElement {
     root.append(note);
   }
 
-  const source = document.createElement('p');
-  source.className = 'poi-popup-note';
-  source.textContent = 'OpenStreetMap place. Not a surveyed chart feature.';
-  root.append(source);
   return root;
 }

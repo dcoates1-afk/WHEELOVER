@@ -262,11 +262,11 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
               <Row label="Effect on surface navigation" value={mark.wreckBoatingEffect} />
               <Row label="Wreck water level" value={mark.wreckWaterLevel?.replace(/_/g, ' ')} />
               <Row label="Charted sounding" value={mark.wreckSoundingDepth ? `${mark.wreckSoundingDepth} m relative to chart datum` : null} />
-              <Row label="Reported depth below water" value={mark.wreckReportedDepth ? `${mark.wreckReportedDepth} m (community mapped; datum/source may differ)` : null} />
+              <Row label="Reported depth below water" value={mark.wreckReportedDepth ? `${mark.wreckReportedDepth} m` : null} />
               <Row label="Wreck-top clearance" value={mark.wreckClearance ? `${mark.wreckClearance} m (reported)` : null} />
               <Row label="Craft type" value={mark.wreckType} />
               <Row label="Reported sinking date" value={mark.wreckDateSunk} />
-              <Row label="Heritage inventory depth information" value={mark.wreckInventoryDepth ? `${mark.wreckInventoryDepth} (heritage inventory report; units/datum may differ; not chart-clearance information)` : null} />
+              <Row label="Heritage inventory depth information" value={mark.wreckInventoryDepth} />
               <Row label="Heritage wreck / vessel description" value={mark.wreckTypeDescription} />
               <Row label="Heritage site condition" value={mark.wreckSiteDescription} />
               <Row label="Historical context" value={mark.wreckHistoricalContext} />
@@ -275,15 +275,15 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
               <Row label="Heritage inventory updated" value={mark.wreckInventoryUpdated} />
               <Row label="Reported dimensions" value={mark.wreckLength || mark.wreckWidth ? `${mark.wreckLength ? `${mark.wreckLength} m long` : ''}${mark.wreckLength && mark.wreckWidth ? ' · ' : ''}${mark.wreckWidth ? `${mark.wreckWidth} m wide` : ''}` : null} />
               <Row label="NOAA ENC Direct GIS category" value={mark.wreckChartSource ? mark.wreckCategory : null} />
-              <Row label="NOAA chart expected depth" value={mark.wreckChartExpectedDepth ? `${mark.wreckChartExpectedDepth} m; ENC Direct GIS value, not navigation-certified` : null} />
+              <Row label="NOAA chart expected depth" value={mark.wreckChartExpectedDepth ? `${mark.wreckChartExpectedDepth} m` : null} />
               <Row label="NOAA chart sounding quality" value={mark.wreckChartQuality} />
               <Row label="NOAA chart source date" value={mark.wreckChartSurveyDate} />
               <Row label="NOAA vertical datum code" value={mark.wreckChartVerticalDatum} />
               <Row label="NOAA wreck exposure code" value={mark.wreckChartExposed} />
-              <Row label="NOAA source warning" value={mark.wreckChartSource} />
-              <Row label="Dive site (community mapped)" value={mark.diveSite ? 'Yes — community-mapped interest only; not confirmation of access, conditions, or safety' : null} />
-              <Row label="Typical dive depth" value={mark.diveDepth ? `${mark.diveDepth} m (community mapped)` : null} />
-              <Row label="Maximum reported dive depth" value={mark.diveMaxDepth ? `${mark.diveMaxDepth} m (community mapped)` : null} />
+              <Row label="NOAA source" value={mark.wreckChartSource} />
+              <Row label="Dive site (community mapped)" value={mark.diveSite ? 'Yes' : null} />
+              <Row label="Typical dive depth" value={mark.diveDepth} />
+              <Row label="Maximum reported dive depth" value={mark.diveMaxDepth} />
               <Row label="Dive entry" value={mark.diveEntry} />
               <Row label="Reported diver hazard" value={mark.diveHazard} />
               <Row label="Dive style" value={mark.driftDive ? 'Drift diving reported' : null} />
@@ -310,7 +310,7 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
           {mark.wreckInventoryUrl && <Row label="Heritage dataset metadata" value={mark.wreckInventoryUrl} />}
           {mark.wreckChartSourceUrl && <Row label="NOAA ENC Direct GIS guidance" value={mark.wreckChartSourceUrl} />}
           <Row label="Source date" value={mark.sourceDate} />
-          <Row label="Source" value={mark.source === 'osm' ? 'OpenStreetMap seamarks (ODbL)' : mark.source === 'noaa-enc' ? 'NOAA ENC Direct to GIS (not certified for navigation)' : mark.source} />
+          <Row label="Source" value={mark.source === 'osm' ? 'OpenStreetMap seamarks (ODbL)' : mark.source === 'noaa-enc' ? 'NOAA ENC Direct to GIS' : mark.source} />
           {mark.sourceUrl && <Row label="Source feature" value={mark.sourceUrl} />}
           <Row label="Last mapped" value={mark.updated ? new Date(mark.updated).toLocaleDateString() : null} />
           <Row label="Reference" value={mark.id} />

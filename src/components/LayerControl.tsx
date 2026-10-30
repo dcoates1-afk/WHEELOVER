@@ -10,7 +10,6 @@ import { NAVAID_GROUPS, isGroupHidden, toggleGroup } from '../lib/navaidGroups';
 import { POI_GROUPS, isPoiGroupHidden, togglePoiGroup } from '../lib/poiGroups';
 import { poiIconSvg } from '../lib/pois';
 import { formatBytes } from '../lib/noaaChart';
-import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 
 export interface MarkStats {
   shown: number;
@@ -305,9 +304,8 @@ export function LayerControl({
                 {preferences.overlays.contours && (
                   <p className="menu-note">
                     {noaaCovered
-                      ? 'US zoom 9+ uses NOAA charted contours; worldwide/local vector detail is only available where its source files are installed.'
-                      : 'Global contours come from the GEBCO grid (15″ base resolution); high-zoom lines can look crisp but cannot add survey detail.'}{' '}
-                    Interpolated display aid only—not for navigation. Source/datum seams can occur.
+                      ? 'US zoom 9+ uses NOAA ENC contours; other regions use the global GEBCO contour layer.'
+                      : 'Global GEBCO contour layer.'}
                   </p>
                 )}
                 <ToggleRow
@@ -316,12 +314,6 @@ export function LayerControl({
                   checked={preferences.overlays.depthLabels}
                   onChange={(value) => setOverlay('depthLabels', value)}
                 />
-                {preferences.overlays.depthLabels && (
-                  <p className="menu-note">
-                    Sampled from seabed grids, not surveyed chart soundings. Use them to read the shape of the
-                    seabed, never to plan a safe depth.
-                  </p>
-                )}
                 <ToggleRow
                   label="Charted soundings"
                   hint="NOAA ENC spot depths in the chart's printed unit · US waters, zoom 15+"
@@ -339,7 +331,7 @@ export function LayerControl({
                   <dl>
                     <div>
                       <dt>Depth numbers</dt>
-                      <dd>Metres below sea level · modelled seabed sample</dd>
+                      <dd>Metres</dd>
                     </div>
                     <div>
                       <dt>Charted soundings</dt>
@@ -365,13 +357,13 @@ export function LayerControl({
                 />
                 <ToggleRow
                   label="Ferry lanes"
-                  hint="Charted crossings · Solent, Channel ports and New York"
+                  hint="Ferry routes"
                   checked={preferences.overlays.ferries}
                   onChange={(value) => setOverlay('ferries', value)}
                 />
                 <ToggleRow
                   label="TSS lanes"
-                  hint="Traffic separation schemes · English Channel and Dover Strait"
+                  hint="Traffic separation schemes"
                   checked={preferences.overlays.tss}
                   onChange={(value) => setOverlay('tss', value)}
                 />
@@ -387,37 +379,7 @@ export function LayerControl({
                   checked={preferences.overlays.protectedAreas}
                   onChange={(value) => setOverlay('protectedAreas', value)}
                 />
-                {(preferences.overlays.bridges || preferences.overlays.protectedAreas) && (
-                  <p className="menu-note">Bridge and OSM information is community-mapped and may be incomplete; missing clearance is unknown, not safe. Natura 2000 boundaries show designations, not a universal boating ban. Check current charts, notices, laws, and local authorities before navigating or entering a restricted area.</p>
-                )}
-                {preferences.overlays.navaids && (
-                  <>
-                    <p className="menu-note">
-                      Reporting overlays include the mapped systems and partial lines shown on the chart; the researched index also records systems whose chartlets, datum or exact coordinates are not sufficiently verified to draw. Boundary lines are not always reporting areas. Not for navigation or compliance—check current requirements with the responsible authority.
-                    </p>
-                    <details className="legend reporting-coverage">
-                      <summary>Reporting system coverage &amp; sources</summary>
-                      <ul>
-                        {SHIP_REPORTING_SYSTEMS.coverageNotes.map((entry) => (
-                          <li key={entry.systemId}>
-                            <strong>{entry.system}</strong>
-                            <p>{entry.status}</p>
-                            <p>{entry.datum} · verified {entry.verifiedAsOf}</p>
-                            <p>{entry.note}</p>
-                            <a href={entry.sourceUrl} target="_blank" rel="noreferrer">{entry.sourceCitation}</a>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  </>
-                )}
-                {(preferences.overlays.ferries || preferences.overlays.tss) && (
-                  <p className="menu-note">
-                    Routes are community-mapped OpenStreetMap data drawn in their own layer: ferries as dashed cyan
-                    lines, traffic separation lanes in magenta (amber for separation zones). Nothing appears where OSM
-                    has no mapped route, so pan to the Solent, the Channel or New York to see them.
-                  </p>
-                )}
+                <a className="menu-row disclaimer-link" href="/disclaimer" onClick={() => onOpen(false)}>Data sources &amp; disclaimer<span className="chevron" aria-hidden="true">›</span></a>
                 <ToggleRow
                   label="AIS targets"
                   hint="Live vessel positions on the chart"
@@ -439,10 +401,7 @@ export function LayerControl({
                 />
                 {preferences.overlays.pois && (
                   <>
-                    <p className="menu-note">
-                      Places are community-mapped and can be out of date. Tap a class to show or hide it; the
-                      choice is remembered on this device.
-                    </p>
+                    <p className="menu-note">Tap a class to show or hide it; the choice is remembered on this device.</p>
                     <ul className="legend-grid poi-legend">
                       {POI_GROUPS.map((group) => {
                         const hidden = isPoiGroupHidden(preferences.hiddenPoiGroups, group.id);

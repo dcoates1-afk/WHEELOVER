@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeTssFeature, marineBoundsIntersect, marineShardsForBounds, validateMarineManifest } from './marineDb';
+import { describeTssFeature, marineBoundsIntersect, marineShardsForBounds, tssGeometryParts, validateMarineManifest } from './marineDb';
 import { DEFAULT_PREFERENCES, readChartPreferences } from './chartPreferences';
 
 const manifest = validateMarineManifest({
@@ -37,6 +37,49 @@ describe('worldwide marine archive index', () => {
     expect(migrated.overlays).toMatchObject({ ferries: true, tss: true });
   });
 
+  it('preserves disconnected TSS components rather than drawing artificial joins', () => {
+    const feature = {
+      id: 'tss:r321',
+      type: 'separation_lane',
+      name: 'Multipart traffic lane',
+      bounds: [50, -5, 51, -4] as [number, number, number, number],
+      path: [[50, -5], [50.1, -4.9]] as [number, number][],
+      paths: [
+        [[50, -5], [50.1, -4.9]],
+        [[50.8, -4.2], [51, -4]],
+      ] as [number, number][][],
+      polygons: [[
+        [[50, -5], [50, -4.8], [50.2, -4.8], [50, -5]],
+        [[50.05, -4.98], [50.08, -4.98], [50.08, -4.95], [50.05, -4.98]],
+      ]] as [number, number][][][],
+    };
+
+    expect(tssGeometryParts(feature)).toEqual([
+      { kind: 'polygon', coordinates: feature.polygons[0] },
+      { kind: 'line', coordinates: feature.paths[0] },
+      { kind: 'line', coordinates: feature.paths[1] },
+    ]);
+    expect(tssGeometryParts({ ...feature, polygons: undefined })).toEqual([
+      { kind: 'line', coordinates: feature.paths[0] },
+      { kind: 'line', coordinates: feature.paths[1] },
+    ]);
+  });
+
+  it('keeps legacy closed-zone geometries as polygons and lines as lines', () => {
+    const base = {
+      id: 'tss:w654',
+      type: 'separation_zone',
+      name: 'Legacy feature',
+      bounds: [50, -5, 51, -4] as [number, number, number, number],
+    };
+    expect(tssGeometryParts({ ...base, path: [[50, -5], [50, -4], [51, -4], [50, -5]] })).toEqual([
+      { kind: 'polygon', coordinates: [[[50, -5], [50, -4], [51, -4], [50, -5]]] },
+    ]);
+    expect(tssGeometryParts({ ...base, path: [[50, -5], [51, -4]] })).toEqual([
+      { kind: 'line', coordinates: [[50, -5], [51, -4]] },
+    ]);
+  });
+
   it('formats TSS popup details and produces a direct OSM source link', () => {
     const info = describeTssFeature({
       id: 'tss:r987',
@@ -54,6 +97,7 @@ describe('worldwide marine archive index', () => {
       type: 'separation lane',
       details: [['Lane traffic flow', 'inbound'], ['OSM source note', 'IMO circular']],
       sourceUrl: 'https://www.openstreetmap.org/relation/987',
+      sourceName: 'OpenStreetMap contributors (ODbL)',
     });
   });
 

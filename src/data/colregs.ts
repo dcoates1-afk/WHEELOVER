@@ -383,7 +383,6 @@ export const REGIONAL_NOTES: RegionalNote[] = [
       'Canadian modifications include additional requirements for sounding signals and radar use in restricted visibility, and specific rules for the Great Lakes and their connecting waters.',
       'The Canadian buoyage system follows IALA Region B (red to starboard returning upstream from seaward), with Canadian adaptations for the St. Lawrence and Great Lakes.',
       'Pleasure craft are also bound by the Small Vessel Regulations; operator competency is a legal requirement.',
-      'Check Notices to Mariners (NOTMAR) for localized changes before relying on charted aids.',
     ],
   },
   {

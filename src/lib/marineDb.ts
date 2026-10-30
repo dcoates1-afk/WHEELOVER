@@ -10,12 +10,36 @@ export interface MarineFeature {
   bounds: MarineBounds;
   path: [number, number][];
   paths?: [number, number][][];
+  polygons?: [number, number][][][];
   details?: Record<string, string>;
   sourceUrl?: string;
+  sourceName?: string;
   navaid?: Navaid;
 }
 
-export const TSS_SOURCE_ATTRIBUTION = 'TSS data © OpenStreetMap contributors (ODbL)';
+export type TssGeometryPart =
+  | { kind: 'line'; coordinates: [number, number][] }
+  | { kind: 'polygon'; coordinates: [number, number][][] };
+
+export function tssGeometryParts(feature: MarineFeature): TssGeometryPart[] {
+  const parts: TssGeometryPart[] = [
+    ...(feature.polygons ?? [])
+      .filter((rings) => rings.some((ring) => ring.length >= 4))
+      .map((coordinates) => ({ kind: 'polygon' as const, coordinates })),
+    ...(feature.paths ?? [])
+      .filter((coordinates) => coordinates.length >= 2)
+      .map((coordinates) => ({ kind: 'line' as const, coordinates })),
+  ];
+  if (parts.length || feature.path.length < 2) return parts;
+  const first = feature.path[0];
+  const last = feature.path.at(-1)!;
+  const closed = feature.path.length >= 4 && first[0] === last[0] && first[1] === last[1];
+  return closed
+    ? [{ kind: 'polygon', coordinates: [feature.path] }]
+    : [{ kind: 'line', coordinates: feature.path }];
+}
+
+export const TSS_SOURCE_ATTRIBUTION = 'TSS data © OpenStreetMap contributors (ODbL) and the credited regional data providers.';
 
 const TSS_DETAIL_LABELS: Record<string, string> = {
   operator: 'Operator',
@@ -32,9 +56,17 @@ const TSS_DETAIL_LABELS: Record<string, string> = {
   'seamark:separation_lane:category': 'Lane category',
   'seamark:separation_zone:category': 'Zone category',
   'seamark:information': 'Information',
+  source_name: 'Data source',
+  source_class: 'Source class',
+  source_date: 'Source date',
+  valid_from: 'Valid from',
+  valid_to: 'Valid to',
+  information: 'Information',
+  orientation: 'Orientation',
+  traffic_flow: 'Traffic flow',
 };
 
-export function describeTssFeature(feature: MarineFeature): { title: string; type: string; details: Array<[string, string]>; sourceUrl: string | null } {
+export function describeTssFeature(feature: MarineFeature): { title: string; type: string; details: Array<[string, string]>; sourceUrl: string | null; sourceName: string | null } {
   const details = Object.entries(feature.details ?? {})
     .filter(([key, value]) => key !== 'seamark:name' && key !== 'name' && typeof value === 'string' && value.trim())
     .map(([key, value]) => [TSS_DETAIL_LABELS[key] ?? key.replace(/^seamark:/, '').replace(/[:_]/g, ' '), value.trim()] as [string, string]);
@@ -47,6 +79,7 @@ export function describeTssFeature(feature: MarineFeature): { title: string; typ
     type: feature.type.replace(/_/g, ' '),
     details,
     sourceUrl,
+    sourceName: feature.details?.source_name ?? (sourceUrl?.includes('openstreetmap.org') ? 'OpenStreetMap contributors (ODbL)' : null),
   };
 }
 

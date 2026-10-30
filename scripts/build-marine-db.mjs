@@ -12,10 +12,23 @@ import { rename } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { normalizeElement } from '../shared/navaid-core.mjs';
 
+async function renameWithRetry(source, destination) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(source, destination);
+      return;
+    } catch (error) {
+      if (!['EPERM', 'EACCES', 'EBUSY'].includes(error?.code) || attempt >= 7) throw error;
+      await new Promise((done) => setTimeout(done, 100 * (attempt + 1)));
+    }
+  }
+}
+
 const args = process.argv.slice(2);
 const inputPath = args.find((arg) => !arg.startsWith('--'));
 const outArg = args.indexOf('--out');
 const outDir = resolve(outArg >= 0 ? args[outArg + 1] : 'public/marine-db');
+const tssOnly = args.includes('--tss-only');
 const CELL_SIZE = 5;
 const MAX_FEATURES_PER_CELL = 400;
 const MIN_DENSE_CELL_SIZE = 0.05;
@@ -48,6 +61,26 @@ function collectPaths(geometry) {
   }
 }
 
+function collectLinePaths(geometry) {
+  if (!geometry) return [];
+  switch (geometry.type) {
+    case 'LineString': return [geometry.coordinates];
+    case 'MultiLineString': return geometry.coordinates;
+    case 'GeometryCollection': return geometry.geometries.flatMap(collectLinePaths);
+    default: return [];
+  }
+}
+
+function collectPolygonGroups(geometry) {
+  if (!geometry) return [];
+  switch (geometry.type) {
+    case 'Polygon': return [geometry.coordinates];
+    case 'MultiPolygon': return geometry.coordinates;
+    case 'GeometryCollection': return geometry.geometries.flatMap(collectPolygonGroups);
+    default: return [];
+  }
+}
+
 function toPath(raw) {
   return raw
     .filter((coordinate) => Array.isArray(coordinate) && Number.isFinite(coordinate[0]) && Number.isFinite(coordinate[1]))
@@ -73,11 +106,10 @@ function cellsFor([south, west, north, east], cellSize) {
 
 const cellBounds = ([y, x], cellSize) => [y * cellSize - 90, x * cellSize - 180, (y + 1) * cellSize - 90, (x + 1) * cellSize - 180];
 const cellId = ([y, x]) => `${y}_${x}`;
-
 const intersectsBounds = (a, b) => a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3];
 
 function writeShardTree(layer, layerDir, shardBounds, entries, shards, depth = 0, y = 0, x = 0) {
-  const size = (shardBounds[2] - shardBounds[0]);
+  const size = shardBounds[2] - shardBounds[0];
   if (entries.length > MAX_FEATURES_PER_CELL && size > MIN_DENSE_CELL_SIZE) {
     const halfSize = size / 2;
     const [south, west] = shardBounds;
@@ -89,8 +121,7 @@ function writeShardTree(layer, layerDir, shardBounds, entries, shards, depth = 0
     ];
     for (const quadrant of quadrants) {
       const bucket = entries.filter((entry) => intersectsBounds(entry.bounds, quadrant.bounds));
-      if (bucket.length === 0) continue;
-      writeShardTree(layer, layerDir, quadrant.bounds, bucket, shards, depth + 1, y * 2 + quadrant.y, x * 2 + quadrant.x);
+      if (bucket.length) writeShardTree(layer, layerDir, quadrant.bounds, bucket, shards, depth + 1, y * 2 + quadrant.y, x * 2 + quadrant.x);
     }
     return;
   }
@@ -99,12 +130,46 @@ function writeShardTree(layer, layerDir, shardBounds, entries, shards, depth = 0
   writeFileSync(resolve(layerDir, `${suffix}.json`), JSON.stringify({ bounds: shardBounds, features: entries }));
   shards.push({ path, bounds: shardBounds, count: entries.length });
 }
+
 const cells = { navaids: new Map(), ferries: new Map(), tss: new Map() };
 const featureIds = { navaids: new Set(), ferries: new Set(), tss: new Set() };
+const featureById = { navaids: new Map(), ferries: new Map(), tss: new Map() };
 let inputCount = 0;
 let dropped = 0;
 
+function uniquePaths(paths) {
+  const seen = new Set();
+  return paths.filter((path) => {
+    const key = JSON.stringify(path);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function addToCells(layer, item) {
+  const previous = featureById[layer].get(item.id);
+  if (previous && layer === 'tss') {
+    for (const cell of cellsFor(previous.bounds, CELL_SIZE)) {
+      const key = cellId(cell);
+      const bucket = cells[layer].get(key);
+      if (bucket) cells[layer].set(key, bucket.filter((entry) => entry.id !== item.id));
+    }
+    const paths = uniquePaths([...(previous.paths ?? []), ...(item.paths ?? [])]);
+    const polygons = [...(previous.polygons ?? []), ...(item.polygons ?? [])]
+      .filter((polygon, index, all) => all.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(polygon)) === index);
+    item = {
+      ...previous,
+      ...item,
+      bounds: boundsOf([...paths, ...polygons.flat()]),
+      path: paths[0] ?? polygons[0]?.[0] ?? [],
+      ...(paths.length ? { paths } : {}),
+      ...(polygons.length ? { polygons } : {}),
+      details: { ...(previous.details ?? {}), ...(item.details ?? {}) },
+      sourceUrl: item.sourceUrl ?? previous.sourceUrl,
+    };
+  }
+  featureById[layer].set(item.id, item);
   featureIds[layer].add(item.id);
   for (const cell of cellsFor(item.bounds, CELL_SIZE)) {
     const key = cellId(cell);
@@ -125,21 +190,14 @@ function addNavaid(feature, properties, tags, seamark) {
   const tagsForCore = { ...tags };
   if (tagsForCore.seamark_type && !tagsForCore['seamark:type']) tagsForCore['seamark:type'] = tagsForCore.seamark_type;
   const center = [(rawBounds[0] + rawBounds[2]) / 2, (rawBounds[1] + rawBounds[3]) / 2];
-  const isReportingGeometry =
-    seamark === 'calling_in_point' || seamark === 'calling-in_point' || seamark === 'communication_area';
+  const isReportingGeometry = seamark === 'calling_in_point' || seamark === 'calling-in_point' || seamark === 'communication_area';
   const geometryPaths = isReportingGeometry
     ? feature.geometry?.type === 'Polygon'
       ? feature.geometry.coordinates
       : feature.geometry?.type === 'MultiPolygon'
         ? feature.geometry.coordinates.flat()
         : feature.geometry?.type === 'GeometryCollection'
-          ? feature.geometry.geometries.flatMap((geometry) =>
-              geometry.type === 'Polygon'
-                ? geometry.coordinates
-                : geometry.type === 'MultiPolygon'
-                  ? geometry.coordinates.flat()
-                  : [],
-            )
+          ? feature.geometry.geometries.flatMap((geometry) => geometry.type === 'Polygon' ? geometry.coordinates : geometry.type === 'MultiPolygon' ? geometry.coordinates.flat() : [])
           : undefined
     : undefined;
   const element = {
@@ -150,9 +208,7 @@ function addNavaid(feature, properties, tags, seamark) {
     lon: feature.geometry?.type === 'Point' ? feature.geometry.coordinates[0] : undefined,
     center: feature.geometry?.type === 'Point' ? undefined : { lat: center[0], lon: center[1] },
     geometryPaths: geometryPaths?.map((part) => part.map(([lon, lat]) => ({ lat, lon }))),
-    geometry: isReportingGeometry && feature.geometry?.type === 'LineString'
-      ? feature.geometry.coordinates.map(([lon, lat]) => ({ lat, lon }))
-      : undefined,
+    geometry: isReportingGeometry && feature.geometry?.type === 'LineString' ? feature.geometry.coordinates.map(([lon, lat]) => ({ lat, lon })) : undefined,
   };
   const navaid = normalizeElement(element, null, 'osm');
   if (!navaid) return false;
@@ -160,15 +216,7 @@ function addNavaid(feature, properties, tags, seamark) {
   const path = paths.flat();
   const bounds = boundsOf(paths);
   if (!bounds) { dropped += 1; return true; }
-  addToCells('navaids', {
-    id: navaid.id,
-    type: navaid.category,
-    name: navaid.name ?? navaid.category.replace(/_/g, ' '),
-    bounds,
-    path,
-    paths,
-    navaid,
-  });
+  addToCells('navaids', { id: navaid.id, type: navaid.category, name: navaid.name ?? navaid.category.replace(/_/g, ' '), bounds, path, paths, navaid });
   return true;
 }
 
@@ -179,36 +227,46 @@ function addFeature(feature) {
   const seamark = tags['seamark:type'] ?? tags.seamark_type ?? properties.seamark_type;
   const isFerry = tags.route === 'ferry' || seamark === 'ferry_route';
   const isTss = typeof seamark === 'string' && seamark.startsWith('separation_');
+  if (tssOnly && !isTss) return;
   if (!isFerry && !isTss) {
     addNavaid(feature, properties, tags, seamark);
     return;
   }
-  const paths = collectPaths(feature.geometry).map(toPath).filter((path) => path.length > 0);
-  const bounds = boundsOf(paths);
+  const paths = (isTss ? collectLinePaths(feature.geometry) : collectPaths(feature.geometry)).map(toPath).filter((path) => path.length > 0);
+  const polygons = isTss
+    ? collectPolygonGroups(feature.geometry).map((rings) => rings.map(toPath).filter((ring) => ring.length > 0)).filter((rings) => rings.length > 0)
+    : [];
+  const allPaths = [...paths, ...polygons.flat()];
+  const bounds = boundsOf(allPaths);
   if (!bounds) { dropped += 1; return; }
   const layer = isFerry ? 'ferries' : 'tss';
   const type = isFerry ? 'ferry_route' : seamark;
   const readableType = type.replace(/_/g, ' ').replace(/^./, (letter) => letter.toUpperCase());
-  const sourceIdentity = String(properties['@id'] ?? feature.id ?? '');
-  const sourceIdentityMatch = sourceIdentity.match(/^([nwr])(\d+)$/);
+  const explicitIdentity = properties['@id'] ?? properties.osm_ref;
+  const taggedIdentityMatch = String(explicitIdentity ?? '').match(/^([nwr])(\d+)$/);
+  const featureIdentityMatch = String(feature.id ?? '').match(/^([nwr])(\d+)$/);
+  const osmWayId = properties.osm_way_id;
+  const numericOsmId = properties.osm_id;
+  const sourceIdentityMatch = taggedIdentityMatch
+    ? { type: taggedIdentityMatch[1], id: taggedIdentityMatch[2] }
+    : osmWayId !== undefined && osmWayId !== null && /^\d+$/.test(String(osmWayId))
+      ? { type: 'w', id: String(osmWayId) }
+      : featureIdentityMatch
+        ? { type: featureIdentityMatch[1], id: featureIdentityMatch[2] }
+        : numericOsmId !== undefined && numericOsmId !== null && /^\d+$/.test(String(numericOsmId))
+          ? { type: 'r', id: String(numericOsmId) }
+          : null;
+  const sourceId = sourceIdentityMatch ? `${sourceIdentityMatch.type}${sourceIdentityMatch.id}` : '';
   const name = String(tags.name ?? tags.ref ?? tags['seamark:name'] ?? readableType);
-  const id = String(properties['@id'] ?? properties.osm_id ?? feature.id ?? `${type}:${createHash('sha1').update(JSON.stringify(paths)).digest('hex').slice(0, 16)}`);
+  const id = properties.marine_source_id || sourceId || `${type}:${createHash('sha1').update(JSON.stringify(allPaths)).digest('hex').slice(0, 16)}`;
   const details = {};
   for (const key of [
-    'operator',
-    'ref',
-    'seamark:separation_scheme:category',
-    'seamark:separation_scheme:traffic_flow',
-    'seamark:separation_scheme:lane_count',
-    'seamark:separation_scheme:lane_width',
-    'seamark:separation_scheme:orientation',
-    'seamark:separation_scheme:category_of_separation',
-    'seamark:separation_boundary:category',
-    'seamark:separation_lane:traffic_flow',
-    'seamark:separation_lane:category',
-    'seamark:separation_zone:category',
-    'seamark:information',
-    'source',
+    'operator', 'ref', 'seamark:separation_scheme:category', 'seamark:separation_scheme:traffic_flow',
+    'seamark:separation_scheme:lane_count', 'seamark:separation_scheme:lane_width',
+    'seamark:separation_scheme:orientation', 'seamark:separation_scheme:category_of_separation',
+    'seamark:separation_boundary:category', 'seamark:separation_lane:traffic_flow',
+    'seamark:separation_lane:category', 'seamark:separation_zone:category', 'seamark:information', 'source',
+    'source_name', 'source_class', 'source_date', 'reference', 'reference_url', 'valid_from', 'information', 'source_url',
   ]) {
     const value = tags[key];
     if (typeof value === 'string' && value.trim()) details[key] = value.trim();
@@ -218,10 +276,13 @@ function addFeature(feature) {
     type,
     name,
     bounds,
-    path: paths.flat(),
+    path: paths[0] ?? polygons[0]?.[0] ?? [],
+    ...(paths.length ? { paths } : {}),
+    ...(polygons.length ? { polygons } : {}),
     ...(Object.keys(details).length ? { details } : {}),
-    ...(sourceIdentityMatch ? {
-      sourceUrl: `https://www.openstreetmap.org/${sourceIdentityMatch[1] === 'r' ? 'relation' : sourceIdentityMatch[1] === 'w' ? 'way' : 'node'}/${sourceIdentityMatch[2]}`,
+    ...(typeof properties.source_name === 'string' && properties.source_name.trim() ? { sourceName: properties.source_name.trim() } : {}),
+    ...(typeof properties.source_url === 'string' && /^https:\/\//.test(properties.source_url) ? { sourceUrl: properties.source_url } : sourceIdentityMatch ? {
+      sourceUrl: `https://www.openstreetmap.org/${sourceIdentityMatch.type === 'r' ? 'relation' : sourceIdentityMatch.type === 'w' ? 'way' : 'node'}/${sourceIdentityMatch.id}`,
     } : {}),
   });
 }
@@ -272,19 +333,21 @@ async function* readFeatures(path) {
 for await (const feature of readFeatures(resolve(inputPath))) addFeature(feature);
 const cellSize = CELL_SIZE;
 const denseCellCounts = { navaids: 0, ferries: 0, tss: 0 };
-for (const layer of ['navaids', 'ferries', 'tss']) {
-  denseCellCounts[layer] = [...cells[layer].values()].filter((entries) => entries.length > MAX_FEATURES_PER_CELL).length;
-}
-
+for (const layer of ['navaids', 'ferries', 'tss']) denseCellCounts[layer] = [...cells[layer].values()].filter((entries) => entries.length > MAX_FEATURES_PER_CELL).length;
 console.log(`[marine-db] writing viewport shards with ${cellSize}° base cells`);
 const generatedAt = new Date().toISOString();
 const sourceStat = statSync(resolve(inputPath));
 const fingerprint = createHash('sha1').update(`${sourceStat.size}:${sourceStat.mtimeMs}:${inputCount}`).digest('hex').slice(0, 10);
 const version = `${generatedAt.slice(0, 19).replace(/[-:T]/g, '')}-${fingerprint}`;
-const manifest = { schema: 1, version, generatedAt, cellSize, layers: {} };
+let manifest = { schema: 1, version, generatedAt, cellSize, layers: {} };
+if (tssOnly) {
+  const existingManifest = JSON.parse(readFileSync(resolve(outDir, 'manifest.json'), 'utf8'));
+  manifest = { ...existingManifest, version, generatedAt, cellSize: existingManifest.cellSize ?? cellSize, layers: { ...existingManifest.layers } };
+}
 const stageDir = `${outDir}.${version}.tmp`;
 rmSync(stageDir, { recursive: true, force: true });
-for (const layer of ['navaids', 'ferries', 'tss']) {
+const outputLayers = tssOnly ? ['tss'] : ['navaids', 'ferries', 'tss'];
+for (const layer of outputLayers) {
   const shards = [];
   const layerDir = resolve(stageDir, layer);
   mkdirSync(layerDir, { recursive: true });
@@ -296,15 +359,38 @@ for (const layer of ['navaids', 'ferries', 'tss']) {
   manifest.layers[layer] = { count: featureIds[layer].size, shards };
 }
 mkdirSync(stageDir, { recursive: true });
-writeFileSync(resolve(stageDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
-const previousDir = `${outDir}.previous`;
-rmSync(previousDir, { recursive: true, force: true });
-try { await rename(outDir, previousDir); } catch (error) { if (error?.code !== 'ENOENT') throw error; }
-try {
-  await rename(stageDir, outDir);
+if (tssOnly) {
+  const stagedManifest = resolve(outDir, 'manifest.json.tmp');
+  const stagedTss = `${resolve(outDir, 'tss')}.tmp`;
+  const oldTss = `${resolve(outDir, 'tss')}.previous`;
+  rmSync(stagedTss, { recursive: true, force: true });
+  rmSync(oldTss, { recursive: true, force: true });
+  writeFileSync(stagedManifest, JSON.stringify(manifest, null, 2));
+  await renameWithRetry(resolve(stageDir, 'tss'), stagedTss);
+  await renameWithRetry(resolve(outDir, 'tss'), oldTss);
+  try {
+    await renameWithRetry(stagedTss, resolve(outDir, 'tss'));
+    await renameWithRetry(stagedManifest, resolve(outDir, 'manifest.json'));
+    rmSync(oldTss, { recursive: true, force: true });
+  } catch (error) {
+    rmSync(resolve(outDir, 'tss'), { recursive: true, force: true });
+    await renameWithRetry(oldTss, resolve(outDir, 'tss'));
+    rmSync(stagedTss, { recursive: true, force: true });
+    throw error;
+  } finally {
+    rmSync(stageDir, { recursive: true, force: true });
+  }
+} else {
+  writeFileSync(resolve(stageDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  const previousDir = `${outDir}.previous`;
   rmSync(previousDir, { recursive: true, force: true });
-} catch (error) {
-  try { await rename(previousDir, outDir); } catch {}
-  throw error;
+  try { await renameWithRetry(outDir, previousDir); } catch (error) { if (error?.code !== 'ENOENT') throw error; }
+  try {
+    await renameWithRetry(stageDir, outDir);
+    rmSync(previousDir, { recursive: true, force: true });
+  } catch (error) {
+    try { await renameWithRetry(previousDir, outDir); } catch {}
+    throw error;
+  }
 }
-console.log(`[marine-db] ${inputCount} OSM features → ${manifest.layers.navaids.count} NAVAIDs, ${manifest.layers.ferries.count} ferries, ${manifest.layers.tss.count} TSS; ${manifest.layers.navaids.shards.length + manifest.layers.ferries.shards.length + manifest.layers.tss.shards.length} shards; ${dropped} dropped; ${outDir}`);
+console.log(`[marine-db] ${inputCount} features → ${manifest.layers.navaids.count} NAVAIDs, ${manifest.layers.ferries.count} ferries, ${manifest.layers.tss.count} TSS; ${manifest.layers.navaids.shards.length + manifest.layers.ferries.shards.length + manifest.layers.tss.shards.length} shards; ${dropped} dropped; ${outDir}`);

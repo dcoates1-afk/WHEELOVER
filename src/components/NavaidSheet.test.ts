@@ -59,7 +59,7 @@ describe('wreck detail sheet', () => {
 
     expect(html).toContain('HMS INVINCIBLE');
     expect(html).toContain('dangerous');
-    expect(html).toContain('6-7 (heritage inventory report; units/datum may differ; not chart-clearance information)');
+    expect(html).toContain('6-7');
     expect(html).toContain('Polygon centroid; matched chart mark 10 m away');
     expect(html).toContain('Protected wreck');
     expect(html).toContain('Sank in 1758 after grounding.');
@@ -81,9 +81,9 @@ describe('wreck detail sheet', () => {
     }));
 
     expect(html).toContain('NOAA ENC Direct GIS category');
-    expect(html).toContain('20.1 m; ENC Direct GIS value, not navigation-certified');
+    expect(html).toContain('20.1 m');
     expect(html).toContain('20080905');
-    expect(html).toContain('NOAA ENC Direct to GIS (not certified for navigation)');
-    expect(html).toContain('not certified for navigation');
+    expect(html).toContain('NOAA ENC Direct to GIS');
+    expect(html).not.toContain('not certified for navigation');
   });
 });

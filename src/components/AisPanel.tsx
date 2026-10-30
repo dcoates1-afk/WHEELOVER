@@ -78,7 +78,7 @@ export function AisPanel({
 
       {state === 'demo' && (
         <p className="inline-warning">
-          Simulated traffic: the relay has no AISStream feed right now, so these positions are illustrative only.
+          AISStream feed unavailable; showing simulated vessels.
         </p>
       )}
       {state === 'reconnecting' && (

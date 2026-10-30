@@ -13,7 +13,10 @@ try {
   const output = join(dir, 'marine-db');
   const features = [
     { type: 'Feature', id: 'w1', properties: { route: 'ferry', name: 'Visible Ferry' }, geometry: { type: 'LineString', coordinates: [[-1, 50], [-0.5, 50.5]] } },
-    { type: 'Feature', id: 'w2', properties: { 'seamark:type': 'separation_lane', name: 'Visible TSS' }, geometry: { type: 'LineString', coordinates: [[-1, 50], [-0.5, 50.5]] } },
+    { type: 'Feature', id: 'w2', properties: { 'seamark:type': 'separation_lane', name: 'Visible TSS' }, geometry: { type: 'MultiLineString', coordinates: [[[-1, 50], [-0.5, 50.5]], [[0.5, 50.5], [1, 51]]] } },
+    { type: 'Feature', id: 'w5', properties: { seamark_type: 'separation_zone', osm_id: 42, osm_way_id: 999, name: 'Polygon TSS' }, geometry: { type: 'MultiPolygon', coordinates: [[[[2, 50], [2.1, 50], [2.1, 50.1], [2, 50], [2, 50]]], [[[2.2, 50], [2.3, 50], [2.3, 50.1], [2.2, 50], [2.2, 50]]]] } },
+    { type: 'Feature', id: 'w6', properties: { seamark_type: 'separation_zone', osm_id: 42, osm_way_id: 999, name: 'Polygon TSS' }, geometry: { type: 'Polygon', coordinates: [[[2.4, 50], [2.5, 50], [2.5, 50.1], [2.4, 50], [2.4, 50]]] } },
+    { type: 'Feature', id: 'r7', properties: { seamark_type: 'separation_lane', osm_ref: 'r777', name: 'Relation TSS' }, geometry: { type: 'MultiLineString', coordinates: [[[3, 50], [3.1, 50.1]], [[3.2, 50.2], [3.3, 50.3]]] } },
     { type: 'Feature', id: 'n3', properties: { 'seamark:type': 'buoy_lateral', name: 'Visible Buoy', 'seamark:buoy_lateral:category': 'port' }, geometry: { type: 'Point', coordinates: [-0.75, 50.25] } },
     { type: 'Feature', id: 'w4', properties: { route: 'ferry', name: 'Elsewhere Ferry' }, geometry: { type: 'LineString', coordinates: [[100, 0], [101, 1]] } },
   ];
@@ -52,8 +55,16 @@ try {
     const response = await fetch(`${origin}/marine-db/manifest.json`);
     if (!response.ok) throw new Error(`Fixture manifest request returned HTTP ${response.status}`);
     const data = await loadMarineData([49, -2, 51, 0], { baseUrl: `${origin}/marine-db/` });
-    if (data.ferries.length !== 1 || data.ferries[0].id !== 'ferries:w1') throw new Error('viewport ferry query incorrect');
+    if (data.ferries.length !== 1 || data.ferries[0].id !== 'ferries:w1') throw new Error(`viewport ferry query incorrect: ${data.ferries.map(({ id }) => id).join(',')}`);
     if (data.tss.length !== 1 || data.tss[0].id !== 'tss:w2') throw new Error('viewport TSS query incorrect');
+    if (data.tss[0].paths?.length !== 2) throw new Error('multipart TSS line components were flattened or lost');
+    const polygonData = await loadMarineData([49, 1.9, 51, 2.4], { baseUrl: `${origin}/marine-db/` });
+    if (polygonData.tss.length !== 1 || polygonData.tss[0].id !== 'tss:w999') throw new Error('GDAL OSM way identity was not preserved for TSS polygons');
+    if (polygonData.tss[0].polygons?.length !== 3) throw new Error('duplicate TSS way geometries were not merged or multipart TSS polygons were lost');
+    if (!describeTssFeature(polygonData.tss[0]).sourceUrl?.endsWith('/way/999')) throw new Error('GDAL osm_way_id did not produce a correct way source link');
+    const relationData = await loadMarineData([49, 2.9, 51, 3.4], { baseUrl: `${origin}/marine-db/` });
+    if (relationData.tss.length !== 1 || relationData.tss[0].id !== 'tss:r777') throw new Error('GDAL relation identity was not preserved for TSS');
+    if (relationData.tss[0].paths?.length !== 2 || !describeTssFeature(relationData.tss[0]).sourceUrl?.endsWith('/relation/777')) throw new Error('relation TSS multipart paths/source URL incorrect');
     const tssInfo = describeTssFeature(data.tss[0]);
     if (tssInfo.title !== 'Visible TSS' || tssInfo.type !== 'separation lane') throw new Error('TSS popup title/type incorrect');
     if (!tssInfo.details.some(([label, value]) => label === 'Operator' && value === 'Harbour Authority')) throw new Error('TSS operator missing from popup data');

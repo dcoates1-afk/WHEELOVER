@@ -1,0 +1,18 @@
+.disclaimer-page { min-height: 100vh; overflow: auto; background: radial-gradient(ellipse at 76% 0, rgba(20, 81, 95, .2), transparent 35%), var(--home-bg); color: var(--home-ink); }
+.disclaimer-page a { color: inherit; }
+.disclaimer-header { display: flex; align-items: center; justify-content: space-between; width: min(1120px, calc(100% - 48px)); min-height: 82px; margin: auto; border-bottom: 1px solid var(--home-line); }
+.disclaimer-content { width: min(860px, calc(100% - 48px)); margin: 0 auto; padding: 72px 0 54px; }
+.disclaimer-content h1 { margin: 18px 0 16px; font: 600 clamp(36px, 6vw, 58px)/1.12 var(--home-display); letter-spacing: -.05em; }
+.disclaimer-lead { padding: 20px 22px; border: 1px solid rgba(244, 197, 49, .32); background: rgba(105, 84, 39, .1); color: #d3d1bd; font-size: 15px; line-height: 1.8; }
+.disclaimer-content section { margin-top: 42px; }
+.disclaimer-content h2 { margin-bottom: 12px; color: var(--home-cyan); font: 600 20px/1.35 var(--home-display); }
+.disclaimer-content p, .disclaimer-content li { color: #b5c5c9; font-size: 14px; line-height: 1.8; }
+.disclaimer-content section > p + p { margin-top: 12px; }
+.disclaimer-content section > ul { padding-left: 22px; list-style: disc; }
+.disclaimer-content section > ul > li + li { margin-top: 10px; }
+.disclaimer-sources a { color: var(--home-cyan); font-weight: 700; text-decoration: none; }
+.disclaimer-sources p { margin-top: 3px; }
+.disclaimer-content footer { display: flex; justify-content: space-between; gap: 20px; margin-top: 52px; padding-top: 18px; border-top: 1px solid var(--home-line); color: #81969c; font: 10px var(--home-mono); }
+.disclaimer-content footer a { color: var(--home-cyan); text-decoration: none; }
+.disclaimer-page a:focus-visible { outline: 2px solid var(--home-cyan); outline-offset: 4px; }
+@media (max-width: 560px) { .disclaimer-header, .disclaimer-content { width: calc(100% - 36px); }.disclaimer-header { min-height: 70px; }.disclaimer-content { padding: 50px 0 36px; }.disclaimer-lead { padding: 16px; font-size: 13px; }.disclaimer-content section { margin-top: 32px; }.disclaimer-content p, .disclaimer-content li { font-size: 13px; }.disclaimer-content footer { flex-direction: column; } }

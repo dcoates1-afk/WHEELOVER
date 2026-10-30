@@ -279,9 +279,10 @@ export default function App() {
   }, [view, db.manifest, reloadKey]);
 
   // Ferry routes and TSS load from the versioned archive by visible bounds.
+  // Retain the last successful set while the next viewport is fetched, so a
+  // slow shard request cannot blank the overlay and make lanes appear missing.
   const marineRequestId = useRef(0);
   useEffect(() => {
-    setMarineFeatures(null);
     const id = ++marineRequestId.current;
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -293,7 +294,8 @@ export default function App() {
           }
         })
         .catch(() => {
-          // Keep the checked-in regional bundle until a generated archive is available.
+          // Keep the last successful overlay or checked-in regional bundle on
+          // fetch failures; never replace useful chart geometry with emptiness.
         });
     }, 250);
     return () => {

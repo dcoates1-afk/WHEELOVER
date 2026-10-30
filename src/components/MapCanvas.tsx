@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import L from 'leaflet';
 import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
-import { describeTssFeature, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
+import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import type { ChartFeature } from '../lib/overpass';
 import { distanceMeters } from '../../shared/navaid-core.mjs';
 import type { ProtectedAreaFeature } from '../lib/protectedAreas';
@@ -230,7 +230,7 @@ function createExportChart(options: ExportChartOptions): L.GridLayer {
  * styles.css) because the same stroke has to read over pale NOAA paper, green
  * OSM land and dark satellite water.
  */
-export const LANE_ATTRIBUTION = 'Ferry routes & TSS: OpenStreetMap (ODbL)';
+export const LANE_ATTRIBUTION = 'Ferry routes: OpenStreetMap (ODbL) · TSS: OpenStreetMap (ODbL), Shom, Fisheries and Oceans Canada, Hong Kong Marine Department';
 
 function featureBounds(path: [number, number][]): [number, number, number, number] {
   const lats = path.map(([lat]) => lat);
@@ -844,20 +844,20 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       ferries.addTo(map);
     }
     for (const feature of source.tss) {
-      const path = feature.path;
-      const closed = path.length > 3 && path[0][0] === path[path.length - 1][0] && path[0][1] === path[path.length - 1][1];
-      const layer = closed ? L.polygon(path, tssStyle(feature.type)) : L.polyline(path, tssStyle(feature.type));
       const info = describeTssFeature(feature);
-      layer.bindTooltip(`${info.title} · ${info.type}`, { sticky: true, className: 'marnav-tip' });
       const rows = info.details.map(([label, value]) => `<div><strong>${escapePopupText(label)}:</strong> ${escapePopupText(value)}</div>`).join('');
       const sourceLink = info.sourceUrl
-        ? `<a href="${escapePopupText(info.sourceUrl)}" target="_blank" rel="noopener noreferrer">OpenStreetMap feature details ↗</a>`
-        : 'OpenStreetMap';
-      layer.bindPopup(
-        `<strong>${escapePopupText(info.title)}</strong><br><span>${escapePopupText(info.type)}</span>${rows ? `<hr>${rows}` : ''}<hr><small>${sourceLink}<br>${TSS_SOURCE_ATTRIBUTION}</small>`,
-        { className: 'reporting-system-popup', maxWidth: 340 },
-      );
-      tss.addLayer(layer);
+        ? `<a href="${escapePopupText(info.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapePopupText(info.sourceName ?? 'Source details')} ↗</a>`
+        : escapePopupText(info.sourceName ?? 'Source attribution');
+      const popup = `<strong>${escapePopupText(info.title)}</strong><br><span>${escapePopupText(info.type)}</span>${rows ? `<hr>${rows}` : ''}<hr><small>${sourceLink}<br>${TSS_SOURCE_ATTRIBUTION}</small>`;
+      for (const part of tssGeometryParts(feature)) {
+        const layer = part.kind === 'polygon'
+          ? L.polygon(part.coordinates, tssStyle(feature.type))
+          : L.polyline(part.coordinates, tssStyle(feature.type));
+        layer.bindTooltip(`${info.title} · ${info.type}`, { sticky: true, className: 'marnav-tip' });
+        layer.bindPopup(popup, { className: 'reporting-system-popup', maxWidth: 340 });
+        tss.addLayer(layer);
+      }
     }
     if (props.preferences.overlays.tss && source.tss.length > 0 && !map.hasLayer(tss)) {
       tss.addTo(map);

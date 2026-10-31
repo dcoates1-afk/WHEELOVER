@@ -349,14 +349,10 @@ function wreckBoatingEffect(category, waterLevel) {
   return [categoryEffect, water, fallback].filter(Boolean).join(' ') || null;
 }
 
-/** Mirror clockwise-from-north sector limits correctly across the north-south axis. */
+/** Mirror clockwise-from-north sector limits east-to-west, keeping north and south fixed. */
 export function mirrorLightSectorBearings(start, end) {
   if (![start, end].every((value) => Number.isFinite(value) && value >= 0 && value <= 360)) return null;
-
-  // 360 minus bearing flips the vertical vector components on the map canvas
-  const mirror = (bearing) => (360 - bearing + 360) % 360;
-
-  // The end/start swap preserves the sector’s clockwise width after reflection so it doesn't disappear
+  const mirror = (bearing) => (360 - bearing) % 360;
   return [mirror(end), mirror(start)];
 }
 
@@ -383,20 +379,9 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
-
-    // 1. Calculate standard degrees normally to protect math stability
-    const normalLat = destinationLatitude * 180 / Math.PI;
-    const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
-
-    // 2. VERTICAL FLIP: Invert latitude delta relative to center
-    const flippedLatDeg = lat - (normalLat - lat);
-
-    // 3. HORIZONTAL FLIP: Invert longitude delta relative to center
-    const flippedLonDeg = lon - (normalLon - lon);
-
     return /** @type {[number, number]} */ ([
-      flippedLatDeg,
-      flippedLonDeg,
+      destinationLatitude * 180 / Math.PI,
+      ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180,
     ]);
   });
 }

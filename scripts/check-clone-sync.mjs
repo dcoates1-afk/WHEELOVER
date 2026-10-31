@@ -264,7 +264,10 @@ if (source === target) usageProblem('source and target are the same directory');
 
 /** Compares both trees; paths are relative and use forward slashes. */
 async function compareTrees() {
-  const sourceFiles = gitFiles(source).filter(isCompared);
+  // A file deleted in the workspace but not yet `git rm`-ed still sits in its
+  // index. Counting it as present made the clone's copy invisible here, so a
+  // deleted module could ride along for ever; only files on disk count.
+  const sourceFiles = gitFiles(source).filter((pathname) => isCompared(pathname) && existsSync(resolve(source, pathname)));
   const sourceSet = new Set(sourceFiles);
   const targetFiles = new Set(gitFiles(target).filter(isCompared));
   const targetTracked = new Set(gitFiles(target, { cachedOnly: true }).filter(isCompared));
@@ -353,7 +356,10 @@ if (problems) {
   if (missing.length || differing.length) {
     hints.push(`${args.fix ? 'Some files could not be copied; check them by hand.' : '`npm run sync:check -- --fix` copies them across.'}`);
   }
-  if (onlyInClone.length) hints.push('Files the workspace no longer has must be removed from the clone by hand.');
+  if (onlyInClone.length) {
+    const command = `git -C "${target}" rm ${onlyInClone.map((pathname) => `"${pathname}"`).join(' ')}`;
+    hints.push(`files the workspace no longer has are removed by hand (commit any edits they carry first):\n  ${command}`);
+  }
   console.log(`\nRefusing to push: ${hints.join(' ')}`);
   process.exit(1);
 }

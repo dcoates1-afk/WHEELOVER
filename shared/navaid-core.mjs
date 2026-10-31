@@ -468,6 +468,7 @@ export function bearingDegrees(fromLat, fromLon, toLat, toLon) {
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
+
 /**
  * OSM stores the two lights of a transit separately, so the leading line only
  * exists once they are paired. Match each front/lower light to the nearest

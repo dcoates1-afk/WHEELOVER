@@ -18,12 +18,17 @@
  * Usage:
  *   node scripts/check-clone-sync.mjs [--source <workspace>] [--target <clone>] [--fix]
  *
- * Defaults: the repository holding this script, and $WHEELOVER_CLONE or
+ * The workspace is discovered when it is not given: the path recorded by the
+ * hook, then the most recently edited Freebuff worktree holding this project,
+ * then the checkout the script lives in. A Freebuff worktree path changes every
+ * session, so discovery is what keeps the hook working without a re-install.
+ *
+ * Defaults: the workspace found above, and $WHEELOVER_CLONE or
  * ~/Documents/WHEELOVER.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir, readFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,6 +48,9 @@ const ROOT_FILES = new Set([
   '.gitignore',
 ]);
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'backup', 'artifacts', 'data-raw']);
+/** Where Freebuff keeps one checkout per thread: <root>/<thread>/<hash>. */
+const WORKTREES_ROOT = process.env.WHEELOVER_WORKTREES ?? resolve(homedir(), '.freebuff', 'worktrees');
+const CONFIG = '.git/clone-sync.json';
 const SKIP_SUFFIXES = ['.patch', '.diff', '.bundle', '.pid', '.log', '.tmp'];
 /** How many paths to name per finding before summarising the rest. */
 const LIST_LIMIT = 25;
@@ -51,13 +59,16 @@ const BATCH = 24;
 
 const HELP = `Compares a workspace checkout with the desktop clone, file by file.
 
-  --source <dir>  workspace to read (default: the repository holding this script)
+  --source <dir>  workspace to read (default: found automatically)
   --target <dir>  clone to compare (default: $WHEELOVER_CLONE or ~/Documents/WHEELOVER)
   --fix           copy missing and stale files into the clone, then check again
   --help          show this message
 
-Exits 0 when the clone holds every file with the same content, 1 when a file is
-missing from the clone or differs, and 2 when the arguments are unusable.`;
+Without --source the workspace is taken from $WHEELOVER_WORKSPACE, then the path
+the hook recorded, then the most recently edited Freebuff worktree of this
+project. Exits 0 when the clone holds every file with the same content, 1 when a
+file is missing from the clone or differs, and 2 when no workspace can be found
+or the arguments are unusable.`;
 
 function usageProblem(message) {
   console.error(`check-clone-sync: ${message}`);
@@ -135,20 +146,120 @@ function describe(paths) {
   return shown.join('\n');
 }
 
-const args = parseArgs(process.argv.slice(2));
-let source = args.source ?? ownRepo;
-const target = args.target ?? process.env.WHEELOVER_CLONE ?? resolve(homedir(), 'Documents', 'WHEELOVER');
+/** A checkout of this project: the script that is running is its marker. */
+function isWorkspace(directory) {
+  return existsSync(resolve(directory, 'scripts', 'check-clone-sync.mjs'));
+}
 
-// Run from inside the clone with no arguments: check the workspace the hook was
-// installed for instead of comparing the clone with itself.
-if (!args.source && resolve(source) === resolve(target) && existsSync(resolve(target, '.git/clone-sync.json'))) {
+/** Newest edit under the directories a session actually works in. */
+async function newestEdit(directory) {
+  let newest = 0;
+  async function walk(relative) {
+    let entries;
+    try {
+      entries = await readdir(resolve(directory, relative), { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
+      const path = `${relative}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (!SKIP_DIRS.has(entry.name)) await walk(path);
+        continue;
+      }
+      try {
+        const info = await stat(resolve(directory, path));
+        if (info.mtimeMs > newest) newest = info.mtimeMs;
+      } catch {
+        // A file removed mid-walk cannot be the newest edit.
+      }
+    }
+  }
+  for (const root of ['src', 'shared', 'server', 'scripts']) await walk(root);
+  return newest;
+}
+
+/** Freebuff checkouts of this project, most recently edited first. */
+async function freebuffWorkspaces() {
+  let threads;
   try {
-    source = resolve(JSON.parse(await readFile(resolve(target, '.git/clone-sync.json'), 'utf8')).workspace);
+    threads = await readdir(WORKTREES_ROOT, { withFileTypes: true });
   } catch {
-    // A damaged config just leaves the default in place, which is reported below.
+    return []; // No Freebuff worktrees on this machine.
+  }
+  const found = [];
+  for (const thread of threads) {
+    if (!thread.isDirectory()) continue;
+    let checkouts;
+    try {
+      checkouts = await readdir(resolve(WORKTREES_ROOT, thread.name), { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const checkout of checkouts) {
+      if (!checkout.isDirectory()) continue;
+      const directory = resolve(WORKTREES_ROOT, thread.name, checkout.name);
+      if (!isWorkspace(directory) || directory === target) continue;
+      found.push({ directory, edited: await newestEdit(directory) });
+    }
+  }
+  return found.sort((left, right) => right.edited - left.edited).map((entry) => entry.directory);
+}
+
+/** The workspace a previous install pinned, if it still exists. */
+async function recordedWorkspace() {
+  try {
+    const config = JSON.parse(await readFile(resolve(target, CONFIG), 'utf8'));
+    return config.workspace ? resolve(config.workspace) : null;
+  } catch {
+    return null;
   }
 }
 
+const args = parseArgs(process.argv.slice(2));
+const target = args.target ?? process.env.WHEELOVER_CLONE ?? resolve(homedir(), 'Documents', 'WHEELOVER');
+
+let source = null;
+let sourceNote = 'set with --source';
+if (args.source) {
+  source = args.source;
+} else if (process.env.WHEELOVER_WORKSPACE) {
+  if (!isWorkspace(process.env.WHEELOVER_WORKSPACE)) {
+    usageProblem(`WHEELOVER_WORKSPACE points at ${process.env.WHEELOVER_WORKSPACE}, which is not a checkout of this project`);
+  }
+  source = resolve(process.env.WHEELOVER_WORKSPACE);
+  sourceNote = 'set by WHEELOVER_WORKSPACE';
+}
+
+if (!source) {
+  const recorded = await recordedWorkspace();
+  if (recorded && recorded !== target && isWorkspace(recorded)) {
+    source = recorded;
+    sourceNote = 'the workspace recorded when the hook was installed';
+  }
+}
+
+if (!source) {
+  // A path that no longer exists is normal: Freebuff makes a new worktree per
+  // session, so look for the one that was worked in most recently.
+  const found = await freebuffWorkspaces();
+  if (found.length) {
+    [source] = found;
+    sourceNote = found.length === 1
+      ? 'the only Freebuff worktree of this project'
+      : `the most recently edited of ${found.length} Freebuff worktrees`;
+  }
+}
+
+if (!source && ownRepo !== target && isWorkspace(ownRepo)) {
+  source = ownRepo;
+  sourceNote = 'the checkout holding this script';
+}
+
+if (!source) {
+  usageProblem(`no workspace of this project found under ${WORKTREES_ROOT}: pass --source <dir>, or set WHEELOVER_WORKSPACE`);
+}
 if (source === target) usageProblem('source and target are the same directory');
 
 /** Compares both trees; paths are relative and use forward slashes. */
@@ -215,7 +326,8 @@ const { compared, missing, differing, onlyInClone } = result;
 // terminal out of order, and the exit code already carries the result.
 console.log(`check-clone-sync: ${source}`);
 console.log(`             against ${target}`);
-console.log(`              ${compared} files match`);
+console.log(`                from ${sourceNote}`);
+console.log(`              ${compared} ${compared === 1 ? 'file matches' : 'files match'}`);
 
 if (copied.length) {
   console.log(`\nCopied ${copied.length} ${copied.length === 1 ? 'file' : 'files'} into the clone:\n${describe(copied)}`);

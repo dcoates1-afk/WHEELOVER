@@ -593,9 +593,13 @@ npm run sync:hook -- --source <workspace> # install the hook in the clone
 carries after the workspace dropped it is reported and left for you to `git rm`,
 because deleting from the repository is a decision the script should not make.
 
-Freebuff worktrees change path, so the hook records the workspace it was
-installed against and asks to be re-run when that path disappears.
-`WHEELOVER_CLONE` and `WHEELOVER_WORKSPACE` override the recorded paths.
+Freebuff worktrees change path, so the hook does not hold one. The check takes
+`WHEELOVER_WORKSPACE` when it is set, then the workspace an install pinned with
+`--source`, then the most recently edited Freebuff worktree of this project — the
+newest edit under `src/`, `shared/`, `server/` or `scripts/`. A new session needs
+no re-install; pin one with `--source` only when discovery would be ambiguous.
+`WHEELOVER_CLONE` and `WHEELOVER_WORKTREES` override the clone and the worktree
+root.
 
 On a minimal Linux container, headless Chromium may need `libnss3`, `libnspr4`,
 `libatk*`, `libx*` and fonts. `scripts/setup-browser-deps.sh` extracts those

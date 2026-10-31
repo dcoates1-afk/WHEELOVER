@@ -352,7 +352,7 @@ function wreckBoatingEffect(category, waterLevel) {
 /** Mirror clockwise-from-north sector limits east-to-west, keeping north and south fixed. */
 export function mirrorLightSectorBearings(start, end) {
   if (![start, end].every((value) => Number.isFinite(value) && value >= 0 && value <= 360)) return null;
-  const mirror = (bearing) => (360 - bearing) % 360;
+  const mirror = (bearing) => (360 - bearing + 360) % 360;
   return [mirror(end), mirror(start)];
 }
 

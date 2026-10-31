@@ -358,6 +358,7 @@ export function mirrorLightSectorBearings(start, end) {
   
   return [mirror(end), mirror(start)];
 }
+
 /** Geographic arc for clockwise-from-north OSM sector bearings; invalid or zero-width sectors are omitted. */
 export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees = 4) {
   if (![lat, lon, start, end, radiusMeters, stepDegrees].every(Number.isFinite) ||
@@ -371,7 +372,11 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   const latitude = lat * Math.PI / 180;
   const longitude = lon * Math.PI / 180;
   return Array.from({ length: steps + 1 }, (_, index) => {
-    const bearing = (start + span * index / steps) * Math.PI / 180;
+    // Calculate the raw bearing step normally
+    const rawBearing = (start + span * index / steps) * Math.PI / 180;
+    // VERTICAL FLIP: Math.PI (180 deg) minus rawBearing flips North and South on the projection grid
+    const bearing = Math.PI - rawBearing;
+    
     const angularDistance = radiusMeters / radius;
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
@@ -387,6 +392,7 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
     ]);
   });
 }
+
 
 const LIGHT_SECTOR_FIELDS = {
   character: 'character',

@@ -372,16 +372,16 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   const latitude = lat * Math.PI / 180;
   const longitude = lon * Math.PI / 180;
   return Array.from({ length: steps + 1 }, (_, index) => {
-    // Calculate the raw bearing step normally
-    const rawBearing = (start + span * index / steps) * Math.PI / 180;
-    // VERTICAL FLIP: Math.PI (180 deg) minus rawBearing flips North and South on the projection grid
-    const bearing = Math.PI - rawBearing;
-    
+    const bearing = (start + span * index / steps) * Math.PI / 180;
     const angularDistance = radiusMeters / radius;
+    
+    // VERTICAL FLIP: Multiplying Math.cos(bearing) by -1 directly inverts the North/South offset 
+    // on the geographic grid while keeping the East/West calculation (Math.sin(bearing)) untouched.
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
-      Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),
+      Math.cos(latitude) * Math.sin(angularDistance) * (-Math.cos(bearing)),
     );
+    
     const destinationLongitude = longitude + Math.atan2(
       Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
@@ -392,7 +392,6 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
     ]);
   });
 }
-
 
 const LIGHT_SECTOR_FIELDS = {
   character: 'character',

@@ -353,11 +353,11 @@ function wreckBoatingEffect(category, waterLevel) {
 export function mirrorLightSectorBearings(start, end) {
   if (![start, end].every((value) => Number.isFinite(value) && value >= 0 && value <= 360)) return null;
   
-  // 1. Mirror the bearing East-to-West, then add 180 to force a full 180-degree rotation turn
+  // Math mirrors east-to-west and adds 180 degrees for the rotation turn
   const mirror = (bearing) => ((360 - bearing) + 180) % 360;
   
-  // 2. Swapping the end/start parameters maintains correct clockwise geometry after the mirror operation
-  return [mirror(end), mirror(start)];
+  // FIX: Keeping [start, end] order stops the angles from flipping past each other and breaking the renderer
+  return [mirror(start), mirror(end)];
 }
 
 /** Geographic arc for clockwise-from-north OSM sector bearings; invalid or zero-width sectors are omitted. */

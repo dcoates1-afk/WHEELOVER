@@ -374,21 +374,26 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   return Array.from({ length: steps + 1 }, (_, index) => {
     const bearing = (start + span * index / steps) * Math.PI / 180;
     const angularDistance = radiusMeters / radius;
-    
-    // VERTICAL FLIP: Multiplying Math.cos(bearing) by -1 directly inverts the North/South offset 
-    // on the geographic grid while keeping the East/West calculation (Math.sin(bearing)) untouched.
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
-      Math.cos(latitude) * Math.sin(angularDistance) * (-Math.cos(bearing)),
+      Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),
     );
-    
     const destinationLongitude = longitude + Math.atan2(
       Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
+
+    // 1. Calculate standard degrees normally so the geometry is perfectly intact
+    const normalLat = destinationLatitude * 180 / Math.PI;
+    const finalLonDeg = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
+
+    // 2. VERTICAL FLIP: Invert the latitude delta relative to the central beacon (lat)
+    // This perfectly flips North to South visually while leaving East/West Longitude completely alone.
+    const flippedLatDeg = lat - (normalLat - lat);
+
     return /** @type {[number, number]} */ ([
-      destinationLatitude * 180 / Math.PI,
-      ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180,
+      flippedLatDeg,
+      finalLonDeg,
     ]);
   });
 }

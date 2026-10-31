@@ -571,6 +571,27 @@ in the night theme, and counts the lane colours in a real screenshot. A layer
 that is added to the map but drawn invisibly, under another pane or without its
 credit fails that run, as does one whose ink survives being switched off.
 
+### Pushing from the desktop clone
+
+GitHub and Render build from the desktop clone, but development happens in a
+Freebuff workspace, and `git status` there only names files git already tracks: a
+new module can sit untracked in the workspace, never reach the clone, and fail on
+Render's `tsc --noEmit`. That is how `TrackingPanel.tsx` went missing.
+
+The clone's pre-push hook compares both trees file by file — tracked and
+untracked — and refuses the push while a file is missing from the clone, differs,
+or exists only in the clone. Line endings are folded, so a CRLF checkout never
+blocks a push.
+
+```bash
+npm run sync:check                        # compare once, without pushing
+npm run sync:hook -- --source <workspace> # install the hook in the clone
+```
+
+Freebuff worktrees change path, so the hook records the workspace it was
+installed against and asks to be re-run when that path disappears.
+`WHEELOVER_CLONE` and `WHEELOVER_WORKSPACE` override the recorded paths.
+
 On a minimal Linux container, headless Chromium may need `libnss3`, `libnspr4`,
 `libatk*`, `libx*` and fonts. `scripts/setup-browser-deps.sh` extracts those
 libraries into `.browser-deps/` (no root needed) and installs DejaVu into the

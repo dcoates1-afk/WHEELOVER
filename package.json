@@ -12,6 +12,8 @@
     "start": "node --env-file-if-exists=.env.local build/server.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "sync:check": "node scripts/check-clone-sync.mjs",
+    "sync:hook": "node scripts/install-clone-sync-hook.mjs",
     "preview": "vite preview",
     "db:build": "node scripts/build-navaid-db.mjs",
     "lanes:build": "node scripts/prepare-lanes.mjs",

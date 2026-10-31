@@ -361,10 +361,6 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   if (![lat, lon, start, end, radiusMeters, stepDegrees].every(Number.isFinite) ||
     Math.abs(lat) > 90 || Math.abs(lon) > 180 || start < 0 || start > 360 || end < 0 || end > 360 ||
     radiusMeters <= 0 || stepDegrees <= 0) return [];
-
-  // TRIPLE RADIUS: Multiplies the incoming radius by 3 to extend the arc length visually
-  const tripledRadiusMeters = radiusMeters * 3;
-
   const rawSpan = end - start;
   const span = Math.abs(rawSpan) === 360 ? 360 : (rawSpan + 360) % 360;
   if (span <= 0) return [];
@@ -374,10 +370,7 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   const longitude = lon * Math.PI / 180;
   return Array.from({ length: steps + 1 }, (_, index) => {
     const bearing = (start + span * index / steps) * Math.PI / 180;
-    
-    // Updated to use tripledRadiusMeters here
-    const angularDistance = tripledRadiusMeters / radius; 
-    
+    const angularDistance = radiusMeters / radius;
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
       Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),
@@ -387,14 +380,16 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
     
+    // 1. Calculate standard degrees normally to keep the shape engine stable
     const normalLat = destinationLatitude * 180 / Math.PI;
     const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
 
-    // Retaining your true East-West mirror flip from the previous step
+    // 2. TRUE HORIZONTAL MIRROR FLIP: Invert longitude delta relative to the center lighthouse (lon)
+    // This perfectly mirrors East for West visually without spinning or rotating the shape.
     const flippedLonDeg = lon - (normalLon - lon);
 
     return /** @type {[number, number]} */ ([
-      normalLat,
+      normalLat, // Keep normal latitude completely untouched so North and South do not shift
       flippedLonDeg,
     ]);
   });

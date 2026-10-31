@@ -42,6 +42,42 @@ describe('lateral colours and buoy silhouettes', () => {
     expect(symbolFor('lateral_starboard', 'B').svg).toContain('#e23b3b');
   });
 
+  it('paints a mark in the colour its source records, whatever the region', () => {
+    // Region B would default these two to the opposite colours.
+    expect(symbolFor('lateral_port', 'B', 'red').svg).toContain('#e23b3b');
+    expect(symbolFor('lateral_starboard', 'B', 'green').svg).toContain('#26a65b');
+    expect(symbolFor('lateral_port', 'A', 'green').svg).toContain('#26a65b');
+    expect(symbolFor('lateral_starboard', 'A', 'red').svg).toContain('#e23b3b');
+  });
+
+  it('reads a banded colour list top band first', () => {
+    const banded = symbolFor('lateral_starboard', 'A', 'white;green;white').svg;
+    expect(banded).toContain('fill="#f4f7f8"');
+    expect(banded).toContain('fill="#26a65b"');
+  });
+
+  it('draws an unsided lateral mark in its mapped colour instead of grey', () => {
+    const green = symbolFor('lateral_other', 'A', 'green').svg;
+    expect(green).toContain('#26a65b');
+    expect(green).not.toContain('#8fa3ad');
+    // Green is starboard in Region A, so it takes the point-ended silhouette.
+    expect(green).toContain('M12 7 H20 L23 11 L18 25 H14 L9 11 Z');
+
+    const red = symbolFor('lateral_other', 'A', 'red').svg;
+    expect(red).toContain('#e23b3b');
+    expect(red).toContain('M12 8 H20 V11 H23 V25 H9 V11 H12 Z');
+
+    // The same paint is a port-hand can in Region B.
+    expect(symbolFor('lateral_other', 'B', 'green').svg).toContain('M12 8 H20 V11 H23 V25 H9 V11 H12 Z');
+  });
+
+  it('keeps the neutral grey only where no colour is mapped', () => {
+    expect(symbolFor('lateral_other', 'A').svg).toContain('#8fa3ad');
+    expect(symbolFor('lateral_other', 'A', 'grey').svg).toContain('#8fa3ad');
+    // A side word in the colour field is not a colour.
+    expect(symbolFor('lateral_other', 'A', 'starboard').svg).toContain('#8fa3ad');
+  });
+
   it('uses chart-like square can and pointed nun buoy bodies', () => {
     const can = symbolFor('lateral_port', 'A').svg;
     const nun = symbolFor('lateral_starboard', 'A').svg;
@@ -311,7 +347,7 @@ describe('signal annotations on chart marks', () => {
   it('leaves a mark with no mapped signals exactly as before', () => {
     const spec = symbolForMark(buoy(), 'A');
     expect(spec.units).toBe(32);
-    expect(spec.svg).toBe(symbolFor('lateral_starboard', 'A').svg);
+    expect(spec.svg).toBe(symbolFor('lateral_starboard', 'A', 'green').svg);
     expect(spec.svg).not.toContain('data-mark-annotation');
   });
 

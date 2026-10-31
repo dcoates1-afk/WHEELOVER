@@ -41,6 +41,73 @@ function lateralColours(side: 'port' | 'starboard', region: 'A' | 'B') {
   return side === 'port' ? { main: RED, band: GREEN } : { main: GREEN, band: RED };
 }
 
+/** Chart ink for the colour names sources use on painted marks. */
+const COLOUR_INKS: Record<string, string> = {
+  red: RED,
+  green: GREEN,
+  yellow: YELLOW,
+  black: BLACK,
+  white: WHITE,
+  blue: BLUE,
+  orange: '#f0802a',
+  brown: '#8a5a2b',
+  grey: '#8fa3ad',
+  gray: '#8fa3ad',
+  violet: '#a678d8',
+  purple: '#a678d8',
+  magenta: '#ff43d0',
+  pink: '#ff8fc4',
+};
+
+const UNSIDED_LATERAL_INK = '#8fa3ad';
+
+/**
+ * The painted colours a source maps on a mark, in banded order. Values are
+ * lists ("red;white;red;white"), sometimes comma-separated or carrying a
+ * hyphenated suffix, and occasionally a side word instead of a colour; only the
+ * colour names are kept.
+ */
+function mappedInks(colour: string | null | undefined): string[] {
+  if (!colour) return [];
+  return colour
+    .split(/[;,]/)
+    .map((token) => token.trim().toLowerCase().split(/[-_]/)[0])
+    .map((token) => COLOUR_INKS[token])
+    .filter((ink): ink is string => Boolean(ink));
+}
+
+/** The IALA side a mapped colour belongs to, where the region fixes that. */
+function sideForInk(ink: string, region: 'A' | 'B'): 'port' | 'starboard' | null {
+  const port = region === 'B' ? GREEN : RED;
+  const starboard = region === 'B' ? RED : GREEN;
+  if (ink === port) return 'port';
+  if (ink === starboard) return 'starboard';
+  return null;
+}
+
+/**
+ * A lateral mark is painted in the colours its source records; the IALA region
+ * only supplies what the source does not state. Marks that carry a lateral type
+ * but no side take their silhouette from the mapped colour too, so a green
+ * starboard mark is never drawn as a grey can. A mark with no mapped colour
+ * keeps the neutral grey body.
+ */
+function lateralInk(side: 'port' | 'starboard', region: 'A' | 'B', colour?: string | null) {
+  const fallback = lateralColours(side, region);
+  const mapped = mappedInks(colour);
+  return {
+    main: mapped[0] ?? fallback.main,
+    band: mapped[1] ?? (mapped.length ? mapped[0] : fallback.band),
+  };
+}
+
+function unsidedLateral(colour: string | null | undefined, region: 'A' | 'B'): string {
+  const mapped = mappedInks(colour);
+  if (!mapped.length) return can(UNSIDED_LATERAL_INK);
+  const [main, band = main] = mapped;
+  return sideForInk(main, region) === 'starboard' ? cone(main, band) : can(main, band);
+}
+
 function svgWrap(inner: string): string {
   return `<svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" focusable="false">${inner}</svg>`;
 }
@@ -223,27 +290,32 @@ function minorLightSvg() {
     `<circle cx="16" cy="16" r="2.2" fill="${BLACK}" stroke="${LIGHT_MINOR}" stroke-width=".8"/>`;
 }
 
-export function symbolFor(category: NavaidCategory, region: 'A' | 'B'): SymbolSpec {
+/**
+ * The chart symbol for a category. `colour` is the mark's mapped paint list
+ * ("red;green"); without it the IALA region supplies the lateral colours, which
+ * is what the legend needs.
+ */
+export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: string | null): SymbolSpec {
   const label = CATEGORY_LABELS[category] ?? 'Mark';
   switch (category) {
     case 'lateral_port': {
-      const colours = lateralColours('port', region);
-      return { svg: svgWrap(can(colours.main, colours.band)), label };
+      const ink = lateralInk('port', region, colour);
+      return { svg: svgWrap(can(ink.main, ink.band)), label };
     }
     case 'lateral_starboard': {
-      const colours = lateralColours('starboard', region);
-      return { svg: svgWrap(cone(colours.main, colours.band)), label };
+      const ink = lateralInk('starboard', region, colour);
+      return { svg: svgWrap(cone(ink.main, ink.band)), label };
     }
     case 'preferred_channel_port': {
-      const colours = lateralColours('port', region);
-      return { svg: svgWrap(bifurcation('can', colours.main, colours.band)), label };
+      const ink = lateralInk('port', region, colour);
+      return { svg: svgWrap(bifurcation('can', ink.main, ink.band)), label };
     }
     case 'preferred_channel_starboard': {
-      const colours = lateralColours('starboard', region);
-      return { svg: svgWrap(bifurcation('cone', colours.main, colours.band)), label };
+      const ink = lateralInk('starboard', region, colour);
+      return { svg: svgWrap(bifurcation('cone', ink.main, ink.band)), label };
     }
     case 'lateral_other':
-      return { svg: svgWrap(can('#8fa3ad')), label };
+      return { svg: svgWrap(unsidedLateral(colour, region)), label };
     case 'cardinal_north':
       return { svg: svgWrap(cardinalSvg('north')), label };
     case 'cardinal_east':
@@ -456,7 +528,7 @@ function raconAnnotation(): string {
  * light, bell/horn or racon is drawn exactly as before.
  */
 export function symbolForMark(mark: Navaid, region: 'A' | 'B'): MarkSymbolSpec {
-  const base = symbolFor(mark.category, region);
+  const base = symbolFor(mark.category, region, mark.colour);
   const signals = markSignals(mark);
   if (!signals.light && !signals.sound && !signals.racon) {
     return { ...base, units: 32 };

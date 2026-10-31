@@ -384,13 +384,13 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
     const normalLat = destinationLatitude * 180 / Math.PI;
     const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
 
-    // 2. TRUE VERTICAL MIRROR FLIP: Invert latitude delta relative to the center lighthouse (lat)
-    // This perfectly mirrors North for South visually without spinning or rotating the shape.
-    const flippedLatDeg = lat - (normalLat - lat);
+    // 2. TRUE HORIZONTAL MIRROR FLIP: Invert longitude delta relative to the center lighthouse (lon)
+    // This perfectly mirrors East for West visually without spinning or rotating the shape.
+    const flippedLonDeg = lon - (normalLon - lon);
 
     return /** @type {[number, number]} */ ([
-      flippedLatDeg,
-      normalLon, // Keep normal longitude completely untouched so East and West do not shift
+      normalLat, // Keep normal latitude completely untouched so North and South do not shift
+      flippedLonDeg,
     ]);
   });
 }

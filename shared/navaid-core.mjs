@@ -349,10 +349,14 @@ function wreckBoatingEffect(category, waterLevel) {
   return [categoryEffect, water, fallback].filter(Boolean).join(' ') || null;
 }
 
-/** Mirror clockwise-from-north sector limits east-to-west, keeping north and south fixed. */
+/** Mirror clockwise-from-north sector limits east-to-west and rotate 180 degrees. */
 export function mirrorLightSectorBearings(start, end) {
   if (![start, end].every((value) => Number.isFinite(value) && value >= 0 && value <= 360)) return null;
-  const mirror = (bearing) => (360 - bearing) % 360;
+  
+  // 1. Mirror the bearing East-to-West, then add 180 to force a full 180-degree rotation turn
+  const mirror = (bearing) => ((360 - bearing) + 180) % 360;
+  
+  // 2. Swapping the end/start parameters maintains correct clockwise geometry after the mirror operation
   return [mirror(end), mirror(start)];
 }
 

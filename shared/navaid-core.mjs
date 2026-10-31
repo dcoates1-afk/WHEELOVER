@@ -361,10 +361,6 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   if (![lat, lon, start, end, radiusMeters, stepDegrees].every(Number.isFinite) ||
     Math.abs(lat) > 90 || Math.abs(lon) > 180 || start < 0 || start > 360 || end < 0 || end > 360 ||
     radiusMeters <= 0 || stepDegrees <= 0) return [];
-    
-  // TRIPLE RADIUS LENGTH: Extends the sector arc distance out onto the map grid
-  const tripledRadiusMeters = radiusMeters * 3;
-
   const rawSpan = end - start;
   const span = Math.abs(rawSpan) === 360 ? 360 : (rawSpan + 360) % 360;
   if (span <= 0) return [];
@@ -372,24 +368,33 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   const radius = 6_371_000;
   const latitude = lat * Math.PI / 180;
   const longitude = lon * Math.PI / 180;
+
+  // TRIPLE RADIUS: Multiplies the incoming radius by 3 to extend the arc length
+  const tripledRadiusMeters = radiusMeters * 3;
+
   return Array.from({ length: steps + 1 }, (_, index) => {
     const bearing = (start + span * index / steps) * Math.PI / 180;
     const angularDistance = tripledRadiusMeters / radius;
-    
-    // PURE VERTICAL MIRROR: Adding a negative sign to Math.cos(bearing) inverts the North/South offset
-    // relative to the lighthouse center, without shifting East/West or spinning the shape.
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
-      Math.cos(latitude) * Math.sin(angularDistance) * (-Math.cos(bearing)),
+      Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),
     );
-    
     const destinationLongitude = longitude + Math.atan2(
       Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
+
+    // 1. Calculate standard degrees normally to keep the projection engine stable
+    const normalLat = destinationLatitude * 180 / Math.PI;
+    const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
+
+    // 2. TRUE VERTICAL MIRROR FLIP: Invert latitude delta relative to the center lighthouse (lat)
+    // This perfectly mirrors North for South visually without spinning or rotating the shape.
+    const flippedLatDeg = lat - (normalLat - lat);
+
     return /** @type {[number, number]} */ ([
-      destinationLatitude * 180 / Math.PI,
-      ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180,
+      flippedLatDeg,
+      normalLon, // Keep normal longitude completely untouched so East and West do not shift
     ]);
   });
 }
@@ -434,6 +439,8 @@ function lightSectorsFromTags(tags) {
     const value = String(rawValue).trim();
     const match = /^seamark:light:(?:(\d+):)?(character|colour|group|period|sequence|sector_start|sector_end|range|visibility|exhibition|category|orientation|height|multiple)$/.exec(key);
     if (!match) continue;
+    
+    // RESTORED FIX: match[1] and match[2] array references restored to parse data records correctly
     const sector = match[1] ? Number(match[1]) : 1;
     const record = sectors.get(sector) ?? { sector };
     const field = LIGHT_SECTOR_FIELDS[match[2]];

@@ -525,7 +525,7 @@ ul {
   outline-offset: 2px;
 }
 
-/* Centre-on-me, where a phone map puts it: bottom right, clear of attribution. */
+/* Centre-on-me, where a phone map puts it: bottom right, clear of the scale readout. */
 .locate-button {
   position: fixed;
   z-index: 1150;
@@ -1695,6 +1695,52 @@ ul {
 .map-shell {
   position: absolute;
   inset: 0;
+}
+
+/* An arrow over open water — the chart is read with it, not panned with a hand.
+   Leaflet still marks clickable layers, so only those turn into a pointer. */
+.map-shell .leaflet-container,
+.map-shell .leaflet-grab {
+  cursor: default;
+}
+
+.map-shell .leaflet-interactive {
+  cursor: pointer;
+}
+
+.map-shell .leaflet-container.leaflet-dragging,
+.map-shell .leaflet-dragging .leaflet-grab,
+.map-shell .leaflet-dragging .leaflet-grab .leaflet-interactive {
+  cursor: grabbing;
+}
+
+/* Scale and cursor readout in the corner the credit line used to occupy. */
+.chart-readout {
+  position: absolute;
+  z-index: 1150;
+  right: 14px;
+  bottom: calc(var(--safe-bottom) + 8px);
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.chart-readout-zoom {
+  color: var(--muted, #9fb6c2);
+}
+
+.chart-readout-coords {
+  letter-spacing: 0.01em;
 }
 
 .vessel-hover {

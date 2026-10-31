@@ -408,6 +408,7 @@ async function run() {
       ferries: strokes.filter((stroke) => stroke === '#8ff0ff').length,
       halo: svg ? getComputedStyle(svg).filter : '',
       attribution: document.querySelector('.leaflet-control-attribution')?.textContent ?? '',
+      readout: document.querySelector('.chart-readout')?.textContent ?? '',
     };
   });
   check('lane overlays draw in their own chart pane', laneLayers.total > 5, `${laneLayers.total} paths`);
@@ -422,9 +423,14 @@ async function run() {
     laneLayers.halo,
   );
   check(
-    'lane overlays credit OpenStreetMap while switched on',
-    /Ferry routes & TSS: OpenStreetMap/.test(laneLayers.attribution),
-    laneLayers.attribution.trim().slice(-70),
+    'chart carries no credit line over the map',
+    laneLayers.attribution.trim() === '',
+    laneLayers.attribution.trim().slice(-70) || 'none',
+  );
+  check(
+    'corner readout shows chart scale',
+    /Zoom \d+/.test(laneLayers.readout),
+    laneLayers.readout,
   );
   await page.screenshot({ path: `${artifacts}phone-lanes.png` });
 

@@ -187,6 +187,21 @@ export function isUsWaters(lat: number, lon: number): boolean {
  * transparent on top. That way a harbour chart adds detail where it exists
  * without blacking out the rest of the area.
  */
+/**
+ * Cursor position as degrees and decimal minutes — the form read back from a
+ * chart — kept short enough for the corner readout on a phone.
+ */
+function formatCursor(lat: number, lon: number): string {
+  const part = (value: number, positive: string, negative: string, width: number) => {
+    const hemisphere = value >= 0 ? positive : negative;
+    const absolute = Math.abs(value);
+    const degrees = Math.floor(absolute);
+    const minutes = (absolute - degrees) * 60;
+    return `${String(degrees).padStart(width, '0')}° ${minutes.toFixed(2).padStart(5, '0')}′ ${hemisphere}`;
+  };
+  return `${part(lat, 'N', 'S', 2)} · ${part(lon, 'E', 'W', 3)}`;
+}
+
 export const NOAA_ATTRIBUTION = 'NOAA ENC Direct (public domain)';
 
 const NoaaChartLayer = L.GridLayer.extend({
@@ -354,6 +369,10 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   // centres a tooltip on the marker and lets it hang off the screen edge, which
   // is useless on a phone-sized chart. This card is clamped to the map.
   const [hovered, setHovered] = useState<number | null>(null);
+  // Credits live on the disclaimer page now, so the corner the attribution
+  // control used to hold reads out the scale and the cursor instead.
+  const [cursor, setCursor] = useState<{ lat: number; lon: number } | null>(null);
+  const [liveZoom, setLiveZoom] = useState(props.initialZoom ?? 11);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -362,7 +381,9 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       center: props.initialCenter ?? [50.76, -1.2],
       zoom: props.initialZoom ?? 11,
       zoomControl: false,
-      attributionControl: true,
+      // Attribution is carried by the disclaimer page rather than a chart
+      // overlay; the bottom-right corner is used for the scale/cursor readout.
+      attributionControl: false,
       doubleClickZoom: true,
       touchZoom: true,
       worldCopyJump: true,
@@ -1304,6 +1325,27 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     }
   }, [props.fix]);
 
+  // Chart scale and cursor position: the readout that replaces the on-map credit line.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const onMove = (event: L.LeafletMouseEvent) =>
+      setCursor({ lat: event.latlng.lat, lon: event.latlng.lng });
+    const onLeave = () => setCursor(null);
+    const onZoom = () => setLiveZoom(map.getZoom());
+    setLiveZoom(map.getZoom());
+    map.on('mousemove', onMove);
+    map.on('mouseout', onLeave);
+    map.on('zoom', onZoom);
+    map.on('zoomend', onZoom);
+    return () => {
+      map.off('mousemove', onMove);
+      map.off('mouseout', onLeave);
+      map.off('zoom', onZoom);
+      map.off('zoomend', onZoom);
+    };
+  }, []);
+
   useImperativeHandle(ref, () => ({
     zoomIn: () => mapRef.current?.zoomIn(),
     zoomOut: () => mapRef.current?.zoomOut(),
@@ -1345,6 +1387,12 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
         aria-label="Interactive marine chart"
         data-zoom={props.zoom}
       />
+      <div className="chart-readout" data-testid="chart-readout">
+        <span className="chart-readout-zoom">Zoom {liveZoom}</span>
+        <span className="chart-readout-coords">
+          {cursor ? formatCursor(cursor.lat, cursor.lon) : '— · —'}
+        </span>
+      </div>
       {hoverVessel && hoverPoint && mapWidth > 0 && (
         <div
           className={`vessel-hover ${hoverPoint.y < 240 ? 'below' : 'above'}`}

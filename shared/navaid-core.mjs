@@ -349,15 +349,15 @@ function wreckBoatingEffect(category, waterLevel) {
   return [categoryEffect, water, fallback].filter(Boolean).join(' ') || null;
 }
 
-/** Mirror clockwise-from-north sector limits both north-to-south and east-to-west cleanly. */
+/** Mirror clockwise-from-north sector limits correctly across the north-south axis. */
 export function mirrorLightSectorBearings(start, end) {
   if (![start, end].every((value) => Number.isFinite(value) && value >= 0 && value <= 360)) return null;
 
-  // The reflection formula for the baseline positioning
-  const mirror = (bearing) => (180 - bearing + 360) % 360;
+  // 360 minus bearing flips the vertical vector components on the map canvas
+  const mirror = (bearing) => (360 - bearing + 360) % 360;
 
-  // Keeping [start, end] order prevents the angles from flipping past each other and breaking the renderer
-  return [mirror(start), mirror(end)];
+  // The end/start swap preserves the sector’s clockwise width after reflection so it doesn't disappear
+  return [mirror(end), mirror(start)];
 }
 
 /** Geographic arc for clockwise-from-north OSM sector bearings; invalid or zero-width sectors are omitted. */

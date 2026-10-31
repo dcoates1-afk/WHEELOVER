@@ -12,15 +12,18 @@
  * Line endings are folded before comparing: the two checkouts disagree on CRLF
  * for many files, and that must never block a push.
  *
+ * `--fix` copies the missing and stale files across, then checks again, so the
+ * hook can be answered with one command instead of a manual copy.
+ *
  * Usage:
- *   node scripts/check-clone-sync.mjs [--source <workspace>] [--target <clone>]
+ *   node scripts/check-clone-sync.mjs [--source <workspace>] [--target <clone>] [--fix]
  *
  * Defaults: the repository holding this script, and $WHEELOVER_CLONE or
  * ~/Documents/WHEELOVER.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -50,6 +53,7 @@ const HELP = `Compares a workspace checkout with the desktop clone, file by file
 
   --source <dir>  workspace to read (default: the repository holding this script)
   --target <dir>  clone to compare (default: $WHEELOVER_CLONE or ~/Documents/WHEELOVER)
+  --fix           copy missing and stale files into the clone, then check again
   --help          show this message
 
 Exits 0 when the clone holds every file with the same content, 1 when a file is
@@ -62,12 +66,16 @@ function usageProblem(message) {
 }
 
 function parseArgs(argv) {
-  const args = { source: null, target: null };
+  const args = { source: null, target: null, fix: false };
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index];
     if (flag === '--help' || flag === '-h') {
       console.log(HELP);
       process.exit(0);
+    }
+    if (flag === '--fix') {
+      args.fix = true;
+      continue;
     }
     if (flag !== '--source' && flag !== '--target') usageProblem(`unknown argument "${flag}"`);
     const value = argv[index + 1];
@@ -143,42 +151,76 @@ if (!args.source && resolve(source) === resolve(target) && existsSync(resolve(ta
 
 if (source === target) usageProblem('source and target are the same directory');
 
-const sourceFiles = gitFiles(source).filter(isCompared);
-const sourceSet = new Set(sourceFiles);
-const targetFiles = new Set(gitFiles(target).filter(isCompared));
-const targetTracked = new Set(gitFiles(target, { cachedOnly: true }).filter(isCompared));
+/** Compares both trees; paths are relative and use forward slashes. */
+async function compareTrees() {
+  const sourceFiles = gitFiles(source).filter(isCompared);
+  const sourceSet = new Set(sourceFiles);
+  const targetFiles = new Set(gitFiles(target).filter(isCompared));
+  const targetTracked = new Set(gitFiles(target, { cachedOnly: true }).filter(isCompared));
 
-const missing = [];
-const differing = [];
-let compared = 0;
+  const missing = [];
+  const differing = [];
+  let compared = 0;
 
-for (const batch of chunks(sourceFiles, BATCH)) {
-  await Promise.all(batch.map(async (pathname) => {
-    if (!targetFiles.has(pathname)) {
-      missing.push(pathname);
-      return;
-    }
-    try {
-      if (await sameContent(resolve(source, pathname), resolve(target, pathname))) compared += 1;
-      else differing.push(pathname);
-    } catch (error) {
-      if (error?.code !== 'ENOENT') throw error;
-      // A file git still tracks but the workspace has deleted cannot be copied;
-      // one deleted from the clone is a difference that would be pushed.
-      if (existsSync(resolve(source, pathname))) differing.push(pathname);
-    }
-  }));
+  for (const batch of chunks(sourceFiles, BATCH)) {
+    await Promise.all(batch.map(async (pathname) => {
+      if (!targetFiles.has(pathname)) {
+        missing.push(pathname);
+        return;
+      }
+      try {
+        if (await sameContent(resolve(source, pathname), resolve(target, pathname))) compared += 1;
+        else differing.push(pathname);
+      } catch (error) {
+        if (error?.code !== 'ENOENT') throw error;
+        // A file git still tracks but the workspace has deleted cannot be copied;
+        // one deleted from the clone is a difference that would be pushed.
+        if (existsSync(resolve(source, pathname))) differing.push(pathname);
+      }
+    }));
+  }
+
+  const onlyInClone = [...targetTracked].filter((pathname) => !sourceSet.has(pathname)).sort();
+  return { compared, missing: missing.sort(), differing: differing.sort(), onlyInClone };
 }
 
-const onlyInClone = [...targetTracked].filter((pathname) => !sourceSet.has(pathname)).sort();
-missing.sort();
-differing.sort();
+/**
+ * Copies the missing and stale files from the workspace into the clone. Files
+ * that exist only in the clone are left alone: removing one from the repository
+ * is the pusher's decision, not a sync script's.
+ */
+async function copyIntoClone(paths) {
+  const copied = [];
+  for (const pathname of paths) {
+    const from = resolve(source, pathname);
+    if (!existsSync(from)) continue; // Deleted in the workspace; nothing to copy.
+    const to = resolve(target, pathname);
+    await mkdir(dirname(to), { recursive: true });
+    await copyFile(from, to);
+    copied.push(pathname);
+  }
+  return copied;
+}
+
+let result = await compareTrees();
+let copied = [];
+if (args.fix && (result.missing.length || result.differing.length)) {
+  copied = await copyIntoClone([...result.missing, ...result.differing].sort());
+  result = await compareTrees();
+}
+
+const { compared, missing, differing, onlyInClone } = result;
 
 // One stream, in reading order: a hook's stdout and stderr can reach the
 // terminal out of order, and the exit code already carries the result.
 console.log(`check-clone-sync: ${source}`);
 console.log(`             against ${target}`);
 console.log(`              ${compared} files match`);
+
+if (copied.length) {
+  console.log(`\nCopied ${copied.length} ${copied.length === 1 ? 'file' : 'files'} into the clone:\n${describe(copied)}`);
+  console.log('They are copied, not staged: commit them before pushing, or the push carries the old version.');
+}
 
 let problems = 0;
 if (missing.length) {
@@ -195,7 +237,12 @@ if (onlyInClone.length) {
 }
 
 if (problems) {
-  console.log('\nRefusing to push: copy the files across, or delete the stale ones, then try again.');
+  const hints = [];
+  if (missing.length || differing.length) {
+    hints.push(`${args.fix ? 'Some files could not be copied; check them by hand.' : '`npm run sync:check -- --fix` copies them across.'}`);
+  }
+  if (onlyInClone.length) hints.push('Files the workspace no longer has must be removed from the clone by hand.');
+  console.log(`\nRefusing to push: ${hints.join(' ')}`);
   process.exit(1);
 }
-console.log('\nPASS the clone matches the workspace.');
+console.log(copied.length ? '\nPASS the clone matches the workspace now.' : '\nPASS the clone matches the workspace.');

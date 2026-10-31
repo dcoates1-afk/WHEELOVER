@@ -585,8 +585,13 @@ blocks a push.
 
 ```bash
 npm run sync:check                        # compare once, without pushing
+npm run sync:fix                          # copy missing and stale files into the clone
 npm run sync:hook -- --source <workspace> # install the hook in the clone
 ```
+
+`sync:fix` copies only the files the workspace has; a file the clone still
+carries after the workspace dropped it is reported and left for you to `git rm`,
+because deleting from the repository is a decision the script should not make.
 
 Freebuff worktrees change path, so the hook records the workspace it was
 installed against and asks to be re-run when that path disappears.

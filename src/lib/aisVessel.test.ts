@@ -4,7 +4,9 @@ import {
   VESSEL_KIND_COLOURS,
   courseLabel,
   dimensionsLabel,
+  draughtLabel,
   navStatusLabel,
+  selectedVesselLabelHtml,
   speedLabel,
   vesselIconSize,
   vesselIconSvg,
@@ -114,16 +116,82 @@ describe('AIS vessel presentation', () => {
     expect(zoomedOut).toBeLessThan(large);
   });
 
-  it('builds a hover card with identity, status and numbers', () => {
+  it('builds a tracking-style hover card with identity, status and numbers', () => {
     const html = vesselTooltipHtml(vessel(), Date.now());
+    expect(html).toContain('Vessel details');
     expect(html).toContain('RED JET 6');
-    expect(html).toContain('Passenger');
-    expect(html).toContain('Under way using engine');
-    expect(html).toContain('21.4');
-    expect(html).toContain('205');
-    expect(html).toContain('PORTSMOUTH');
-    expect(html).toContain('MMSI 232001234');
-    expect(html).toContain('Class A');
+    expect(html).toContain('Passenger · Class A');
+    expect(html).toContain('<dt>Status</dt><dd>Under way using engine</dd>');
+    expect(html).toContain('<dt>Speed</dt><dd>21.4 kn</dd>');
+    expect(html).toContain('<dt>Course</dt><dd>205°</dd>');
+    expect(html).toContain('<dt>MMSI</dt><dd>232001234</dd>');
+    expect(html).toContain('<dt>IMO</dt><dd>9123456</dd>');
+    expect(html).toContain('<dt>Call sign</dt><dd>MABC1</dd>');
+  });
+
+  it('labels the picked target with its name and course', () => {
+    const html = selectedVesselLabelHtml(vessel());
+    expect(html).toContain('<span class="ais-label-name">RED JET 6</span>');
+    expect(html).toContain('<span class="ais-label-course">COG 205°</span>');
+    // A target that has not reported a course says so rather than showing 000°.
+    expect(selectedVesselLabelHtml(vessel({ cog: null }))).toContain('COG —');
+    // A name is untrusted radio text, and an unnamed target falls back to MMSI.
+    expect(selectedVesselLabelHtml(vessel({ name: '<b>x</b>' }))).not.toContain('<b>');
+    expect(selectedVesselLabelHtml(vessel({ name: null, cog: 7.4 }))).toContain('MMSI 232001234');
+    expect(selectedVesselLabelHtml(vessel({ cog: 7.4 }))).toContain('COG 007°');
+    // No fix means no range line rather than a made-up one.
+    expect(html).not.toContain('brg');
+  });
+
+  it('adds range and bearing off this boat to the picked label', () => {
+    // Just over 30 m due west of the target, so the bearing reads close to 090°
+    // and the short range is written in the feet of the nm/ft pair.
+    const from = { lat: 50.795, lon: -1.2905 };
+    const html = selectedVesselLabelHtml(vessel(), from, 'nm-ft');
+    expect(html).toContain('class="ais-label-range"');
+    expect(html).toMatch(/brg 0?9\d°/);
+    expect(html).toMatch(/\d+ ft · brg/);
+    // The unit setting reaches the label.
+    expect(selectedVesselLabelHtml(vessel(), from, 'm-nm')).toMatch(/\d+ m · brg/);
+  });
+
+  it('groups the card into particulars and voyage, as a tracking card does', () => {
+    const html = vesselTooltipHtml(vessel(), Date.now(), 'nm-ft', 'ft');
+    expect(html).toContain('vessel-tip-block-title">Particulars');
+    expect(html).toContain('vessel-tip-block-title">Voyage and position');
+    expect(html).toContain('<dt>Destination</dt><dd>PORTSMOUTH</dd>');
+    expect(html).toContain('<dt>ETA</dt><dd>14 Jun 22:00 UTC</dd>');
+    // The flag and the transponder class complete the card's identity block.
+    expect(html).toContain('vessel-flagcode');
+    expect(html).toContain('Click the target for its full vessel record');
+  });
+
+  it('shows hull size on the hover card in the chosen distance unit', () => {
+    const ship = vessel({ length: 40, beam: 10 });
+    expect(vesselTooltipHtml(ship, Date.now(), 'nm-ft')).toContain(
+      '<dt>Size (L × B)</dt><dd>131 ft × 32.8 ft</dd>',
+    );
+    expect(vesselTooltipHtml(ship, Date.now(), 'm-nm')).toContain(
+      '<dt>Size (L × B)</dt><dd>40 m × 10 m</dd>',
+    );
+    // A target that has not reported dimensions keeps the row as a placeholder.
+    const unknown = vesselTooltipHtml(vessel({ length: null, beam: null }), Date.now(), 'nm-ft');
+    expect(unknown).toContain('<dt>Size (L × B)</dt><dd class="missing">---</dd>');
+  });
+
+  it('shows the reported draught on the hover card in the chosen depth unit', () => {
+    const ship = vessel({ draught: 6.5 });
+    expect(vesselTooltipHtml(ship, Date.now(), 'nm-ft', 'ft')).toContain(
+      '<dt>Draught</dt><dd>21 ft</dd>',
+    );
+    expect(vesselTooltipHtml(ship, Date.now(), 'nm-ft', 'fathoms')).toContain(
+      '<dt>Draught</dt><dd>3.6 fm</dd>',
+    );
+    expect(vesselTooltipHtml(ship)).toContain('<dt>Draught</dt><dd>6.5 m</dd>');
+    // Targets that have not reported a draught show a placeholder, not a blank.
+    expect(vesselTooltipHtml(vessel({ draught: null }), Date.now(), 'nm-ft', 'ft')).toContain(
+      '<dt>Draught</dt><dd class="missing">---</dd>',
+    );
   });
 
   it('escapes AIS text and explains a missing name', () => {
@@ -136,8 +204,8 @@ describe('AIS vessel presentation', () => {
     expect(html).toContain('A &amp; B');
 
     const unnamed = vesselTooltipHtml(vessel({ name: null }), Date.now());
-    expect(unnamed).toContain('MMSI 232001234');
-    expect(unnamed).toContain('No static report yet');
+    expect(unnamed).toContain('<dt>MMSI</dt><dd>232001234</dd>');
+    expect(unnamed).toContain('no static report yet');
   });
 
   it('formats speed, course and dimensions', () => {
@@ -145,7 +213,20 @@ describe('AIS vessel presentation', () => {
     expect(speedLabel(vessel({ sog: null }))).toBe('—');
     expect(courseLabel(vessel({ cog: 7.4 }))).toBe('007°');
     expect(courseLabel(vessel({ cog: null }))).toBe('—');
-    expect(dimensionsLabel(vessel({ length: 112.4, beam: 18.2 }))).toBe('112 m × 18 m');
+    expect(dimensionsLabel(vessel({ length: 112.4, beam: 18.2 }))).toBe('112 m × 18.2 m');
     expect(dimensionsLabel(vessel({ length: null, beam: null }))).toBeNull();
+  });
+
+  it('prints target size and draught in the chosen units', () => {
+    // Same figure as the boat settings: feet for the imperial distance pairs,
+    // yards when the pair asks for them, and the depth unit for draught.
+    const ship = vessel({ length: 112.4, beam: 18.2, draught: 6.5 });
+    expect(dimensionsLabel(ship, 'nm-ft')).toBe('369 ft × 59.7 ft');
+    expect(dimensionsLabel(ship, 'nm-yd')).toBe('123 yd × 19.9 yd');
+    expect(dimensionsLabel(ship, 'm-km')).toBe('112 m × 18.2 m');
+    expect(draughtLabel(ship, 'ft')).toBe('21 ft');
+    expect(draughtLabel(ship, 'fathoms')).toBe('3.6 fm');
+    expect(draughtLabel(ship)).toBe('6.5 m');
+    expect(draughtLabel(vessel({ draught: null }), 'ft')).toBeNull();
   });
 });

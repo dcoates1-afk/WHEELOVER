@@ -399,6 +399,62 @@ export function formatDepthWithUnit(metres: number, unit: DepthUnit = 'm'): stri
   return `${shown} ${depthUnitLabel(unit)}`;
 }
 
+/**
+ * Vessel dimensions follow the unit choices rather than sitting in metres: the
+ * length and beam take the short unit of the chosen distance pair, and the
+ * draught takes the depth unit. Everything is still stored in metres so the
+ * depth alert compares like with like.
+ */
+export function vesselLengthUnit(unit: DistanceUnit): { label: string; metres: number } {
+  switch (unit) {
+    case 'nm-yd':
+    case 'yd-sm':
+      return { label: 'yd', metres: METRES_PER_YARD };
+    case 'm-nm':
+    case 'm-km':
+      return { label: 'm', metres: 1 };
+    default:
+      return { label: 'ft', metres: METRES_PER_FOOT };
+  }
+}
+
+/** The unit a boat's length and beam are typed and read in. */
+export function lengthUnitLabel(unit: DistanceUnit): string {
+  return vesselLengthUnit(unit).label;
+}
+
+/** A length in metres as the selected vessel-length unit reads it. */
+export function convertLength(metres: number, unit: DistanceUnit): number {
+  return metres / vesselLengthUnit(unit).metres;
+}
+
+function parseTypedNumber(text: string): number | null {
+  const value = Number.parseFloat(String(text).replace(',', '.').trim());
+  return Number.isFinite(value) ? value : null;
+}
+
+/** A figure printed for a field: one decimal below 100, whole above it. */
+export function formatDimension(value: number): string {
+  if (!Number.isFinite(value)) return '';
+  if (value >= 100) return String(Math.round(value));
+  return String(Math.round(value * 10) / 10);
+}
+
+/** A typed length converted back to metres, or null when it is not readable. */
+export function parseLength(text: string, unit: DistanceUnit): number | null {
+  const value = parseTypedNumber(text);
+  if (value === null || value <= 0) return null;
+  return Math.round(value * vesselLengthUnit(unit).metres * 100) / 100;
+}
+
+/** A typed depth converted back to metres, or null when it is not readable. */
+export function parseDepth(text: string, unit: DepthUnit): number | null {
+  const value = parseTypedNumber(text);
+  if (value === null || value <= 0) return null;
+  const factor = unit === 'ft' ? METRES_PER_FOOT : unit === 'fathoms' ? 1 / 0.546806649 : 1;
+  return Math.round(value * factor * 100) / 100;
+}
+
 const HPA_TO_BAR = 0.001;
 const HPA_TO_PSI = 0.0145037738;
 const HPA_TO_INHG = 0.0295299831;

@@ -7,8 +7,13 @@ import {
   convertSpeed,
   convertTemperature,
   convertWind,
+  convertLength,
   formatDepthWithUnit,
+  formatDimension,
   formatDistance,
+  lengthUnitLabel,
+  parseDepth,
+  parseLength,
   readSettings,
   sanitizeSettings,
   writeSettings,
@@ -117,6 +122,31 @@ describe('settings', () => {
     expect(convertPressure(1013.25, 'hpa')).toBe(1013.25);
     expect(convertPressure(1013.25, 'bar')).toBeCloseTo(1.013, 3);
     expect(convertPressure(1013.25, 'psi')).toBeCloseTo(14.696, 2);
+  });
+
+  it('reads vessel dimensions in the unit chosen for lengths and depths', () => {
+    // Length and beam take the short unit of the distance pair.
+    expect(lengthUnitLabel('nm-ft')).toBe('ft');
+    expect(lengthUnitLabel('ft-yd-sm')).toBe('ft');
+    expect(lengthUnitLabel('nm-yd')).toBe('yd');
+    expect(lengthUnitLabel('m-nm')).toBe('m');
+    expect(lengthUnitLabel('m-km')).toBe('m');
+    expect(convertLength(11.5, 'nm-ft')).toBeCloseTo(37.73, 2);
+    expect(convertLength(11.5, 'm-nm')).toBe(11.5);
+    expect(convertLength(11.5, 'nm-yd')).toBeCloseTo(12.577, 3);
+    // Draught takes the depth unit, and both round-trip through metres.
+    expect(parseLength('37.7', 'nm-ft')).toBe(11.49);
+    expect(parseLength('11.5', 'm-km')).toBe(11.5);
+    expect(parseDepth('5.2', 'ft')).toBe(1.58);
+    expect(parseDepth('0.9', 'fathoms')).toBe(1.65);
+    expect(parseDepth('1.6', 'm')).toBe(1.6);
+    expect(parseDepth('', 'm')).toBeNull();
+    expect(parseDepth('0', 'm')).toBeNull();
+    expect(parseLength('deep', 'nm-ft')).toBeNull();
+    // A figure printed for a field keeps one decimal under 100.
+    expect(formatDimension(5.24)).toBe('5.2');
+    expect(formatDimension(37.73)).toBe('37.7');
+    expect(formatDimension(123.4)).toBe('123');
   });
 });
 

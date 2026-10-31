@@ -250,9 +250,88 @@ ul {
 }
 
 .marnav-ais {
+  position: relative;
   display: block;
   transform: rotate(var(--rot));
   transition: transform 0.6s ease-out;
+}
+
+/* The picked AIS target: a soft ring around the icon, so the vessel you chose
+   from the list is obvious among a channel full of identical hulls. */
+.leaflet-marker-icon.ais-selected .marnav-ais::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 3px rgba(61, 214, 255, 0.16), 0 0 14px rgba(61, 214, 255, 0.45);
+  animation: ais-selected-pulse 1.9s ease-out infinite;
+}
+
+.leaflet-marker-icon.ais-selected .marnav-ais svg {
+  filter: drop-shadow(0 0 5px rgba(61, 214, 255, 0.8));
+}
+
+/* Name and course pinned beside the ringed target, readable with the sheet
+   closed. Leaflet's tooltip chrome is overridden to this chart's own panel. */
+.ais-selected-label.leaflet-tooltip {
+  padding: 4px 8px;
+  border: 1px solid rgba(61, 214, 255, 0.45);
+  border-radius: 8px;
+  background: rgba(4, 20, 31, 0.94);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.ais-selected-label .ais-label-name {
+  display: block;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.ais-selected-label .ais-label-course {
+  display: block;
+  font-size: 10px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Range and bearing off this boat, when it has a fix. */
+.ais-selected-label .ais-label-range {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The pointing arrow Leaflet draws for direction: right. */
+.ais-selected-label.leaflet-tooltip-right::before {
+  border-right-color: rgba(4, 20, 31, 0.94);
+}
+
+@keyframes ais-selected-pulse {
+  0% {
+    transform: scale(0.94);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.12);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(0.94);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaflet-marker-icon.ais-selected .marnav-ais::after {
+    animation: none;
+  }
 }
 
 .marnav-vessel {
@@ -1716,6 +1795,44 @@ ul {
   padding: 10px 0;
 }
 
+.sheet-flag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Titled blocks, the way a tracking site splits particulars, voyage and
+   position into separate panels. */
+.sheet-group + .sheet-group {
+  margin-top: 14px;
+}
+
+.sheet-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.sheet-list {
+  margin: 0;
+}
+
+.sheet-group-title + .sheet-list .sheet-row:first-child {
+  border-top: 0;
+}
+
+.sheet-row dd.missing {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
 .sheet-row {
   display: grid;
   grid-template-columns: 128px 1fr;
@@ -1740,7 +1857,14 @@ ul {
 @media (max-width: 480px) {
   .sheet-row {
     grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
+    gap: 3px;
+    /* Stacked rows are twice as tall as the desktop two-column row, so trim
+       the padding to keep a sixteen-field vessel record to a shorter scroll. */
+    padding: 8px 0;
+  }
+
+  .sheet-group + .sheet-group {
+    margin-top: 10px;
   }
 }
 
@@ -1835,6 +1959,134 @@ ul {
   flex-wrap: wrap;
 }
 
+/* Tracking info: the three-page AIS card. */
+.tracking-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(4, 20, 31, 0.45);
+}
+
+.tracking-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--vessel, var(--accent));
+}
+
+.tracking-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.tracking-identity {
+  min-width: 0;
+}
+
+.tracking-identity h3 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.tracking-identity p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tracking-flag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+}
+
+.tracking-pages {
+  margin: 12px 0 2px;
+}
+
+.tracking-list {
+  margin: 0;
+}
+
+.tracking-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 2px;
+  border-bottom: 1px solid rgba(143, 176, 192, 0.12);
+  font-size: 13px;
+}
+
+.tracking-row dt {
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.tracking-row dd {
+  margin: 0;
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.tracking-row dd.missing {
+  color: var(--muted);
+}
+
+.tracking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* One full-width primary, then the two secondary actions side by side so the
+   page keeps its field list on screen on a phone. */
+.tracking-actions .primary-button {
+  flex: 1 1 100%;
+}
+
+.tracking-actions .secondary-button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.tracking-picker {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.tracking-pick-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tracking-pick-swatch {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.tracking-pick-range {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
@@ -1887,6 +2139,15 @@ ul {
   margin-top: 12px;
 }
 
+/* Each list entry pairs the vessel row with its own tracking button, so the
+   card is one tap from the list instead of a trip through the target picker. */
+.vessel-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: stretch;
+}
+
 .vessel-row {
   width: 100%;
   display: flex;
@@ -1898,6 +2159,52 @@ ul {
   border: 1px solid var(--line);
   text-align: left;
   min-height: 64px;
+}
+
+/* Centre and Tracking sit together in a column so both actions stay beside
+   their row without widening the list. */
+.vessel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 72px;
+}
+
+.vessel-action {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(12, 42, 60, 0.35);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+}
+
+.vessel-action svg {
+  flex: none;
+  opacity: 0.85;
+}
+
+.vessel-action:hover,
+.vessel-action:focus-visible {
+  border-color: var(--accent);
+  background: rgba(61, 214, 255, 0.1);
+}
+
+.vessel-action-chevron {
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.8;
 }
 
 .vessel-name {
@@ -2050,6 +2357,17 @@ ul {
   min-width: 188px;
 }
 
+/* Card title band: reads as the "vessel details" heading of a tracking card. */
+.vessel-tip-eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--line);
+}
+
 .vessel-tip-head {
   display: flex;
   align-items: center;
@@ -2098,43 +2416,61 @@ ul {
   margin: 0 1px;
 }
 
-.vessel-tip-grid {
+/* Grouped particulars: a titled block of label/value rows, the layout the
+   tracking cards use for their vessel panel. */
+.vessel-tip-block {
   display: grid;
-  grid-template-columns: repeat(2, minmax(62px, 1fr));
-  gap: 6px 12px;
-  margin-top: 1px;
+  gap: 3px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
 }
 
-.vessel-tip-metric {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.vessel-tip-metric.wide {
-  grid-column: 1 / -1;
-}
-
-.vessel-tip-metric span {
+.vessel-tip-block-title {
   font-size: 9px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--muted);
+  opacity: 0.9;
 }
 
-.vessel-tip-metric b {
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
+.vessel-tip-rows {
+  display: grid;
+  gap: 2px;
+  margin: 0;
 }
 
-.vessel-tip-metric i {
-  font-style: normal;
-  font-size: 10px;
-  font-weight: 500;
+.vessel-tip-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.vessel-tip-row dt {
   color: var(--muted);
-  margin-left: 2px;
+}
+
+.vessel-tip-row dd {
+  margin: 0;
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* A field the transponder has not sent. */
+.vessel-tip-row dd.missing {
+  color: var(--muted);
+  opacity: 0.65;
+}
+
+.vessel-tip-hint {
+  font-size: 10px;
+  color: var(--muted);
+  opacity: 0.85;
 }
 
 .vessel-tip-foot {
@@ -2145,10 +2481,6 @@ ul {
   font-variant-numeric: tabular-nums;
 }
 
-.vessel-tip-note {
-  font-size: 11px;
-  color: var(--warn);
-}
 
 .vessel-sheet-symbol svg {
   width: 44px;

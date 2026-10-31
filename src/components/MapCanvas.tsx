@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
@@ -8,7 +8,14 @@ import { distanceMeters, lightSectorArc, mirrorLightSectorBearings } from '../..
 import type { ProtectedAreaFeature } from '../lib/protectedAreas';
 import { ialaRegion, quickInfo, symbolForMark } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
-import { vesselCourse, vesselIconSize, vesselIconSvg, vesselIsMoving, vesselTooltipHtml } from '../lib/aisVessel';
+import {
+  selectedVesselLabelHtml,
+  vesselCourse,
+  vesselIconSize,
+  vesselIconSvg,
+  vesselIsMoving,
+  vesselTooltipHtml,
+} from '../lib/aisVessel';
 import { loadNoaaTile, noaaTileUrl, tileBounds } from '../lib/noaaChart';
 import { contourManifestCoversBounds, loadContoursForBounds, readContourManifest, type ContourManifest } from '../lib/marineContours';
 import {
@@ -161,6 +168,8 @@ export interface MapCanvasProps {
   onMapClick: (lat: number, lon: number) => void;
   fix: GeoFix | null;
   aisVessels: AisVessel[];
+  /** AIS target the navigator picked, kept picked out on the chart. */
+  selectedVesselMmsi?: number | null;
   /** Anchor circle and course to steer, set from the menu. */
   watch: VoyageWatch;
   /** Grid the cursor readout is written in. */
@@ -362,7 +371,10 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   const vesselRef = useRef<L.Marker | null>(null);
   const watchRef = useRef<L.LayerGroup | null>(null);
   const aisMarkersRef = useRef(
-    new Map<number, { marker: L.Marker; vessel: AisVessel; iconHtml: string; label: string }>(),
+    new Map<
+      number,
+      { marker: L.Marker; vessel: AisVessel; iconHtml: string; label: string; labelHtml: string }
+    >(),
   );
   const handlers = useRef(props);
   handlers.current = props;
@@ -1266,7 +1278,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           handlers.current.onSelectVessel(entry?.vessel ?? vessel);
         });
         group.addLayer(marker);
-        aisMarkersRef.current.set(vessel.mmsi, { marker, vessel, iconHtml, label });
+        aisMarkersRef.current.set(vessel.mmsi, { marker, vessel, iconHtml, label, labelHtml: '' });
         continue;
       }
 
@@ -1296,6 +1308,54 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       aisMarkersRef.current.delete(mmsi);
     }
   }, [props.aisVessels, props.zoom, props.preferences.overlays.ais]);
+
+  // The picked target stays ringed after the drawer and sheet close, so a
+  // vessel heard once in a crowded channel is still findable on the chart, with
+  // its name and course pinned beside it. The class lives on the marker's icon
+  // element, which is replaced whenever the icon is redrawn, hence the
+  // dependency on the snapshot and zoom. The label is only re-written when its
+  // text changes, so a live update does not make the pill flash.
+  useEffect(() => {
+    for (const [mmsi, entry] of aisMarkersRef.current) {
+      const selected = mmsi === props.selectedVesselMmsi;
+      entry.marker.getElement()?.classList.toggle('ais-selected', selected);
+      entry.marker.setZIndexOffset(selected ? 1600 : 1200);
+      if (!selected) {
+        if (entry.marker.getTooltip()) {
+          entry.marker.closeTooltip();
+          entry.marker.unbindTooltip();
+          entry.labelHtml = '';
+        }
+        continue;
+      }
+      // The label carries the range off this boat, so it is rebuilt as the fix
+      // and the target move, not just when the target changes.
+      const html = selectedVesselLabelHtml(entry.vessel, props.fix, props.distanceUnit);
+      if (!entry.marker.getTooltip()) {
+        entry.marker.bindTooltip(html, {
+          permanent: true,
+          direction: 'right',
+          offset: [13, 0],
+          className: 'ais-selected-label',
+          interactive: false,
+          opacity: 1,
+        });
+        entry.labelHtml = html;
+        entry.marker.openTooltip();
+      } else if (entry.labelHtml !== html) {
+        entry.marker.setTooltipContent(html);
+        entry.labelHtml = html;
+      }
+      if (!entry.marker.isTooltipOpen()) entry.marker.openTooltip();
+    }
+  }, [
+    props.selectedVesselMmsi,
+    props.aisVessels,
+    props.zoom,
+    props.preferences.overlays.ais,
+    props.fix,
+    props.distanceUnit,
+  ]);
 
   // Own vessel.
   useEffect(() => {
@@ -1474,6 +1534,15 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     hoverVessel && mapRef.current
       ? mapRef.current.latLngToContainerPoint([hoverVessel.lat, hoverVessel.lon])
       : null;
+  // The card grows with the number of fields a target reports, so its height is
+  // measured rather than assumed when deciding whether it fits above.
+  const hoverCardRef = useRef<HTMLDivElement | null>(null);
+  const [hoverCardHeight, setHoverCardHeight] = useState(300);
+  useLayoutEffect(() => {
+    const height = hoverCardRef.current?.offsetHeight;
+    if (height) setHoverCardHeight(height);
+  }, [hovered]);
+
   // Keep the whole card on screen: half its widest size plus a margin, then
   // flip below the target when there is no room above it.
   const halfCard = Math.min(272, Math.max(200, mapWidth - 24)) / 2;
@@ -1497,11 +1566,16 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       </div>
       {hoverVessel && hoverPoint && mapWidth > 0 && (
         <div
-          className={`vessel-hover ${hoverPoint.y < 240 ? 'below' : 'above'}`}
+          ref={hoverCardRef}
+          className={`vessel-hover ${hoverPoint.y < hoverCardHeight + 20 ? 'below' : 'above'}`}
           style={{ left: hoverLeft, top: hoverPoint.y }}
           aria-hidden="true"
         >
-          <div dangerouslySetInnerHTML={{ __html: vesselTooltipHtml(hoverVessel) }} />
+          <div
+            dangerouslySetInnerHTML={{
+              __html: vesselTooltipHtml(hoverVessel, Date.now(), distanceUnit, depthUnit),
+            }}
+          />
         </div>
       )}
     </div>

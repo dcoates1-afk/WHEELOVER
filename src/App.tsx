@@ -90,6 +90,12 @@ export default function App() {
   const [station, setStation] = useState<StationTab | null>(null);
   const [selectedMark, setSelectedMark] = useState<Navaid | null>(null);
   const [selectedVessel, setSelectedVessel] = useState<AisVessel | null>(null);
+  // The target picked from the AIS list or the chart. It survives closing the
+  // sheet so the vessel is still ringed on the chart afterwards.
+  const [highlightedVessel, setHighlightedVessel] = useState<number | null>(null);
+  // Tracking info keeps the target it was given and follows the live snapshot,
+  // so a page left open keeps reading as the transponder reports again.
+  const [trackingVessel, setTrackingVessel] = useState<AisVessel | null>(null);
   // Deep link first, then the last known position, then the Solent default.
   const deepLink = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
@@ -144,7 +150,7 @@ export default function App() {
   const [reloadKey, setReloadKey] = useState(0);
 
   const geo = useGeolocation(gpsMode);
-  const aisEnabled = station === 'ais' || preferences.overlays.ais;
+  const aisEnabled = station === 'ais' || station === 'tracking' || preferences.overlays.ais;
   const ais = useAis(aisEnabled, view.bounds);
   // Depth, traffic, anchor and course alerts follow the fix, the latest AIS
   // snapshot and the watch set from the menu.
@@ -155,6 +161,9 @@ export default function App() {
   // its last known detail rather than blinking shut.
   useEffect(() => {
     setSelectedVessel((current) =>
+      current ? (ais.vessels.find((vessel) => vessel.mmsi === current.mmsi) ?? current) : current,
+    );
+    setTrackingVessel((current) =>
       current ? (ais.vessels.find((vessel) => vessel.mmsi === current.mmsi) ?? current) : current,
     );
   }, [ais.vessels]);
@@ -576,15 +585,21 @@ export default function App() {
         onSelectVessel={(vessel) => {
           setSelectedMark(null);
           setSelectedVessel(vessel);
+          setHighlightedVessel(vessel.mmsi);
         }}
         onViewChange={onViewChange}
         onUserMove={() => {
           userMoved.current = true;
         }}
         onNoaaCoverageChange={setNoaaCovered}
-        onMapClick={(lat, lon) => setWeatherAt([lat, lon])}
+        onMapClick={(lat, lon) => {
+          setWeatherAt([lat, lon]);
+          // Tapping open water puts the picked target down again.
+          setHighlightedVessel(null);
+        }}
         fix={geo.fix}
         aisVessels={ais.vessels}
+        selectedVesselMmsi={highlightedVessel}
         watch={watch}
         coordinateFormat={settings.units.coordinates}
         distanceUnit={settings.units.distance}
@@ -695,10 +710,33 @@ export default function App() {
           onToggleAisChart={(value) =>
             configure({ ...preferences, overlays: { ...preferences.overlays, ais: value } })
           }
+          trackingVessel={trackingVessel}
+          onSelectTracking={(mmsi) =>
+            setTrackingVessel(mmsi === null ? null : (ais.vessels.find((vessel) => vessel.mmsi === mmsi) ?? null))
+          }
+          onCentreVessel={(vessel) => {
+            // Whatever the chart is flown to is also the picked target, so the
+            // mark you asked for keeps its ring once the flight settles.
+            setHighlightedVessel(vessel.mmsi);
+            centreOn(vessel.lat, vessel.lon, Math.max(view.zoom, 14));
+          }}
+          onOpenVesselSheet={(vessel) => {
+            setStation(null);
+            setSelectedVessel(vessel);
+          }}
+          depthUnit={settings.units.depth}
+          coordinateFormat={settings.units.coordinates}
           onFocusVessel={(vessel) => {
             setStation(null);
             setSelectedVessel(vessel);
+            setHighlightedVessel(vessel.mmsi);
             centreOn(vessel.lat, vessel.lon, Math.max(view.zoom, 14));
+          }}
+          // A target picked from the AIS list opens its tracking card in the
+          // same drawer, so the list and the card stay one place to work from.
+          onOpenTracking={(vessel) => {
+            setTrackingVessel(vessel);
+            setStation('tracking');
           }}
           distanceUnit={settings.units.distance}
         />
@@ -714,6 +752,7 @@ export default function App() {
           }}
           onClose={() => setSelectedVessel(null)}
           distanceUnit={settings.units.distance}
+          depthUnit={settings.units.depth}
         />
       )}
 

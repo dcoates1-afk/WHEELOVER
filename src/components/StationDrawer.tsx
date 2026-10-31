@@ -1,9 +1,10 @@
 import type { AisScope, AisState, AisVessel } from '../lib/ais';
-import { STATION_LABELS } from '../lib/station';
+import { STATION_LABELS, STATION_TAB_LABELS, STATION_TABS } from '../lib/station';
 import type { StationTab } from '../lib/station';
-import type { DistanceUnit } from '../lib/settings';
+import type { CoordinateFormat, DepthUnit, DistanceUnit } from '../lib/settings';
 import { AisPanel } from './AisPanel';
 import { ColregsPanel } from './ColregsPanel';
+import { TrackingPanel } from './TrackingPanel';
 
 interface StationDrawerProps {
   station: StationTab;
@@ -17,11 +18,18 @@ interface StationDrawerProps {
   showAisOnChart: boolean;
   onToggleAisChart: (value: boolean) => void;
   onFocusVessel: (vessel: AisVessel) => void;
+  /** Open the Tracking info card for a target picked from the AIS list. */
+  onOpenTracking: (vessel: AisVessel) => void;
   /** Unit the range to each target is written in. */
   distanceUnit?: DistanceUnit;
+  depthUnit?: DepthUnit;
+  coordinateFormat?: CoordinateFormat;
+  /** Target the Tracking info page is showing, once one has been chosen. */
+  trackingVessel: AisVessel | null;
+  onSelectTracking: (mmsi: number | null) => void;
+  onCentreVessel: (vessel: AisVessel) => void;
+  onOpenVesselSheet: (vessel: AisVessel) => void;
 }
-
-const TABS: StationTab[] = ['ais', 'colregs'];
 
 export function StationDrawer({
   station,
@@ -35,7 +43,14 @@ export function StationDrawer({
   showAisOnChart,
   onToggleAisChart,
   onFocusVessel,
+  onOpenTracking,
   distanceUnit,
+  depthUnit,
+  coordinateFormat,
+  trackingVessel,
+  onSelectTracking,
+  onCentreVessel,
+  onOpenVesselSheet,
 }: StationDrawerProps) {
   return (
     <div className="scrim drawer-scrim" onClick={onClose} role="presentation">
@@ -48,7 +63,7 @@ export function StationDrawer({
       >
         <header className="drawer-head">
           <div className="tab-row" role="tablist" aria-label="Station">
-            {TABS.map((tab) => (
+            {STATION_TABS.map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -57,7 +72,7 @@ export function StationDrawer({
                 className={`tab ${station === tab ? 'active' : ''}`}
                 onClick={() => onStation(tab)}
               >
-                {tab === 'ais' ? 'AIS' : 'COLREGs'}
+                {STATION_TAB_LABELS[tab]}
               </button>
             ))}
           </div>
@@ -82,7 +97,22 @@ export function StationDrawer({
             showOnChart={showAisOnChart}
             onToggleChart={onToggleAisChart}
             onFocusVessel={onFocusVessel}
+            onCentreVessel={onCentreVessel}
+            onOpenTracking={onOpenTracking}
             distanceUnit={distanceUnit}
+          />
+        )}
+        {station === 'tracking' && (
+          <TrackingPanel
+            vessels={aisVessels}
+            vessel={trackingVessel}
+            centre={center}
+            onSelect={onSelectTracking}
+            onCentre={onCentreVessel}
+            onOpenSheet={onOpenVesselSheet}
+            distanceUnit={distanceUnit}
+            depthUnit={depthUnit}
+            coordinateFormat={coordinateFormat}
           />
         )}
         {station === 'colregs' && <ColregsPanel />}

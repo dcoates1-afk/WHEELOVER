@@ -24,6 +24,10 @@ interface AisPanelProps {
   showOnChart: boolean;
   onToggleChart: (value: boolean) => void;
   onFocusVessel: (vessel: AisVessel) => void;
+  /** Move the chart onto this target, leaving the drawer open. */
+  onCentreVessel: (vessel: AisVessel) => void;
+  /** Open the Tracking info card for this target instead of its reference sheet. */
+  onOpenTracking: (vessel: AisVessel) => void;
   /** Unit the range to each target is written in. */
   distanceUnit?: DistanceUnit;
 }
@@ -47,6 +51,8 @@ export function AisPanel({
   showOnChart,
   onToggleChart,
   onFocusVessel,
+  onCentreVessel,
+  onOpenTracking,
   distanceUnit,
 }: AisPanelProps) {
   const sorted = useMemo(() => {
@@ -129,7 +135,7 @@ export function AisPanel({
         {sorted.map(({ vessel, metres }) => {
           const { iso2, country } = vesselCountry(vessel);
           return (
-            <li key={vessel.mmsi}>
+            <li key={vessel.mmsi} className="vessel-item">
               <button type="button" className="vessel-row" onClick={() => onFocusVessel(vessel)}>
                 <span className="vessel-name" title="Open vessel reference">
                   <span
@@ -156,6 +162,35 @@ export function AisPanel({
                   <span>{relativeAge(vessel.lastSeen)}</span>
                 </span>
               </button>
+              {/* The row above opens the reference sheet; these two act on the
+                  chart without closing the drawer or losing the list. */}
+              <span className="vessel-actions">
+                <button
+                  type="button"
+                  className="vessel-action"
+                  onClick={() => onCentreVessel(vessel)}
+                  title="Centre chart on this target"
+                  aria-label={`Centre the chart on ${vesselLabel(vessel)}`}
+                >
+                  <span>Centre</span>
+                  <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                    <circle cx="8" cy="8" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                    <path d="M8 0.8 V4 M8 12 V15.2 M0.8 8 H4 M12 8 H15.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="vessel-action"
+                  onClick={() => onOpenTracking(vessel)}
+                  title="Open tracking info"
+                  aria-label={`Open tracking info for ${vesselLabel(vessel)}`}
+                >
+                  <span>Tracking</span>
+                  <span className="vessel-action-chevron" aria-hidden="true">
+                    ›
+                  </span>
+                </button>
+              </span>
             </li>
           );
         })}

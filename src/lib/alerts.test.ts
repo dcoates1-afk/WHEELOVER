@@ -10,6 +10,7 @@ import {
   shallowWaterAlert,
 } from './alerts';
 import type { AisVessel } from './ais';
+import { parseDepth } from './settings';
 
 function vessel(overrides: Partial<AisVessel> = {}): AisVessel {
   return {
@@ -83,6 +84,17 @@ describe('shallow water', () => {
     const alert = shallowWaterAlert(2.2, 1.6, { unit: 'ft' });
     expect(alert?.detail).toContain('ft');
     expect(alert?.detail).not.toContain(' m against');
+  });
+
+  it('compares a draught typed in feet against the modelled depth', () => {
+    // The boat settings field writes feet back as metres; the alert must judge
+    // that figure against the model in the same unit it prints.
+    const draughtM = parseDraught(String(parseDepth('6.5', 'ft')));
+    expect(draughtM).toBe(1.98);
+    const alert = shallowWaterAlert(2.2, draughtM, { unit: 'ft' });
+    expect(alert?.level).toBe('caution');
+    expect(alert?.detail).toContain('6.5 ft draught');
+    expect(alert?.detail).toContain('7.2 ft');
   });
 });
 

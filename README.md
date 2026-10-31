@@ -290,26 +290,60 @@ cannot be redistributed; their entries record why.
 
 ## Stations
 
-The menu's *Stations* section carries AIS and the COLREGs guide. Weather, tides
-and tidal current have their own drawer: the **Weather conditions** button in the
-top-left corner of the chart opens the same panel that used to sit in the menu.
+The menu's *Stations* section carries AIS, the tracking card and the COLREGs
+guide. Weather, tides and tidal current have their own drawer: the **Weather
+conditions** button in the top-left corner of the chart opens the same panel
+that used to sit in the menu.
 
 - **AIS** — live vessels from AISStream through the relay, drawn like a traffic
   display: the hull is coloured by class (cargo green, tanker red, passenger
   blue, high-speed cyan, fishing orange, tug brown, pleasure and sailing
   violet, law enforcement slate, military olive) and outlined by navigational
   status (under way, at anchor, moored, restricted, aground). Under-way targets
-  turn with their course; stopped ones become discs. Hover a target for a card
-  with name, flag and country, class, status, SOG, COG, destination, MMSI and
-  freshness; tap it for a reference sheet with IMO, callsign, size, draught,
-  ETA, flag and country, transponder class, range and bearing from the chart
-  centre, and the age of both the position and the static report. The same
-  detail opens from a row in the station list. The flag — shown as a two-letter
+  turn with their course; stopped ones become discs. Hover a target for a
+  *Vessel details* card laid out the way the tracking sites lay theirs out: a
+  title band above the name, type and transponder class, then the flag badge and
+  country, then two labelled blocks — *Particulars* (IMO, MMSI, call sign, hull
+  size, reported draught, navigational status) and *Voyage and position* (SOG,
+  COG, destination, ETA, when the position was received). Tap it for a reference
+  sheet split into *Particulars*, *Current trip* and *Position*, carrying the same
+  fields plus the heading, the range and bearing from the chart centre and the age
+  of the static report. A field the transponder has not sent prints `---` instead
+  of vanishing, so a gap is visible as a gap. Hull size on
+  both takes the length unit of the Distance setting, and the draught on both
+  takes the Depth unit, so a target is quoted in the same units as your own
+  boat. The same
+  detail opens from a row in the station list, and each row carries its own
+  **Centre** and **Tracking** buttons: Centre flies the chart onto that target
+  while the drawer, the list and its scroll position stay put, and Tracking opens
+  that target's Tracking info card straight away instead of going back through
+  the picker. Whichever target you pick — a row, or the target itself on the
+  chart — is ringed with a soft accent pulse, raised above the other hulls and
+  labelled beside the ring with its name, course over ground and, once this
+  device has a GPS fix, its range and true bearing off the boat
+  (`selectedVesselLabelHtml`). Range follows the Distance setting and the label
+  refreshes as the fix and the target move. Both outlive the sheet, so the
+  vessel stays identifiable once it closes; tapping open water puts the ring and
+  the label down. The flag — shown as a two-letter
   country-code badge, which does not depend on an emoji font — and the country
   name are decoded from the MMSI's Maritime Identification Digits (ITU-R
   M.585-9), including the special formats for coast stations, aids to
   navigation, SAR aircraft, craft with a parent ship and handheld VHF;
   emergency beacons carry no MID and show no flag.
+- **Tracking info** — the AIS reference arranged as a card, in the shape the
+  tracking sites use (`src/components/TrackingPanel.tsx`,
+  `src/lib/tracking.ts`). Open it on a target with the **Tracking** button on its
+  row in the AIS list, or choose one from the card's nearest-first list. It has
+  three pages: *Overview* (status, SOG, COG, heading, position, range and
+  bearing from the chart centre, report age, source), *Particulars* (type,
+  MMSI, IMO, call sign, flag, size, draught, transponder class, static report)
+  and *Voyage* (destination, reported ETA, status, speed, course, reported
+  draught, range). A field the transponder has not sent reads "Not reported"
+  rather than being guessed, and there is no port-call, ownership or photo
+  data behind it. The page follows the live snapshot, and size, draught and
+  position use the Distance, Depth and Coordinate settings. From the card you
+  can centre the chart on the target, open its reference sheet, or pick another
+  target.
 - **AIS names arrive sooner.** The relay subscribes to Class A and Class B
   position reports, both static formats (`ShipStaticData`, `StaticDataReport`)
   and long-range broadcasts, keeps static records for hours regardless of chart
@@ -387,7 +421,10 @@ instead of breaking the panel.
   notifications by itself.
 - **My profile** — name, home port, experience and an emergency contact.
 - **Boat settings** — name, type, length, beam, draught, MMSI and call sign.
-  Draught is the figure the shallow-water alert compares against.
+  Length and beam are typed in the short unit of the chosen distance pair and
+  draught in the chosen depth unit; all three are kept in metres behind the scenes.
+  Draught is the figure the shallow-water alert compares against, so the alert
+  reads the same unit back to you.
 
 ## Chart alerts
 

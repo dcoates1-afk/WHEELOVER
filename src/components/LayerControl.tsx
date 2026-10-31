@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { BaseLayerId, ChartPreferences, ThemeId } from '../lib/chartPreferences';
 import type { GpsMode } from '../lib/gpsPreference';
@@ -16,7 +16,7 @@ import {
 } from '../lib/voyageWatch';
 import type { VoyageWatch } from '../lib/voyageWatch';
 import type { StationTab } from '../lib/station';
-import { STATION_LABELS } from '../lib/station';
+import { STATION_LABELS, STATION_TABS } from '../lib/station';
 import { symbolFor } from '../lib/navaids';
 import { NAVAID_GROUPS, isGroupHidden, toggleGroup } from '../lib/navaidGroups';
 import { POI_GROUPS, isPoiGroupHidden, togglePoiGroup } from '../lib/poiGroups';
@@ -29,8 +29,14 @@ import {
   DEPTH_UNITS,
   DISTANCE_UNITS,
   EXPERIENCE_LEVELS,
+  convertDepth,
+  convertLength,
   depthUnitLabel,
+  formatDimension,
   formatDistance,
+  lengthUnitLabel,
+  parseDepth,
+  parseLength,
   FUEL_UNITS,
   PRESSURE_UNITS,
   RATE_OF_TURN_UNITS,
@@ -206,6 +212,77 @@ function TextField({
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+/**
+ * A measurement kept in metres but typed and read in whatever unit Settings
+ * chooses. The draft text is local so typing is never rewritten under the
+ * cursor, while every readable keystroke is committed in metres so the depth
+ * alert follows the entry immediately.
+ */
+function MeasurementField({
+  label,
+  unitLabel,
+  metres,
+  placeholderM,
+  toUnit,
+  fromUnitText,
+  onChangeMetres,
+}: {
+  label: string;
+  unitLabel: string;
+  metres: string;
+  placeholderM: string;
+  toUnit: (metres: number) => number;
+  fromUnitText: (text: string) => number | null;
+  onChangeMetres: (metres: string) => void;
+}) {
+  const stored = Number.parseFloat(metres);
+  const display = Number.isFinite(stored) ? formatDimension(toUnit(stored)) : '';
+  const [draft, setDraft] = useState(display);
+  const focused = useRef(false);
+  const shown = useRef(display);
+
+  // Switching unit, or resetting the boat, rewrites the field — but never while
+  // it has focus, or the figure the navigator is half way through typing goes.
+  useEffect(() => {
+    if (focused.current || shown.current === display) return;
+    shown.current = display;
+    setDraft(display);
+  }, [display]);
+
+  const placeholder = formatDimension(toUnit(Number.parseFloat(placeholderM)));
+  return (
+    <label className="menu-field">
+      <span className="row-label">
+        {label}
+        <small>{unitLabel}</small>
+      </span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={draft}
+        placeholder={placeholder}
+        onFocus={() => {
+          focused.current = true;
+        }}
+        onChange={(event) => {
+          const text = event.target.value;
+          setDraft(text);
+          if (text.trim() === '') {
+            onChangeMetres('');
+            return;
+          }
+          const next = fromUnitText(text);
+          if (next !== null) onChangeMetres(String(next));
+        }}
+        onBlur={() => {
+          focused.current = false;
+          setDraft(display);
+        }}
       />
     </label>
   );
@@ -1004,7 +1081,7 @@ export function LayerControl({
               </Section>
 
               <Section title="Stations" id="menu-stations">
-                {(['ais', 'colregs'] as StationTab[]).map((tab) => (
+                {STATION_TABS.map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -1076,26 +1153,32 @@ export function LayerControl({
                   onChange={(value) => setBoat('type', value)}
                 />
                 <div className="menu-field-pair">
-                  <TextField
+                  <MeasurementField
                     label="Length"
-                    hint="metres"
-                    placeholder="11.5"
-                    value={settings.boat.lengthM}
-                    onChange={(value) => setBoat('lengthM', value)}
+                    unitLabel={lengthUnitLabel(settings.units.distance)}
+                    metres={settings.boat.lengthM}
+                    placeholderM="11.5"
+                    toUnit={(metres) => convertLength(metres, settings.units.distance)}
+                    fromUnitText={(text) => parseLength(text, settings.units.distance)}
+                    onChangeMetres={(value) => setBoat('lengthM', value)}
                   />
-                  <TextField
+                  <MeasurementField
                     label="Beam"
-                    hint="metres"
-                    placeholder="3.8"
-                    value={settings.boat.beamM}
-                    onChange={(value) => setBoat('beamM', value)}
+                    unitLabel={lengthUnitLabel(settings.units.distance)}
+                    metres={settings.boat.beamM}
+                    placeholderM="3.8"
+                    toUnit={(metres) => convertLength(metres, settings.units.distance)}
+                    fromUnitText={(text) => parseLength(text, settings.units.distance)}
+                    onChangeMetres={(value) => setBoat('beamM', value)}
                   />
-                  <TextField
+                  <MeasurementField
                     label="Draught"
-                    hint="metres"
-                    placeholder="1.6"
-                    value={settings.boat.draughtM}
-                    onChange={(value) => setBoat('draughtM', value)}
+                    unitLabel={depthUnitLabel(settings.units.depth)}
+                    metres={settings.boat.draughtM}
+                    placeholderM="1.6"
+                    toUnit={(metres) => convertDepth(metres, settings.units.depth)}
+                    fromUnitText={(text) => parseDepth(text, settings.units.depth)}
+                    onChangeMetres={(value) => setBoat('draughtM', value)}
                   />
                 </div>
                 <TextField

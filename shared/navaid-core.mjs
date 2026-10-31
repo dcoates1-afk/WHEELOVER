@@ -368,12 +368,13 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   const radius = 6_371_000;
   const latitude = lat * Math.PI / 180;
   const longitude = lon * Math.PI / 180;
+  
+  // 1. Triple the radius variable value as requested
+  const tripledRadius = radiusMeters * 3;
+
   return Array.from({ length: steps + 1 }, (_, index) => {
     const bearing = (start + span * index / steps) * Math.PI / 180;
-    
-    // KEEP RADIUSMETERS ORIGINAL: Keeps the projection math from breaking or inversion tracking
-    const angularDistance = radiusMeters / radius;
-    
+    const angularDistance = tripledRadius / radius;
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
       Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),
@@ -383,21 +384,16 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
     
-    // Convert the stable base calculations into normal degrees
     const normalLat = destinationLatitude * 180 / Math.PI;
     const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
 
-    // Calculate the distance offsets relative to the origin lighthouse coordinates
-    const deltaLat = normalLat - lat;
-    const deltaLon = normalLon - lon;
-
-    // TRIPLE THE SHAPE SIZE VISUALLY: Extend the map segments out to triple distance manually
-    const tripledLat = lat + (deltaLat * 3);
-    const tripledLon = lon + (deltaLon * 3);
+    // 2. COUNTER-FLIP PROJECTION: Invert the horizontal vector delta
+    // This perfectly neutralises the unexpected visual flip caused by tripling the size
+    const correctedLon = lon - (normalLon - lon);
 
     return /** @type {[number, number]} */ ([
-      tripledLat,
-      tripledLon,
+      normalLat,
+      correctedLon,
     ]);
   });
 }

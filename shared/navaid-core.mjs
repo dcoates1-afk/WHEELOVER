@@ -352,10 +352,12 @@ function wreckBoatingEffect(category, waterLevel) {
 /** Mirror clockwise-from-north sector limits east-to-west, keeping north and south fixed. */
 export function mirrorLightSectorBearings(start, end) {
   if (![start, end].every((value) => Number.isFinite(value) && value >= 0 && value <= 360)) return null;
+  
+  // Adding +360 handles cases near 0/360 smoothly, ensuring a clean vertical axis reflection line
   const mirror = (bearing) => (360 - bearing + 360) % 360;
   
-  // FIX: Keeping [start, end] order stops the angles from breaking the arc layout engine
-  return [mirror(start), mirror(end)];
+  // The swap is required to reverse the arc's drawing direction, keeping North/South locked down
+  return [mirror(end), mirror(start)];
 }
 
 /** Geographic arc for clockwise-from-north OSM sector bearings; invalid or zero-width sectors are omitted. */

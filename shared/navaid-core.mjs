@@ -433,6 +433,8 @@ function lightSectorsFromTags(tags) {
     const value = String(rawValue).trim();
     const match = /^seamark:light:(?:(\d+):)?(character|colour|group|period|sequence|sector_start|sector_end|range|visibility|exhibition|category|orientation|height|multiple)$/.exec(key);
     if (!match) continue;
+    
+    // RESTORED FIX: Re-adding match[1] and match[2] indices ensures data records parse cleanly
     const sector = match[1] ? Number(match[1]) : 1;
     const record = sectors.get(sector) ?? { sector };
     const field = LIGHT_SECTOR_FIELDS[match[2]];

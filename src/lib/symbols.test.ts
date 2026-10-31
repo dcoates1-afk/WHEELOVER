@@ -326,9 +326,10 @@ describe('signal annotations on chart marks', () => {
     expect(spec.units).toBe(56);
     expect(spec.svg).toContain('data-mark-annotation="light"');
     // A beam from the lamp towards the south-east corner, not a star.
-    expect(spec.svg).toContain('M25.62 25.62 L35.09 29.44 L29.44 35.09 Z');
+    expect(spec.svg).toContain('M26.61 26.61 L43.15 36.65 L36.65 43.15 Z');
     expect(spec.svg).toContain('fill="#e23b3b"');
-    expect(spec.svg).toContain('r="1.8"');
+    // The beam is the whole cue: no lamp dot sits at its base.
+    expect(spec.svg).not.toContain('r="1.8"');
     // The aid itself is unchanged apart from the wider viewport.
     expect(spec.svg).toContain('M12 7 H20 L23 11 L18 25 H14 L9 11 Z');
   });
@@ -343,9 +344,38 @@ describe('signal annotations on chart marks', () => {
     expect(spec.svg).toContain('fill="#26a65b"');
   });
 
-  it('does not add a second flare to symbols that are already a light', () => {
+  it('gives a major light the same beam, without a second lamp dot', () => {
     const spec = symbolForMark(buoy({ category: 'major_light', lit: true, light: 'Fl 5s' }), 'A');
-    expect(spec.svg).not.toContain('data-mark-annotation="light"');
+
+    expect(spec.units).toBe(56);
+    expect(spec.svg).toContain('data-mark-annotation="light"');
+    // The same beam a buoy gets, starting outside the glyph's 14-unit rays.
+    expect(spec.svg).toContain('M26.61 26.61 L43.15 36.65 L36.65 43.15 Z');
+    expect(spec.svg).not.toContain('r="1.8"');
+    // The light's own star is untouched.
+    expect(spec.svg).toContain('stroke="#ff43d0"');
+  });
+
+  it('gives a minor light a beam leaving its body', () => {
+    const spec = symbolForMark(buoy({ category: 'light', lit: true, light: 'Fl 5s' }), 'A');
+
+    expect(spec.units).toBe(56);
+    expect(spec.svg).toContain('data-mark-annotation="light"');
+    expect(spec.svg).toContain('M26.61 26.61 L43.15 36.65 L36.65 43.15 Z');
+    expect(spec.svg).not.toContain('r="1.8"');
+    expect(spec.svg).toContain('stroke="#d9a6ff"');
+  });
+
+  it('beams a transit light, which is also drawn as a light', () => {
+    const spec = symbolForMark(buoy({ category: 'transit_front', lit: true, light: 'F R' }), 'A');
+    expect(spec.svg).toContain('data-mark-annotation="light"');
+    expect(spec.svg).not.toContain('r="1.8"');
+  });
+
+  it('keeps an unlit mark unchanged even in a light class', () => {
+    const spec = symbolForMark(buoy({ category: 'light', lit: false }), 'A');
+    expect(spec.units).toBe(32);
+    expect(spec.svg).not.toContain('data-mark-annotation');
   });
 
   it('draws three sound lines on the 225° bearing and names the signal above them', () => {

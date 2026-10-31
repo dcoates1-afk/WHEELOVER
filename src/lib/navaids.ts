@@ -342,15 +342,6 @@ const LIGHT_COLOURS: Record<string, string> = {
   magenta: '#ff43d0',
 };
 
-/** These categories are already drawn as a light, so they need no extra flare. */
-const LIGHT_SYMBOL_CATEGORIES = new Set<NavaidCategory>([
-  'major_light',
-  'light',
-  'transit_front',
-  'transit_rear',
-  'range',
-]);
-
 /** Colour of the small flare drawn off a lit aid, taken from the mapped light. */
 export function lightSymbolColour(mark: Navaid): string {
   const candidates: (string | null | undefined)[] = [
@@ -371,7 +362,7 @@ export function lightSymbolColour(mark: Navaid): string {
 
 /** The three extra chart cues a mark can carry, as plain values. */
 export interface MarkSignals {
-  /** Light colour for the 135° flare, or null when the symbol already is a light. */
+  /** Light colour for the 135° beam, or null when the mark carries no mapped light. */
   light: string | null;
   /** Lower-case sound-signal label, or null when there is no fog signal. */
   sound: string | null;
@@ -390,7 +381,7 @@ export function markSignals(mark: Navaid): MarkSignals {
     mark.radarTransponderPeriod || mark.radarTransponderSequence,
   );
   return {
-    light: hasLight && !LIGHT_SYMBOL_CATEGORIES.has(mark.category) ? lightSymbolColour(mark) : null,
+    light: hasLight ? lightSymbolColour(mark) : null,
     sound,
     racon,
   };
@@ -402,10 +393,18 @@ export function markSignals(mark: Navaid): MarkSignals {
 const ANNOTATED_VIEWBOX = '-12 -12 56 56';
 const ANNOTATED_UNITS = 56;
 
+// One beam for every lit mark, whatever its class: it leaves at 15 units (clear
+// of even a major light's 14-unit rays) and reaches 33.8, twice the throw the
+// first buoy-only beam used. The tip stays inside the 56-unit annotated box.
+const BEAM_START = 15;
+const BEAM_TIP = 33.8;
+const BEAM_HALF_WIDTH = 4.6;
+
 /**
  * A beam of light on the 135° (south-east) bearing, in the mapped light colour:
- * the lamp sits just clear of the aid and the light fans outward, the way a
- * chart shows a light's throw rather than a decorative star.
+ * the light fans outward from just clear of the aid, the way a chart shows a
+ * light's throw rather than a decorative star. The beam is the whole cue: every
+ * lit mark draws the same one, with no separate lamp dot.
  */
 function lightAnnotation(colour: string): string {
   const ux = Math.SQRT1_2;
@@ -414,11 +413,11 @@ function lightAnnotation(colour: string): string {
   const py = -Math.SQRT1_2;
   const point = (radius: number, side: number) =>
     `${(16 + ux * radius + px * side).toFixed(2)} ${(16 + uy * radius + py * side).toFixed(2)}`;
-  const lamp = point(13.6, 0);
-  const beam = `M${lamp} L${point(23, 4)} L${point(23, -4)} Z`;
+  const from = BEAM_START;
+  const lamp = point(from, 0);
+  const beam = `M${lamp} L${point(BEAM_TIP, BEAM_HALF_WIDTH)} L${point(BEAM_TIP, -BEAM_HALF_WIDTH)} Z`;
   return `<g data-mark-annotation="light">` +
     `<path d="${beam}" fill="${colour}" fill-opacity=".9" stroke="#04141f" stroke-width=".9" stroke-linejoin="round"/>` +
-    `<circle cx="${(16 + ux * 13.6).toFixed(2)}" cy="${(16 + uy * 13.6).toFixed(2)}" r="1.8" fill="${colour}" stroke="#04141f" stroke-width=".9"/>` +
     `</g>`;
 }
 

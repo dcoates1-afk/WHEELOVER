@@ -368,17 +368,12 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   const radius = 6_371_000;
   const latitude = lat * Math.PI / 180;
   const longitude = lon * Math.PI / 180;
-  
-  // Use tripled radius safely
-  const tripledRadiusMeters = radiusMeters * 3;
-
   return Array.from({ length: steps + 1 }, (_, index) => {
-    // FIX: Reversing the winding order loop (steps - index) forces the array coordinates 
-    // to maintain a safe winding direction, stopping the canvas engine from flipping the overlay.
-    const reversedIndex = steps - index;
-    const bearing = (start + span * reversedIndex / steps) * Math.PI / 180;
+    const bearing = (start + span * index / steps) * Math.PI / 180;
     
-    const angularDistance = tripledRadiusMeters / radius;
+    // KEEP RADIUSMETERS ORIGINAL: Keeps the projection math from breaking or inversion tracking
+    const angularDistance = radiusMeters / radius;
+    
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
       Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),
@@ -387,9 +382,22 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
+    
+    // Convert the stable base calculations into normal degrees
+    const normalLat = destinationLatitude * 180 / Math.PI;
+    const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
+
+    // Calculate the distance offsets relative to the origin lighthouse coordinates
+    const deltaLat = normalLat - lat;
+    const deltaLon = normalLon - lon;
+
+    // TRIPLE THE SHAPE SIZE VISUALLY: Extend the map segments out to triple distance manually
+    const tripledLat = lat + (deltaLat * 3);
+    const tripledLon = lon + (deltaLon * 3);
+
     return /** @type {[number, number]} */ ([
-      destinationLatitude * 180 / Math.PI,
-      ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180,
+      tripledLat,
+      tripledLon,
     ]);
   });
 }

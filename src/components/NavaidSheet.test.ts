@@ -43,7 +43,7 @@ function render(mark: Navaid, depthUnit?: 'ft' | 'fathoms' | 'm'): string {
 }
 
 describe('wreck detail sheet', () => {
-  it('renders EMODnet heritage context separately from charted danger and depth', () => {
+  it('renders the matched heritage record without a nearby-records search', () => {
     const html = render(wreck({
       wreckInventoryName: 'HMS INVINCIBLE',
       wreckInventoryDepth: '6-7',
@@ -60,6 +60,10 @@ describe('wreck detail sheet', () => {
 
     expect(html).toContain('HMS INVINCIBLE');
     expect(html).toContain('dangerous');
+    // Nearby inventory hits were noise on the card; the dataset lives on the data
+    // sources and disclaimer page instead.
+    expect(html).not.toContain('Nearby heritage wreck records');
+    expect(html).not.toContain('Searching nearby heritage records');
     expect(html).toContain('6-7');
     expect(html).toContain('Polygon centroid; matched chart mark 10 m away');
     expect(html).toContain('Protected wreck');

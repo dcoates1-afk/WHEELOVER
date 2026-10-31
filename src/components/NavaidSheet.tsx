@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-import { distanceMeters } from '../../shared/navaid-core.mjs';
 import {
   ialaRegion,
   formatPosition,
@@ -58,19 +56,6 @@ function depthText(raw: string | null | undefined, unit?: DepthUnit): string | n
   return `${shown} ${depthUnitLabel(unit ?? 'm')}`;
 }
 
-interface HeritageWreckRecord {
-  type?: string;
-  id?: string;
-  geometry?: { type?: string; coordinates?: number[] };
-  properties?: Record<string, unknown>;
-}
-
-function displayValue(value: unknown): string | null {
-  if (value === null || value === undefined || value === '' || value === 'n/a') return null;
-  if (typeof value === 'number' && value === 0) return null;
-  return String(value);
-}
-
 /**
  * Dataset labels can carry a navigation caveat in brackets. Those caveats live
  * on the disclaimer page now, so a data row shows the source without repeating
@@ -103,33 +88,6 @@ export function NavaidSheet({
   distanceUnit,
   depthUnit,
 }: NavaidSheetProps) {
-  const [heritageRecords, setHeritageRecords] = useState<HeritageWreckRecord[]>([]);
-  const [heritageState, setHeritageState] = useState<'idle' | 'loading' | 'loaded' | 'unavailable'>('idle');
-  const isWreck = mark.category === 'wreck' || mark.category === 'hazard_danger';
-  useEffect(() => {
-    if (!isWreck) {
-      setHeritageRecords([]);
-      setHeritageState('idle');
-      return;
-    }
-    const controller = new AbortController();
-    setHeritageRecords([]);
-    setHeritageState('loading');
-    void fetch(`/api/wreck-research?lat=${encodeURIComponent(mark.lat)}&lon=${encodeURIComponent(mark.lon)}`, {
-      signal: controller.signal,
-    }).then(async (response) => {
-      if (!response.ok) throw new Error('Heritage source unavailable');
-      const payload = await response.json() as { features?: HeritageWreckRecord[] };
-      if (!Array.isArray(payload.features)) throw new Error('Invalid heritage response');
-      if (controller.signal.aborted) return;
-      setHeritageRecords(payload.features);
-      setHeritageState('loaded');
-    }).catch(() => {
-      if (!controller.signal.aborted) setHeritageState('unavailable');
-    });
-    return () => controller.abort();
-  }, [isWreck, mark.id, mark.lat, mark.lon]);
-
   const region = ialaRegion(mark.lat, mark.lon);
   const spec = symbolForMark(mark, region);
   // One light of a transit is often unnamed in OSM while its partner carries
@@ -275,59 +233,6 @@ export function NavaidSheet({
           {mark.category === 'wreck' || mark.category === 'hazard_danger' ? (
             <>
               <Row label="Wreck chart category" value={mark.wreckCategory} />
-              <section className="wreck-heritage-results" aria-label="Nearby heritage records">
-                <h3>Nearby heritage wreck records</h3>
-                <p>EMODnet/Historic England records are discovery context, not proof that a record is this charted wreck. Dataset positions may be area centroids, and heritage depths are not navigation clearances.</p>
-                {heritageState === 'loading' && <p role="status">Searching nearby heritage records…</p>}
-                {heritageState === 'unavailable' && <p role="status">The heritage service is temporarily unavailable. Existing chart details remain available.</p>}
-                {heritageState === 'loaded' && heritageRecords.length === 0 && <p>No EMODnet heritage records were returned within about {formatDistance(3000, distanceUnit)} of this mark.</p>}
-                {heritageRecords.map((record, index) => {
-                  const properties = record.properties ?? {};
-                  const name = displayValue(properties.name) ?? 'Unnamed heritage wreck';
-                  const coordinates = record.geometry?.coordinates;
-                  const distance = Array.isArray(coordinates) && coordinates.length >= 2
-                    ? distanceMeters(mark.lat, mark.lon, Number(coordinates[1]), Number(coordinates[0]))
-                    : null;
-                  const reference = displayValue(properties.reference);
-                  const source = displayValue(properties.source_inf);
-                  return (
-                    <article className="wreck-heritage-record" key={record.id ?? `${name}-${index}`}>
-                      <h4>{name}{distance !== null ? ` · ${formatDistance(distance, distanceUnit)} from chart mark` : ''}</h4>
-                      <Row label="Record source" value={source} />
-                      <Row label="Vessel / object type" value={displayValue(properties.obj_type) ?? displayValue(properties.ship_char)} />
-                      <Row label="Sinking context" value={displayValue(properties.sink_context)} />
-                      <Row label="Sinking year" value={displayValue(properties.sink_yr)} />
-                      <Row label="Vessel dating" value={displayValue(properties.dating)} />
-                      <Row label="Site description" value={displayValue(properties.obj_desc)} />
-                      <Row label="Inventory depth notes" value={displayValue(properties.depth_info)} />
-                      <Row label="Depth measurement precision" value={displayValue(properties.depth_prec)} />
-                      <Row label="Approximate object length" value={displayValue(properties.object_length)} />
-                      <Row label="Original port / destination" value={[displayValue(properties.place_orig), displayValue(properties.place_dest)].filter(Boolean).join(' → ') || null} />
-                      <Row label="Estimated tonnage" value={displayValue(properties.est_tonnag)} />
-                      <Row label="Recorded artefacts" value={displayValue(properties.artefacts)} />
-                      <Row label="Dataset source record ID" value={displayValue(properties.source_id)} />
-                      <Row label="Least / maximum depth fields" value={[displayValue(properties.least_depth), displayValue(properties.max_depth)].filter(Boolean).join(' / ') || null} />
-                      <Row label="Recorded legal status" value={displayValue(properties.statutory)} />
-                      <Row label="Position note" value={displayValue(properties.point_info)} />
-                      <Row label="Country" value={displayValue(properties.country)} />
-                      <Row label="Inventory updated" value={displayValue(properties.yr_updated)} />
-                      {reference && <Row label="Inventory reference" value={reference} />}
-                      {[properties.website1, properties.website2].map((candidate, linkIndex) => {
-                        const raw = displayValue(candidate);
-                        if (!raw) return null;
-                        try {
-                          const link = new URL(raw);
-                          if (link.protocol !== 'https:' && link.protocol !== 'http:') return null;
-                          return <p key={`source-link-${linkIndex}`}><a href={link.toString()} target="_blank" rel="noreferrer">Related source {linkIndex + 1} ↗</a></p>;
-                        } catch {
-                          return null;
-                        }
-                      })}
-                    </article>
-                  );
-                })}
-                <a href="https://emodnet.ec.europa.eu/geonetwork/srv/api/records/e965088b-a265-4517-84df-c49b156af8a7" target="_blank" rel="noreferrer">EMODnet heritage wreck dataset (CC BY 4.0) ↗</a>
-              </section>
               <Row label="Effect on surface navigation" value={mark.wreckBoatingEffect} />
               <Row label="Wreck water level" value={mark.wreckWaterLevel?.replace(/_/g, ' ')} />
               <Row label="Charted sounding" value={mark.wreckSoundingDepth ? `${depthText(mark.wreckSoundingDepth, depthUnit)} relative to chart datum` : null} />

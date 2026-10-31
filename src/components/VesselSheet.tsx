@@ -14,12 +14,16 @@ import {
 } from '../lib/aisVessel';
 import { formatPosition } from '../lib/navaids';
 import { vesselCountry } from '../lib/mmsi';
+import { formatDistance } from '../lib/settings';
+import type { DistanceUnit } from '../lib/settings';
 
 interface VesselSheetProps {
   vessel: AisVessel;
   centre: [number, number];
   onCentre: (vessel: AisVessel) => void;
   onClose: () => void;
+  /** Unit the range and bearing line is written in. */
+  distanceUnit?: DistanceUnit;
 }
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
@@ -32,19 +36,17 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   );
 }
 
-function rangeLabel(vessel: AisVessel, centre: [number, number]): string {
+function rangeLabel(vessel: AisVessel, centre: [number, number], unit?: DistanceUnit): string {
   const metres = distanceMeters(centre[0], centre[1], vessel.lat, vessel.lon);
-  const nauticalMiles = metres / 1852;
-  const distance = nauticalMiles < 1 ? `${nauticalMiles.toFixed(2)} NM` : `${nauticalMiles.toFixed(1)} NM`;
   const bearing = Math.round(bearingDegrees(centre[0], centre[1], vessel.lat, vessel.lon));
-  return `${distance} away · bearing ${String(bearing).padStart(3, '0')}°`;
+  return `${formatDistance(metres, unit)} away · bearing ${String(bearing).padStart(3, '0')}°`;
 }
 
 /**
  * AIS reference sheet: everything a static report or voyage report carries,
  * plus what the chart measured — range and bearing from the current view.
  */
-export function VesselSheet({ vessel, centre, onCentre, onClose }: VesselSheetProps) {
+export function VesselSheet({ vessel, centre, onCentre, onClose, distanceUnit }: VesselSheetProps) {
   const title = vesselLabel(vessel);
   const kind = vesselKindLabel(vessel);
   const status = navStatusLabel(vessel.navStatus, vessel.sog);
@@ -106,7 +108,7 @@ export function VesselSheet({ vessel, centre, onCentre, onClose }: VesselSheetPr
           <Row label="Heading" value={headingLabel(vessel)} />
           <Row label="Position" value={formatPosition(vessel.lat, vessel.lon)} />
           <Row label="Flag" value={flagLabel} />
-          <Row label="From this chart" value={rangeLabel(vessel, centre)} />
+          <Row label="From this chart" value={rangeLabel(vessel, centre, distanceUnit)} />
           <Row label="Destination" value={vessel.destination} />
           <Row label="ETA" value={vessel.eta} />
           <Row label="Size (L × B)" value={dimensionsLabel(vessel)} />

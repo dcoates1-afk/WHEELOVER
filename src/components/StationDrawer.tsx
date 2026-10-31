@@ -1,9 +1,9 @@
 import type { AisScope, AisState, AisVessel } from '../lib/ais';
 import { STATION_LABELS } from '../lib/station';
 import type { StationTab } from '../lib/station';
+import type { DistanceUnit } from '../lib/settings';
 import { AisPanel } from './AisPanel';
 import { ColregsPanel } from './ColregsPanel';
-import { WeatherPanel } from './WeatherPanel';
 
 interface StationDrawerProps {
   station: StationTab;
@@ -17,10 +17,11 @@ interface StationDrawerProps {
   showAisOnChart: boolean;
   onToggleAisChart: (value: boolean) => void;
   onFocusVessel: (vessel: AisVessel) => void;
-  weatherAt: [number, number];
+  /** Unit the range to each target is written in. */
+  distanceUnit?: DistanceUnit;
 }
 
-const TABS: StationTab[] = ['ais', 'colregs', 'weather'];
+const TABS: StationTab[] = ['ais', 'colregs'];
 
 export function StationDrawer({
   station,
@@ -34,7 +35,7 @@ export function StationDrawer({
   showAisOnChart,
   onToggleAisChart,
   onFocusVessel,
-  weatherAt,
+  distanceUnit,
 }: StationDrawerProps) {
   return (
     <div className="scrim drawer-scrim" onClick={onClose} role="presentation">
@@ -56,7 +57,7 @@ export function StationDrawer({
                 className={`tab ${station === tab ? 'active' : ''}`}
                 onClick={() => onStation(tab)}
               >
-                {tab === 'ais' ? 'AIS' : tab === 'colregs' ? 'COLREGs' : 'Weather'}
+                {tab === 'ais' ? 'AIS' : 'COLREGs'}
               </button>
             ))}
           </div>
@@ -81,10 +82,10 @@ export function StationDrawer({
             showOnChart={showAisOnChart}
             onToggleChart={onToggleAisChart}
             onFocusVessel={onFocusVessel}
+            distanceUnit={distanceUnit}
           />
         )}
         {station === 'colregs' && <ColregsPanel />}
-        {station === 'weather' && <WeatherPanel lat={weatherAt[0]} lon={weatherAt[1]} />}
       </section>
     </div>
   );

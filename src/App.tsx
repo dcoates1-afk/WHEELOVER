@@ -14,9 +14,12 @@ const LayerControl = lazy(() => import('./components/LayerControl').then((module
 const NavaidSheet = lazy(() => import('./components/NavaidSheet').then((module) => ({ default: module.NavaidSheet })));
 const VesselSheet = lazy(() => import('./components/VesselSheet').then((module) => ({ default: module.VesselSheet })));
 const StationDrawer = lazy(() => import('./components/StationDrawer').then((module) => ({ default: module.StationDrawer })));
+const WeatherMenu = lazy(() => import('./components/WeatherMenu').then((module) => ({ default: module.WeatherMenu })));
 import type { AisVessel } from './lib/ais';
 import { useAis } from './hooks/useAis';
+import { useChartAlerts } from './hooks/useChartAlerts';
 import { useGeolocation } from './hooks/useGeolocation';
+import { ChartAlerts } from './components/ChartAlerts';
 import {
   readChartPreferences,
   writeChartPreferences,
@@ -32,6 +35,10 @@ import {
 } from './lib/noaaChart';
 import { openingView, readLastFix, shouldAutoCentre, writeLastFix } from './lib/locate';
 import { readGpsMode, writeGpsMode } from './lib/gpsPreference';
+import { readSettings, writeSettings } from './lib/settings';
+import type { AppSettings } from './lib/settings';
+import { readVoyageWatch, writeVoyageWatch } from './lib/voyageWatch';
+import type { VoyageWatch } from './lib/voyageWatch';
 import type { GpsMode } from './lib/gpsPreference';
 import { navaidDatabase, regionForPoint } from './lib/navaidDb';
 import { ialaRegion } from './lib/navaids';
@@ -73,6 +80,13 @@ export default function App() {
     readGpsMode(typeof window === 'undefined' ? null : safeStorage()),
   );
   const [menuOpen, setMenuOpen] = useState(false);
+  const [weatherOpen, setWeatherOpen] = useState(false);
+  const [settings, setSettings] = useState<AppSettings>(() =>
+    readSettings(typeof window === 'undefined' ? null : safeStorage()),
+  );
+  const [watch, setWatch] = useState<VoyageWatch>(() =>
+    readVoyageWatch(typeof window === 'undefined' ? null : safeStorage()),
+  );
   const [station, setStation] = useState<StationTab | null>(null);
   const [selectedMark, setSelectedMark] = useState<Navaid | null>(null);
   const [selectedVessel, setSelectedVessel] = useState<AisVessel | null>(null);
@@ -132,6 +146,9 @@ export default function App() {
   const geo = useGeolocation(gpsMode);
   const aisEnabled = station === 'ais' || preferences.overlays.ais;
   const ais = useAis(aisEnabled, view.bounds);
+  // Depth, traffic, anchor and course alerts follow the fix, the latest AIS
+  // snapshot and the watch set from the menu.
+  const alerts = useChartAlerts({ fix: geo.fix, vessels: ais.vessels, settings, watch });
 
   // Keep an open vessel sheet on the latest snapshot: speed, course and status
   // move while the sheet is open, and a target that drops out of range keeps
@@ -211,6 +228,14 @@ export default function App() {
   useEffect(() => {
     writeGpsMode(storage, gpsMode);
   }, [gpsMode, storage]);
+
+  useEffect(() => {
+    writeSettings(storage, settings);
+  }, [settings, storage]);
+
+  useEffect(() => {
+    writeVoyageWatch(storage, watch);
+  }, [watch, storage]);
 
   // Manifest + weekly revalidation, once per session.
   useEffect(() => {
@@ -560,6 +585,10 @@ export default function App() {
         onMapClick={(lat, lon) => setWeatherAt([lat, lon])}
         fix={geo.fix}
         aisVessels={ais.vessels}
+        watch={watch}
+        coordinateFormat={settings.units.coordinates}
+        distanceUnit={settings.units.distance}
+        depthUnit={settings.units.depth}
       />
 
       {preferences.theme === 'red' && <div className="red-tint" aria-hidden="true" />}
@@ -567,6 +596,17 @@ export default function App() {
       <h1 className="chart-brand" aria-label="WHEELOVER — Maritime Navigation and Planning">
         WHEELOVER
       </h1>
+
+      <Suspense fallback={null}>
+        <WeatherMenu
+          open={weatherOpen}
+          onOpen={setWeatherOpen}
+          lat={weatherAt[0]}
+          lon={weatherAt[1]}
+          units={settings.units}
+          hidden={Boolean(station || selectedMark || selectedVessel)}
+        />
+      </Suspense>
 
       <ZoomControls
         hidden={chartControlsHidden}
@@ -586,6 +626,13 @@ export default function App() {
           {locateNote}
         </p>
       )}
+
+      <ChartAlerts
+        alerts={alerts}
+        sound={settings.notifications.sound}
+        vibration={settings.notifications.vibration}
+        hidden={weatherOpen || Boolean(station || selectedMark || selectedVessel)}
+      />
 
       <LayerControl
         open={menuOpen}
@@ -611,6 +658,11 @@ export default function App() {
         onStation={setStation}
         noaaCovered={noaaCovered}
         legendRegion={ialaRegion(view.center[0], view.center[1])}
+        settings={settings}
+        onSettings={setSettings}
+        fix={geo.fix}
+        watch={watch}
+        onWatch={setWatch}
         hidden={Boolean(station || selectedMark || selectedVessel)}
       />
 
@@ -624,6 +676,7 @@ export default function App() {
             if (geo.fix) centreOn(geo.fix.lat, geo.fix.lon, 14);
           }}
           onEnable={() => changeGpsMode('on')}
+          units={settings.units}
           onClose={() => configure({ ...preferences, showPosition: false })}
         />
       )}
@@ -647,7 +700,7 @@ export default function App() {
             setSelectedVessel(vessel);
             centreOn(vessel.lat, vessel.lon, Math.max(view.zoom, 14));
           }}
-          weatherAt={weatherAt}
+          distanceUnit={settings.units.distance}
         />
       )}
 
@@ -660,6 +713,7 @@ export default function App() {
             setSelectedVessel(null);
           }}
           onClose={() => setSelectedVessel(null)}
+          distanceUnit={settings.units.distance}
         />
       )}
 
@@ -680,6 +734,7 @@ export default function App() {
             setSelectedMark(mark);
           }}
           onClose={() => setSelectedMark(null)}
+          distanceUnit={settings.units.distance}
         />
       )}
       </Suspense>

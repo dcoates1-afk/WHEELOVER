@@ -9,6 +9,8 @@ import {
   CATEGORY_LABELS,
 } from '../lib/navaids';
 import type { Navaid, NavaidCategory } from '../lib/navaids';
+import { convertDepth, depthUnitLabel, formatDistance } from '../lib/settings';
+import type { DepthUnit, DistanceUnit } from '../lib/settings';
 
 /**
  * "mark" is the fallback form for chart features that are not buoys or beacons,
@@ -32,6 +34,28 @@ interface NavaidSheetProps {
   onCentre: (mark: Navaid) => void;
   onShowPartner?: (mark: Navaid) => void;
   onClose: () => void;
+  /** Unit the transit gap and heritage offsets are written in. */
+  distanceUnit?: DistanceUnit;
+  /** Unit the wreck soundings and clearances are written in. */
+  depthUnit?: DepthUnit;
+}
+
+/**
+ * Wreck depths arrive as raw OpenStreetMap tags, nominally in metres. A plain
+ * figure is converted to the chosen depth unit; anything carrying a qualifier or
+ * unusual wording is shown exactly as mapped rather than guessed at.
+ */
+function depthText(raw: string | null | undefined, unit?: DepthUnit): string | null {
+  if (!raw) return null;
+  const match = /^\s*(-?\d+(?:[.,]\d+)?)\s*(?:m|metres?|meters?)?\s*$/i.exec(raw);
+  if (!match) return raw;
+  const metres = Number.parseFloat(match[1].replace(',', '.'));
+  if (!Number.isFinite(metres) || metres < 0) return raw;
+  // A sheet keeps the mapped precision rather than rounding like a chart label:
+  // 20.1 m stays 20.1 m, and becomes 66 ft in feet.
+  const value = Math.round(convertDepth(metres, unit ?? 'm') * 10) / 10;
+  const shown = Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return `${shown} ${depthUnitLabel(unit ?? 'm')}`;
 }
 
 interface HeritageWreckRecord {
@@ -70,7 +94,15 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   );
 }
 
-export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }: NavaidSheetProps) {
+export function NavaidSheet({
+  mark,
+  partner,
+  onCentre,
+  onShowPartner,
+  onClose,
+  distanceUnit,
+  depthUnit,
+}: NavaidSheetProps) {
   const [heritageRecords, setHeritageRecords] = useState<HeritageWreckRecord[]>([]);
   const [heritageState, setHeritageState] = useState<'idle' | 'loading' | 'loaded' | 'unavailable'>('idle');
   const isWreck = mark.category === 'wreck' || mark.category === 'hazard_danger';
@@ -147,7 +179,9 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
   const transitBearing =
     mark.transitBearing === null ? null : `${String(mark.transitBearing).padStart(3, '0')}° true`;
   const transitGap =
-    mark.transitDistanceM === null ? null : `${mark.transitDistanceM} m to the paired mark`;
+    mark.transitDistanceM === null
+      ? null
+      : `${formatDistance(mark.transitDistanceM, distanceUnit)} to the paired mark`;
   const partnerAction =
     partner?.category === 'transit_rear'
       ? 'Show the rear mark (higher)'
@@ -246,19 +280,19 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
                 <p>EMODnet/Historic England records are discovery context, not proof that a record is this charted wreck. Dataset positions may be area centroids, and heritage depths are not navigation clearances.</p>
                 {heritageState === 'loading' && <p role="status">Searching nearby heritage records…</p>}
                 {heritageState === 'unavailable' && <p role="status">The heritage service is temporarily unavailable. Existing chart details remain available.</p>}
-                {heritageState === 'loaded' && heritageRecords.length === 0 && <p>No EMODnet heritage records were returned within about 3 km of this mark.</p>}
+                {heritageState === 'loaded' && heritageRecords.length === 0 && <p>No EMODnet heritage records were returned within about {formatDistance(3000, distanceUnit)} of this mark.</p>}
                 {heritageRecords.map((record, index) => {
                   const properties = record.properties ?? {};
                   const name = displayValue(properties.name) ?? 'Unnamed heritage wreck';
                   const coordinates = record.geometry?.coordinates;
                   const distance = Array.isArray(coordinates) && coordinates.length >= 2
-                    ? Math.round(distanceMeters(mark.lat, mark.lon, Number(coordinates[1]), Number(coordinates[0])))
+                    ? distanceMeters(mark.lat, mark.lon, Number(coordinates[1]), Number(coordinates[0]))
                     : null;
                   const reference = displayValue(properties.reference);
                   const source = displayValue(properties.source_inf);
                   return (
                     <article className="wreck-heritage-record" key={record.id ?? `${name}-${index}`}>
-                      <h4>{name}{distance !== null ? ` · ${distance} m from chart mark` : ''}</h4>
+                      <h4>{name}{distance !== null ? ` · ${formatDistance(distance, distanceUnit)} from chart mark` : ''}</h4>
                       <Row label="Record source" value={source} />
                       <Row label="Vessel / object type" value={displayValue(properties.obj_type) ?? displayValue(properties.ship_char)} />
                       <Row label="Sinking context" value={displayValue(properties.sink_context)} />
@@ -296,9 +330,9 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
               </section>
               <Row label="Effect on surface navigation" value={mark.wreckBoatingEffect} />
               <Row label="Wreck water level" value={mark.wreckWaterLevel?.replace(/_/g, ' ')} />
-              <Row label="Charted sounding" value={mark.wreckSoundingDepth ? `${mark.wreckSoundingDepth} m relative to chart datum` : null} />
-              <Row label="Reported depth below water" value={mark.wreckReportedDepth ? `${mark.wreckReportedDepth} m` : null} />
-              <Row label="Wreck-top clearance" value={mark.wreckClearance ? `${mark.wreckClearance} m (reported)` : null} />
+              <Row label="Charted sounding" value={mark.wreckSoundingDepth ? `${depthText(mark.wreckSoundingDepth, depthUnit)} relative to chart datum` : null} />
+              <Row label="Reported depth below water" value={depthText(mark.wreckReportedDepth, depthUnit)} />
+              <Row label="Wreck-top clearance" value={mark.wreckClearance ? `${depthText(mark.wreckClearance, depthUnit)} (reported)` : null} />
               <Row label="Craft type" value={mark.wreckType} />
               <Row label="Reported sinking date" value={mark.wreckDateSunk} />
               <Row label="Heritage inventory depth information" value={mark.wreckInventoryDepth} />
@@ -306,11 +340,11 @@ export function NavaidSheet({ mark, partner, onCentre, onShowPartner, onClose }:
               <Row label="Heritage site condition" value={mark.wreckSiteDescription} />
               <Row label="Historical context" value={mark.wreckHistoricalContext} />
               <Row label="Heritage protection status" value={mark.wreckInventoryLegalStatus} />
-              <Row label="Heritage position type" value={mark.wreckInventoryPositionType ? `${mark.wreckInventoryPositionType}${mark.wreckInventoryMatchDistanceM != null ? `; matched chart mark ${mark.wreckInventoryMatchDistanceM} m away` : ''}` : null} />
+              <Row label="Heritage position type" value={mark.wreckInventoryPositionType ? `${mark.wreckInventoryPositionType}${mark.wreckInventoryMatchDistanceM != null ? `; matched chart mark ${formatDistance(mark.wreckInventoryMatchDistanceM, distanceUnit)} away` : ''}` : null} />
               <Row label="Heritage inventory updated" value={mark.wreckInventoryUpdated} />
               <Row label="Reported dimensions" value={mark.wreckLength || mark.wreckWidth ? `${mark.wreckLength ? `${mark.wreckLength} m long` : ''}${mark.wreckLength && mark.wreckWidth ? ' · ' : ''}${mark.wreckWidth ? `${mark.wreckWidth} m wide` : ''}` : null} />
               <Row label="NOAA ENC Direct GIS category" value={mark.wreckChartSource ? mark.wreckCategory : null} />
-              <Row label="NOAA chart expected depth" value={mark.wreckChartExpectedDepth ? `${mark.wreckChartExpectedDepth} m` : null} />
+              <Row label="NOAA chart expected depth" value={depthText(mark.wreckChartExpectedDepth, depthUnit)} />
               <Row label="NOAA chart sounding quality" value={mark.wreckChartQuality} />
               <Row label="NOAA chart source date" value={mark.wreckChartSurveyDate} />
               <Row label="NOAA vertical datum code" value={mark.wreckChartVerticalDatum} />

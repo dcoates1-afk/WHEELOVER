@@ -11,6 +11,9 @@
  * modelled everywhere it appears and must never be treated as chart detail.
  */
 
+import { convertDepth } from './settings';
+import type { DepthUnit } from './settings';
+
 export interface DepthPoint {
   lat: number;
   lon: number;
@@ -43,12 +46,19 @@ export function inEmodnetCoverage(lat: number, lon: number): boolean {
   );
 }
 
-/** Chart-style depth text: one decimal in the shallows, whole metres deeper. */
-export function formatDepth(depth: number | null | undefined): string {
+/**
+ * Chart-style depth text, in the unit chosen in Settings: one decimal in the
+ * shallows, whole units deeper. The figure is bare because it sits among other
+ * numbers on the chart; the tooltip and the legend carry the unit.
+ */
+export function formatDepth(
+  depth: number | null | undefined,
+  unit: DepthUnit = 'm',
+): string {
   if (depth === null || depth === undefined || !Number.isFinite(depth) || depth < 0.1) return '';
-  const rounded = Math.round(depth * 10) / 10;
-  if (rounded < 10) return rounded.toFixed(1);
-  return String(Math.round(rounded));
+  const value = Math.round(convertDepth(depth, unit) * 10) / 10;
+  if (value < 10) return value.toFixed(1);
+  return String(Math.round(value));
 }
 
 /**

@@ -38,6 +38,10 @@ import {
   sampleOffsets,
 } from '../lib/depthLabels';
 import type { ChartPreferences } from '../lib/chartPreferences';
+import type { VoyageWatch } from '../lib/voyageWatch';
+import { formatCoordinate } from '../lib/coordinates';
+import { depthUnitLabel, formatDistance } from '../lib/settings';
+import type { CoordinateFormat, DepthUnit, DistanceUnit } from '../lib/settings';
 import type { GeoFix } from '../hooks/useGeolocation';
 import type { AisVessel } from '../lib/ais';
 
@@ -157,6 +161,14 @@ export interface MapCanvasProps {
   onMapClick: (lat: number, lon: number) => void;
   fix: GeoFix | null;
   aisVessels: AisVessel[];
+  /** Anchor circle and course to steer, set from the menu. */
+  watch: VoyageWatch;
+  /** Grid the cursor readout is written in. */
+  coordinateFormat?: CoordinateFormat;
+  /** Unit the anchor circle's radius label is written in. */
+  distanceUnit?: DistanceUnit;
+  /** Unit the depth numbers and contour readouts are written in. */
+  depthUnit?: DepthUnit;
   marineFeatures: { ferries: MarineFeature[]; bridges: MarineFeature[]; tss: MarineFeature[] } | null;
   chartFeatures: ChartFeature[];
   protectedAreaFeatures: ProtectedAreaFeature[];
@@ -187,21 +199,6 @@ export function isUsWaters(lat: number, lon: number): boolean {
  * transparent on top. That way a harbour chart adds detail where it exists
  * without blacking out the rest of the area.
  */
-/**
- * Cursor position as degrees and decimal minutes — the form read back from a
- * chart — kept short enough for the corner readout on a phone.
- */
-function formatCursor(lat: number, lon: number): string {
-  const part = (value: number, positive: string, negative: string, width: number) => {
-    const hemisphere = value >= 0 ? positive : negative;
-    const absolute = Math.abs(value);
-    const degrees = Math.floor(absolute);
-    const minutes = (absolute - degrees) * 60;
-    return `${String(degrees).padStart(width, '0')}° ${minutes.toFixed(2).padStart(5, '0')}′ ${hemisphere}`;
-  };
-  return `${part(lat, 'N', 'S', 2)} · ${part(lon, 'E', 'W', 3)}`;
-}
-
 export const NOAA_ATTRIBUTION = 'NOAA ENC Direct (public domain)';
 
 const NoaaChartLayer = L.GridLayer.extend({
@@ -349,6 +346,9 @@ function tssStyle(type: string): L.PolylineOptions {
 }
 
 export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanvas(props, ref) {
+  // Units the overlays and watch readouts are written in, read by several effects.
+  const distanceUnit = props.distanceUnit;
+  const depthUnit = props.depthUnit;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const basesRef = useRef<Record<string, L.Layer>>({});
@@ -360,6 +360,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   const contourRequestRef = useRef<AbortController | null>(null);
   const groupsRef = useRef<Partial<Record<'navaids' | 'ferries' | 'tss' | 'ais' | 'pois' | 'reportingSystems' | 'bridges' | 'protectedAreas', L.LayerGroup>>>({});
   const vesselRef = useRef<L.Marker | null>(null);
+  const watchRef = useRef<L.LayerGroup | null>(null);
   const aisMarkersRef = useRef(
     new Map<number, { marker: L.Marker; vessel: AisVessel; iconHtml: string; label: string }>(),
   );
@@ -528,6 +529,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       depthSyncRef.current = null;
       basesRef.current = {};
       vesselRef.current = null;
+      watchRef.current = null;
       aisMarkersRef.current.clear();
       depthLabelsRef.current = null;
       contourVectorsRef.current = null;
@@ -683,14 +685,15 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
               className: 'contour-hit-target',
             },
           });
-          hitTarget.bindTooltip(`${depth} m`, {
+          const contourText = `${formatDepth(depth, depthUnit)} ${depthUnitLabel(depthUnit ?? 'm')}`;
+          hitTarget.bindTooltip(contourText, {
             sticky: true,
             direction: 'top',
             className: 'contour-label',
           });
           // A click/tap opens the same concise depth label as a popup too,
           // since hover tooltips are not a reliable interaction on touchscreens.
-          hitTarget.bindPopup(`${depth} m`, {
+          hitTarget.bindPopup(contourText, {
             className: 'contour-depth-popup',
             closeButton: false,
             autoPan: false,
@@ -741,7 +744,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       contourCoverageRef.current = false;
       depthSyncRef.current?.();
     };
-  }, [contoursOn]);
+  }, [contoursOn, depthUnit]);
 
   // Numeric depth labels, sampled from the seabed grid for the current view.
   // GEBCO answers in one batch; inside EMODnet coverage the finer European DTM
@@ -775,7 +778,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       void fetchDepthSamples(points, map.getZoom(), signal, (point, sample) => {
         if (signal.aborted) return;
         const key = `${point.lat.toFixed(5)}:${point.lon.toFixed(5)}`;
-        const text = formatDepth(sample.depth);
+        const text = formatDepth(sample.depth, depthUnit);
         const existing = markers.get(key);
         if (!text) {
           if (existing) {
@@ -785,7 +788,8 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           return;
         }
         const source = sample.source === 'emodnet' ? 'EMODnet DTM' : 'GEBCO grid';
-        const html = `<span class="marnav-depth-num" title="Modelled depth ${text} m · ${source}">${text}</span>`;
+        const unitText = depthUnitLabel(depthUnit ?? 'm');
+        const html = `<span class="marnav-depth-num" title="Modelled depth ${text} ${unitText} · ${source}">${text}</span>`;
         const icon = L.divIcon({
           className: 'marnav-depth-wrap',
           html,
@@ -833,7 +837,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       if (map.hasLayer(group)) map.removeLayer(group);
       map.attributionControl?.removeAttribution(DEPTH_LABEL_ATTRIBUTION);
     };
-  }, [depthLabelsOn]);
+  }, [depthLabelsOn, depthUnit]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1017,8 +1021,8 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
         .sort((a, b) => distanceMeters(a.lat, a.lon, (feature.bounds[0] + feature.bounds[2]) / 2, (feature.bounds[1] + feature.bounds[3]) / 2) - distanceMeters(b.lat, b.lon, (feature.bounds[0] + feature.bounds[2]) / 2, (feature.bounds[1] + feature.bounds[3]) / 2));
       const nearbyWrecks = candidateWrecks.slice(0, 8).map((mark) => {
         const title = mark.name ?? mark.wreckInventoryName ?? `Wreck ${mark.id}`;
-        const metres = Math.round(distanceMeters(mark.lat, mark.lon, (feature.bounds[0] + feature.bounds[2]) / 2, (feature.bounds[1] + feature.bounds[3]) / 2));
-        return `<div>${escapePopupText(title)} · approximately ${metres} m from site's bounding-box centre</div>`;
+        const metres = distanceMeters(mark.lat, mark.lon, (feature.bounds[0] + feature.bounds[2]) / 2, (feature.bounds[1] + feature.bounds[3]) / 2);
+        return `<div>${escapePopupText(title)} · approximately ${formatDistance(metres, distanceUnit)} from site's bounding-box centre</div>`;
       }).join('');
       layer.bindTooltip(feature.name, { sticky: true, className: 'marnav-tip' });
       layer.bindPopup(`<strong>${escapePopupText(feature.name)}</strong>${rows ? `<hr>${rows}` : ''}${nearbyWrecks ? `<hr><strong>Charted wrecks within mapped site geometry (possible association)</strong>${nearbyWrecks}` : ''}<hr><small>Protected-site designation only; it does not establish a boating prohibition. Check site-specific rules with the responsible authority. EMODnet Human Activities / EEA, CC BY 4.0. <a href="${escapePopupText(feature.sourceUrl)}" target="_blank" rel="noopener noreferrer">Dataset information ↗</a></small>`, { className: 'reporting-system-popup', maxWidth: 360 });
@@ -1063,7 +1067,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       );
       if (mark.transitBearing !== null) {
         line.bindTooltip(
-          `Leading line ${String(mark.transitBearing).padStart(3, '0')}° · ${mark.transitDistanceM ?? 0} m`,
+          `Leading line ${String(mark.transitBearing).padStart(3, '0')}° · ${formatDistance(mark.transitDistanceM ?? 0, distanceUnit)}`,
           { sticky: true, className: 'marnav-tip', opacity: 1 },
         );
       }
@@ -1325,6 +1329,104 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     }
   }, [props.fix]);
 
+  // Anchor swing circle and course to steer. Both are set by the navigator on
+  // this device, so they are drawn whatever the overlay switches are doing. The
+  // course ray is a screen length rather than a fixed distance, so it reads the
+  // same at harbour zoom and at passage zoom.
+  const watchAnchor = props.watch.anchor;
+  const watchCourse = props.watch.course;
+  const fixLat = props.fix?.lat ?? null;
+  const fixLon = props.fix?.lon ?? null;
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!watchRef.current) {
+      if (!map.getPane('watch')) {
+        const pane = map.createPane('watch');
+        pane.style.zIndex = '460';
+      }
+      watchRef.current = L.layerGroup().addTo(map);
+    }
+    const group = watchRef.current;
+    group.clearLayers();
+
+    if (watchAnchor) {
+      L.circle([watchAnchor.lat, watchAnchor.lon], {
+        radius: watchAnchor.radiusM,
+        color: '#ffd24a',
+        weight: 1.5,
+        opacity: 0.9,
+        dashArray: '6 5',
+        fillColor: '#ffd24a',
+        fillOpacity: 0.06,
+        pane: 'watch',
+        interactive: false,
+        className: 'marnav-anchor-circle',
+      }).addTo(group);
+      const anchorIcon = L.divIcon({
+        className: 'marnav-watch-icon',
+        html: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="4.6" r="2" fill="none" stroke="#ffd24a" stroke-width="1.8"/>
+          <path d="M12 6.8v13.4" stroke="#ffd24a" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M7.4 10h9.2" stroke="#ffd24a" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M4.2 13.6c0 4.2 3.5 6.6 7.8 6.6s7.8-2.4 7.8-6.6" fill="none" stroke="#ffd24a" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      });
+      L.marker([watchAnchor.lat, watchAnchor.lon], {
+        icon: anchorIcon,
+        interactive: false,
+        keyboard: false,
+        pane: 'watch',
+      }).addTo(group);
+      // The radius, written on the circle's northern edge so the circle can be
+      // read without opening the menu.
+      const radiusLabel = L.divIcon({
+        className: 'marnav-anchor-label-wrap',
+        html: `<span class="marnav-anchor-label">${formatDistance(watchAnchor.radiusM, distanceUnit)}</span>`,
+        iconSize: undefined,
+        iconAnchor: [0, 0],
+      });
+      L.marker([watchAnchor.lat + watchAnchor.radiusM / 111_320, watchAnchor.lon], {
+        icon: radiusLabel,
+        interactive: false,
+        keyboard: false,
+        pane: 'watch',
+      }).addTo(group);
+    }
+
+    if (watchCourse && fixLat !== null && fixLon !== null) {
+      const size = map.getSize();
+      const start = L.latLng(fixLat, fixLon);
+      const from = map.latLngToContainerPoint(start);
+      const radians = (watchCourse.bearingDeg * Math.PI) / 180;
+      const length = Math.max(90, Math.min(size.x, size.y) * 0.36);
+      const end = map.containerPointToLatLng(
+        L.point(from.x + Math.sin(radians) * length, from.y - Math.cos(radians) * length),
+      );
+      L.polyline([start, end], {
+        color: '#3dd6ff',
+        weight: 2,
+        opacity: 0.85,
+        dashArray: '10 7',
+        pane: 'watch',
+        interactive: false,
+        className: 'marnav-course-line',
+      }).addTo(group);
+      const arrowIcon = L.divIcon({
+        className: 'marnav-watch-icon',
+        html: `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="transform:rotate(${watchCourse.bearingDeg}deg)">
+          <path d="M12 3 19 21 12 16.5 5 21Z" fill="#3dd6ff" stroke="#04141f" stroke-width="1.2"/>
+        </svg>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+      L.marker(end, { icon: arrowIcon, interactive: false, keyboard: false, pane: 'watch' }).addTo(group);
+    }
+  }, [watchAnchor, watchCourse, fixLat, fixLon, props.zoom, distanceUnit]);
+
   // Chart scale and cursor position: the readout that replaces the on-map credit line.
   useEffect(() => {
     const map = mapRef.current;
@@ -1390,7 +1492,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       <div className="chart-readout" data-testid="chart-readout">
         <span className="chart-readout-zoom">Zoom {liveZoom}</span>
         <span className="chart-readout-coords">
-          {cursor ? formatCursor(cursor.lat, cursor.lon) : '— · —'}
+          {cursor ? formatCoordinate(cursor.lat, cursor.lon, props.coordinateFormat ?? 'latlon') : '— · —'}
         </span>
       </div>
       {hoverVessel && hoverPoint && mapWidth > 0 && (

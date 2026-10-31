@@ -1,7 +1,20 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { BaseLayerId, ChartPreferences, ThemeId } from '../lib/chartPreferences';
 import type { GpsMode } from '../lib/gpsPreference';
-import type { GeoStatus } from '../hooks/useGeolocation';
+import type { GeoFix, GeoStatus } from '../hooks/useGeolocation';
+import {
+  ANCHOR_RADIUS_DEFAULT_M,
+  ANCHOR_RADIUS_MAX_M,
+  ANCHOR_RADIUS_MIN_M,
+  COURSE_TOLERANCE_DEFAULT_DEG,
+  formatWatchAge,
+  normalizeBearing,
+  parseCourseDeg,
+  parseRadiusM,
+  parseToleranceDeg,
+} from '../lib/voyageWatch';
+import type { VoyageWatch } from '../lib/voyageWatch';
 import type { StationTab } from '../lib/station';
 import { STATION_LABELS } from '../lib/station';
 import { symbolFor } from '../lib/navaids';
@@ -9,6 +22,24 @@ import { NAVAID_GROUPS, isGroupHidden, toggleGroup } from '../lib/navaidGroups';
 import { POI_GROUPS, isPoiGroupHidden, togglePoiGroup } from '../lib/poiGroups';
 import { poiIconSvg } from '../lib/pois';
 import { formatBytes } from '../lib/noaaChart';
+import {
+  BEARING_MODES,
+  BOAT_TYPES,
+  COORDINATE_FORMATS,
+  DEPTH_UNITS,
+  DISTANCE_UNITS,
+  EXPERIENCE_LEVELS,
+  depthUnitLabel,
+  formatDistance,
+  FUEL_UNITS,
+  PRESSURE_UNITS,
+  RATE_OF_TURN_UNITS,
+  RELATIVE_BEARING_MODES,
+  SPEED_UNITS,
+  TEMPERATURE_UNITS,
+  WIND_SPEED_UNITS,
+} from '../lib/settings';
+import type { AppSettings, DistanceUnit, UnitOption } from '../lib/settings';
 
 export interface MarkStats {
   shown: number;
@@ -45,6 +76,11 @@ interface LayerControlProps {
   onStation: (tab: StationTab | null) => void;
   noaaCovered: boolean;
   legendRegion: 'A' | 'B';
+  settings: AppSettings;
+  onSettings: (next: AppSettings) => void;
+  fix: GeoFix | null;
+  watch: VoyageWatch;
+  onWatch: (next: VoyageWatch) => void;
   hidden?: boolean;
 }
 
@@ -116,6 +152,306 @@ function RadioRow({
   );
 }
 
+function SelectRow<T extends string>({
+  label,
+  hint,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: T;
+  options: UnitOption<T>[];
+  onChange: (next: T) => void;
+}) {
+  return (
+    <label className="menu-select">
+      <span className="row-label">
+        {label}
+        {hint && <small>{hint}</small>}
+      </span>
+      <select value={value} onChange={(event) => onChange(event.target.value as T)}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function TextField({
+  label,
+  hint,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  placeholder?: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <label className="menu-field">
+      <span className="row-label">
+        {label}
+        {hint && <small>{hint}</small>}
+      </span>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+/**
+ * A number field with − and + buttons. The figure can still be typed in full,
+ * which is quicker for a big change than holding a button; the buttons clamp to
+ * the field's limits so the stored radius is never out of range.
+ */
+function StepperField({
+  label,
+  hint,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  onBlur,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (next: string) => void;
+  /** Called after focus leaves the field, so a half-typed figure can be tidied. */
+  onBlur?: () => void;
+}) {
+  const typed = Number.parseFloat(value.replace(',', '.'));
+  const current = Number.isFinite(typed) ? typed : min;
+  const nudge = (delta: number) => {
+    const next = Math.min(max, Math.max(min, Math.round(current + delta)));
+    onChange(String(next));
+  };
+  return (
+    <div className="menu-field stepper-field">
+      <span className="row-label">
+        {label}
+        {hint && <small>{hint}</small>}
+      </span>
+      <div className="stepper" role="group" aria-label={label}>
+        <button
+          type="button"
+          className="stepper-button"
+          aria-label={`Decrease ${label}`}
+          disabled={current <= min}
+          onClick={() => nudge(-step)}
+        >
+          −
+        </button>
+        <input
+          type="text"
+          inputMode="numeric"
+          aria-label={label}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={onBlur}
+        />
+        <button
+          type="button"
+          className="stepper-button"
+          aria-label={`Increase ${label}`}
+          disabled={current >= max}
+          onClick={() => nudge(step)}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Anchor watch and course to steer. Both are set from the live fix: the anchor
+ * circle is where the boat is now, and the course is either typed in or taken
+ * from the heading being steered. The alerts in Settings read this state.
+ */
+function VoyageWatchSection({
+  fix,
+  watch,
+  onWatch,
+  distanceUnit,
+}: {
+  fix: GeoFix | null;
+  watch: VoyageWatch;
+  onWatch: (next: VoyageWatch) => void;
+  distanceUnit?: DistanceUnit;
+}) {
+  const [radius, setRadius] = useState(() =>
+    String(watch.anchor?.radiusM ?? ANCHOR_RADIUS_DEFAULT_M),
+  );
+  const [course, setCourse] = useState(() =>
+    watch.course ? String(Math.round(watch.course.bearingDeg)) : '',
+  );
+  const [tolerance, setTolerance] = useState(() =>
+    String(watch.course?.toleranceDeg ?? COURSE_TOLERANCE_DEFAULT_DEG),
+  );
+
+  const radiusM = parseRadiusM(radius);
+  const toleranceDeg = parseToleranceDeg(tolerance) ?? COURSE_TOLERANCE_DEFAULT_DEG;
+
+  const setAnchorRadius = (next: string) => {
+    setRadius(next);
+    const parsed = parseRadiusM(next);
+    if (parsed === null || !watch.anchor) return;
+    onWatch({ ...watch, anchor: { ...watch.anchor, radiusM: parsed } });
+  };
+
+  const setCourseText = (next: string) => {
+    setCourse(next);
+    const parsed = parseCourseDeg(next);
+    if (next.trim() === '') {
+      if (watch.course) onWatch({ ...watch, course: null });
+      return;
+    }
+    if (parsed === null) return;
+    onWatch({ ...watch, course: { bearingDeg: parsed, toleranceDeg } });
+  };
+
+  const setToleranceText = (next: string) => {
+    setTolerance(next);
+    const parsed = parseToleranceDeg(next);
+    if (parsed === null || !watch.course) return;
+    onWatch({ ...watch, course: { ...watch.course, toleranceDeg: parsed } });
+  };
+
+  const anchorAge = watch.anchor
+    ? formatWatchAge(Date.now() - watch.anchor.droppedAt)
+    : null;
+
+  return (
+    <>
+      <p className="menu-note">
+        {fix
+          ? 'Uses the live position fix. Kept on this device.'
+          : 'Waiting for a position fix — the anchor and heading cannot be set yet.'}
+      </p>
+      <p className="menu-note" data-testid="anchor-watch-status">
+        {watch.anchor
+          ? `Anchor down at ${watch.anchor.lat.toFixed(5)}, ${watch.anchor.lon.toFixed(5)} · ${
+              formatDistance(watch.anchor.radiusM, distanceUnit)
+            } circle · dropped ${anchorAge === 'just now' ? 'just now' : `${anchorAge} ago`}`
+          : 'No anchor down.'}
+      </p>
+      <StepperField
+        label="Swing circle"
+        hint={`metres, ${ANCHOR_RADIUS_MIN_M}–${ANCHOR_RADIUS_MAX_M} · ${formatDistance(
+          radiusM ?? watch.anchor?.radiusM ?? ANCHOR_RADIUS_DEFAULT_M,
+          distanceUnit,
+        )} on the chart`}
+        value={radius}
+        min={ANCHOR_RADIUS_MIN_M}
+        max={ANCHOR_RADIUS_MAX_M}
+        step={10}
+        onChange={setAnchorRadius}
+        onBlur={() => {
+          // Put the field back on the circle that is actually drawn when the
+          // typed figure is not a usable radius.
+          if (parseRadiusM(radius) === null) {
+            setRadius(String(watch.anchor?.radiusM ?? ANCHOR_RADIUS_DEFAULT_M));
+          }
+        }}
+      />
+      <button
+        type="button"
+        className="secondary-button wide"
+        disabled={!fix}
+        onClick={() => {
+          if (!fix) return;
+          onWatch({
+            ...watch,
+            anchor: {
+              lat: fix.lat,
+              lon: fix.lon,
+              radiusM: radiusM ?? ANCHOR_RADIUS_DEFAULT_M,
+              droppedAt: Date.now(),
+            },
+          });
+        }}
+      >
+        Drop anchor here
+      </button>
+      {watch.anchor && (
+        <button
+          type="button"
+          className="secondary-button wide"
+          onClick={() => onWatch({ ...watch, anchor: null })}
+        >
+          Weigh anchor
+        </button>
+      )}
+      <p className="menu-note" data-testid="course-watch-status">
+        {watch.course
+          ? `Course to steer ${Math.round(watch.course.bearingDeg)}° true · ${
+              watch.course.toleranceDeg
+            }° either side`
+          : 'No course to steer set.'}
+      </p>
+      <div className="menu-field-pair">
+        <TextField
+          label="Course to steer"
+          hint="degrees true"
+          placeholder="042"
+          value={course}
+          onChange={setCourseText}
+        />
+        <TextField
+          label="Tolerance"
+          hint="degrees either side"
+          placeholder={String(COURSE_TOLERANCE_DEFAULT_DEG)}
+          value={tolerance}
+          onChange={setToleranceText}
+        />
+      </div>
+      <button
+        type="button"
+        className="secondary-button wide"
+        disabled={!fix || (fix.heading ?? fix.compass ?? null) === null}
+        onClick={() => {
+          const heading = fix?.heading ?? fix?.compass ?? null;
+          if (heading === null || heading === undefined) return;
+          const bearing = normalizeBearing(heading);
+          setCourse(String(Math.round(bearing)));
+          onWatch({ ...watch, course: { bearingDeg: bearing, toleranceDeg } });
+        }}
+      >
+        Hold current course
+      </button>
+      {watch.course && (
+        <button
+          type="button"
+          className="secondary-button wide"
+          onClick={() => {
+            setCourse('');
+            onWatch({ ...watch, course: null });
+          }}
+        >
+          Clear course
+        </button>
+      )}
+    </>
+  );
+}
+
 const STATUS_TEXT: Record<GeoStatus, string> = {
   off: 'GPS is off',
   idle: 'GPS starting',
@@ -144,11 +480,24 @@ export function LayerControl({
   onStation,
   noaaCovered,
   legendRegion,
+  settings,
+  onSettings,
+  fix,
+  watch,
+  onWatch,
   hidden = false,
 }: LayerControlProps) {
   const setBase = (base: BaseLayerId) => onChange({ ...preferences, base });
   const setOverlay = (key: keyof ChartPreferences['overlays'], value: boolean) =>
     onChange({ ...preferences, overlays: { ...preferences.overlays, [key]: value } });
+  const setUnit = <K extends keyof AppSettings['units']>(key: K, value: AppSettings['units'][K]) =>
+    onSettings({ ...settings, units: { ...settings.units, [key]: value } });
+  const setNotification = (key: keyof AppSettings['notifications'], value: boolean) =>
+    onSettings({ ...settings, notifications: { ...settings.notifications, [key]: value } });
+  const setProfile = (key: keyof AppSettings['profile'], value: string) =>
+    onSettings({ ...settings, profile: { ...settings.profile, [key]: value } });
+  const setBoat = (key: keyof AppSettings['boat'], value: string) =>
+    onSettings({ ...settings, boat: { ...settings.boat, [key]: value } });
 
   return (
     <>
@@ -193,12 +542,15 @@ export function LayerControl({
 
             <nav className="menu-shortcuts" aria-label="Menu sections">
               {[
-                ['menu-display', 'Display'],
+                ['menu-settings', 'Settings'],
                 ['menu-overlays', 'Map options'],
                 ['menu-places', 'Places'],
                 ['menu-chart-detail', 'Chart detail'],
                 ['menu-vessel-position', 'Position'],
+                ['menu-watch', 'Watch'],
                 ['menu-stations', 'Stations'],
+                ['menu-profile', 'My profile'],
+                ['menu-boat', 'Boat'],
               ].map(([id, label]) => (
                 <button key={id} type="button" onClick={(event) => {
                   const panel = event.currentTarget.closest('.menu-panel');
@@ -265,7 +617,8 @@ export function LayerControl({
                 )}
               </Section>
 
-              <Section title="Display" id="menu-display">
+              <Section title="Settings" id="menu-settings">
+                <h4 className="settings-group">Map display</h4>
                 <div className="segmented segmented-three" role="radiogroup" aria-label="Chart theme">
                   {(['day', 'night', 'red'] as ThemeId[]).map((theme) => (
                     <button
@@ -287,6 +640,122 @@ export function LayerControl({
                       ? 'Dimmed chart and panels for low light on deck.'
                       : 'Red-only palette to protect night vision; symbols keep their shapes.'}
                 </p>
+
+                <h4 className="settings-group">Units</h4>
+                <SelectRow
+                  label="Distance"
+                  value={settings.units.distance}
+                  options={DISTANCE_UNITS}
+                  onChange={(value) => setUnit('distance', value)}
+                />
+                <SelectRow
+                  label="Speed"
+                  value={settings.units.speed}
+                  options={SPEED_UNITS}
+                  onChange={(value) => setUnit('speed', value)}
+                />
+                <SelectRow
+                  label="Depth"
+                  value={settings.units.depth}
+                  options={DEPTH_UNITS}
+                  onChange={(value) => setUnit('depth', value)}
+                />
+                <SelectRow
+                  label="Bearing"
+                  value={settings.units.bearing}
+                  options={BEARING_MODES}
+                  onChange={(value) => setUnit('bearing', value)}
+                />
+                <SelectRow
+                  label="Relative bearing mode"
+                  hint="How targets are called off the bow"
+                  value={settings.units.relativeBearing}
+                  options={RELATIVE_BEARING_MODES}
+                  onChange={(value) => setUnit('relativeBearing', value)}
+                />
+                <SelectRow
+                  label="Coordinates"
+                  hint="Position and cursor readout"
+                  value={settings.units.coordinates}
+                  options={COORDINATE_FORMATS}
+                  onChange={(value) => setUnit('coordinates', value)}
+                />
+                <SelectRow
+                  label="Fuel usage"
+                  value={settings.units.fuel}
+                  options={FUEL_UNITS}
+                  onChange={(value) => setUnit('fuel', value)}
+                />
+                <SelectRow
+                  label="Temperature"
+                  value={settings.units.temperature}
+                  options={TEMPERATURE_UNITS}
+                  onChange={(value) => setUnit('temperature', value)}
+                />
+                <SelectRow
+                  label="Wind speed"
+                  value={settings.units.windSpeed}
+                  options={WIND_SPEED_UNITS}
+                  onChange={(value) => setUnit('windSpeed', value)}
+                />
+                <SelectRow
+                  label="Pressure"
+                  value={settings.units.pressure}
+                  options={PRESSURE_UNITS}
+                  onChange={(value) => setUnit('pressure', value)}
+                />
+                <SelectRow
+                  label="Rate of turn"
+                  value={settings.units.rateOfTurn}
+                  options={RATE_OF_TURN_UNITS}
+                  onChange={(value) => setUnit('rateOfTurn', value)}
+                />
+
+                <h4 className="settings-group">Notifications</h4>
+                <p className="menu-note">
+                  Alerts shown on the chart. Choices are remembered on this device.
+                </p>
+                <ToggleRow
+                  label="Arrival"
+                  hint="Alert as you approach a waypoint or harbour"
+                  checked={settings.notifications.arrival}
+                  onChange={(value) => setNotification('arrival', value)}
+                />
+                <ToggleRow
+                  label="Anchor drift"
+                  hint="Alert when the boat swings outside the circle set in Anchor watch & course"
+                  checked={settings.notifications.anchorDrift}
+                  onChange={(value) => setNotification('anchorDrift', value)}
+                />
+                <ToggleRow
+                  label="Off course"
+                  hint="Alert when the heading leaves the course to steer set in Anchor watch & course"
+                  checked={settings.notifications.offCourse}
+                  onChange={(value) => setNotification('offCourse', value)}
+                />
+                <ToggleRow
+                  label="Shallow water"
+                  hint="Alert when the modelled depth under the keel is close to the boat's draught"
+                  checked={settings.notifications.shallowWater}
+                  onChange={(value) => setNotification('shallowWater', value)}
+                />
+                <ToggleRow
+                  label="AIS proximity"
+                  hint="Alert when a tracked vessel closes on you"
+                  checked={settings.notifications.aisProximity}
+                  onChange={(value) => setNotification('aisProximity', value)}
+                />
+                <ToggleRow
+                  label="Alert sound"
+                  checked={settings.notifications.sound}
+                  onChange={(value) => setNotification('sound', value)}
+                />
+                <ToggleRow
+                  label="Vibration"
+                  hint="On devices that support it"
+                  checked={settings.notifications.vibration}
+                  onChange={(value) => setNotification('vibration', value)}
+                />
               </Section>
 
               <Section title="Map options" id="menu-overlays">
@@ -305,7 +774,9 @@ export function LayerControl({
                 )}
                 <ToggleRow
                   label="Depth numbers"
-                  hint="Modelled labels in metres · GEBCO global, EMODnet from zoom 14 · zoom 12+"
+                  hint={`Modelled labels in ${depthUnitLabel(
+                    settings.units.depth,
+                  )} · GEBCO global, EMODnet from zoom 14 · zoom 12+`}
                   checked={preferences.overlays.depthLabels}
                   onChange={(value) => setOverlay('depthLabels', value)}
                 />
@@ -321,23 +792,6 @@ export function LayerControl({
                     until you pan to a US harbour; depth contours fall back to GEBCO here.
                   </p>
                 )}
-                <div className="depth-units" data-testid="depth-units">
-                  <h4>Depth measurements</h4>
-                  <dl>
-                    <div>
-                      <dt>Depth numbers</dt>
-                      <dd>Metres</dd>
-                    </div>
-                    <div>
-                      <dt>Charted soundings</dt>
-                      <dd>NOAA ENC spot depths · the chart's printed unit (feet or metres)</dd>
-                    </div>
-                    <div>
-                      <dt>Contours</dt>
-                      <dd>NOAA ENC chart unit in US waters · metres from GEBCO elsewhere</dd>
-                    </div>
-                  </dl>
-                </div>
                 <ToggleRow
                   label="OpenSeaMap seamarks"
                   hint="Transparent raster over any base chart"
@@ -536,8 +990,21 @@ export function LayerControl({
                 />
               </Section>
 
+              <Section
+                title="Anchor watch & course"
+                id="menu-watch"
+                hint="The drag and off-course alerts in Settings watch these."
+              >
+                <VoyageWatchSection
+                  fix={fix}
+                  watch={watch}
+                  onWatch={onWatch}
+                  distanceUnit={settings.units.distance}
+                />
+              </Section>
+
               <Section title="Stations" id="menu-stations">
-                {(['ais', 'colregs', 'weather'] as StationTab[]).map((tab) => (
+                {(['ais', 'colregs'] as StationTab[]).map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -551,6 +1018,99 @@ export function LayerControl({
                     <span className="chevron" aria-hidden="true">›</span>
                   </button>
                 ))}
+              </Section>
+
+              <Section
+                title="My profile"
+                id="menu-profile"
+                hint="Your details stay on this device and are only used for the alerts you switch on."
+              >
+                <TextField
+                  label="Name"
+                  placeholder="Skipper"
+                  value={settings.profile.name}
+                  onChange={(value) => setProfile('name', value)}
+                />
+                <TextField
+                  label="Home port"
+                  placeholder="Portsmouth"
+                  value={settings.profile.homePort}
+                  onChange={(value) => setProfile('homePort', value)}
+                />
+                <SelectRow
+                  label="Experience"
+                  value={settings.profile.experience}
+                  options={[
+                    { value: '', label: 'Not set' },
+                    ...EXPERIENCE_LEVELS.map((level) => ({ value: level as string, label: level as string })),
+                  ]}
+                  onChange={(value) => setProfile('experience', value)}
+                />
+                <TextField
+                  label="Emergency contact"
+                  hint="Name and number kept with your profile"
+                  placeholder="Coastguard / next of kin"
+                  value={settings.profile.emergencyContact}
+                  onChange={(value) => setProfile('emergencyContact', value)}
+                />
+              </Section>
+
+              <Section
+                title="Boat settings"
+                id="menu-boat"
+                hint="Vessel particulars used by the passage and depth alerts."
+              >
+                <TextField
+                  label="Boat name"
+                  placeholder="Wheel Over"
+                  value={settings.boat.name}
+                  onChange={(value) => setBoat('name', value)}
+                />
+                <SelectRow
+                  label="Type"
+                  value={settings.boat.type}
+                  options={[
+                    { value: '', label: 'Not set' },
+                    ...BOAT_TYPES.map((type) => ({ value: type as string, label: type as string })),
+                  ]}
+                  onChange={(value) => setBoat('type', value)}
+                />
+                <div className="menu-field-pair">
+                  <TextField
+                    label="Length"
+                    hint="metres"
+                    placeholder="11.5"
+                    value={settings.boat.lengthM}
+                    onChange={(value) => setBoat('lengthM', value)}
+                  />
+                  <TextField
+                    label="Beam"
+                    hint="metres"
+                    placeholder="3.8"
+                    value={settings.boat.beamM}
+                    onChange={(value) => setBoat('beamM', value)}
+                  />
+                  <TextField
+                    label="Draught"
+                    hint="metres"
+                    placeholder="1.6"
+                    value={settings.boat.draughtM}
+                    onChange={(value) => setBoat('draughtM', value)}
+                  />
+                </div>
+                <TextField
+                  label="MMSI"
+                  hint="Nine digits, if the vessel is AIS fitted"
+                  placeholder="232000000"
+                  value={settings.boat.mmsi}
+                  onChange={(value) => setBoat('mmsi', value)}
+                />
+                <TextField
+                  label="Call sign"
+                  placeholder="MABC1"
+                  value={settings.boat.callSign}
+                  onChange={(value) => setBoat('callSign', value)}
+                />
               </Section>
 
               <Section title="Mark database" id="menu-data">

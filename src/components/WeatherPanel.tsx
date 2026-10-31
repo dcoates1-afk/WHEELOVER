@@ -13,11 +13,24 @@ import {
 import type { CurrentEvent, CurrentForecast, CurrentPhase, ModelCurrentNow } from '../lib/currents';
 import { compassPoint } from '../lib/geo';
 import { parseNoaaTime } from '../lib/time';
-import { formatPosition } from '../lib/navaids';
+import { formatCoordinate } from '../lib/coordinates';
+import {
+  DEFAULT_SETTINGS,
+  convertPressure,
+  convertTemperature,
+  convertWind,
+  formatDistance,
+  pressureDecimals,
+  pressureUnitLabel,
+  temperatureUnitLabel,
+  windUnitLabel,
+} from '../lib/settings';
+import type { UnitSettings } from '../lib/settings';
 
 interface WeatherPanelProps {
   lat: number;
   lon: number;
+  units?: UnitSettings;
 }
 
 function Sparkline({ points, colour }: { points: SeriesPoint[]; colour: string }) {
@@ -75,7 +88,7 @@ function seriesToSparkline(points: { epoch: number; speedKn: number }[]): Series
   return points.map((point) => ({ time: new Date(point.epoch).toISOString(), value: point.speedKn }));
 }
 
-export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
+export function WeatherPanel({ lat, lon, units = DEFAULT_SETTINGS.units }: WeatherPanelProps) {
   const [report, setReport] = useState<WeatherReport | null>(null);
   const [tide, setTide] = useState<TideForecast | null>(null);
   const [tideMessage, setTideMessage] = useState<string | null>(null);
@@ -169,6 +182,9 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
 
   const wind = report?.wind[0];
   const gust = report?.gusts[0];
+  const pressure = report?.pressure[0];
+  const windUnit = windUnitLabel(units.windSpeed);
+  const temperatureUnit = temperatureUnitLabel(units.temperature);
   const direction = report?.windDirection[0]?.value;
   const wave = report?.waves[0];
   const wavePeriod = report?.wavePeriod[0];
@@ -197,7 +213,7 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
     <div className="station-body">
       <div className="station-status">
         <span className="pill">Open-Meteo</span>
-        <span className="status-count">{formatPosition(lat, lon)}</span>
+        <span className="status-count">{formatCoordinate(lat, lon, units.coordinates)}</span>
       </div>
 
       {loading && <p className="menu-note">Loading marine forecast…</p>}
@@ -208,9 +224,13 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
           <div className="metric-grid">
             <div className="metric-card">
               <p className="eyebrow">Wind</p>
-              <p className="metric-value">{wind ? Math.round(wind.value) : '—'}<small> kn</small></p>
+              <p className="metric-value">
+                {wind ? Math.round(convertWind(wind.value, units.windSpeed)) : '—'}
+                <small> {windUnit}</small>
+              </p>
               <p className="metric-sub">
-                gusts {gust ? Math.round(gust.value) : '—'} kn · from {arrowFor(direction)}
+                gusts {gust ? Math.round(convertWind(gust.value, units.windSpeed)) : '—'} {windUnit} · from{' '}
+                {arrowFor(direction)}
               </p>
               <Sparkline points={report.wind} colour="#5cc9f0" />
             </div>
@@ -223,7 +243,9 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
               <p className="metric-sub">
                 {report.marineAvailable
                   ? `period ${wavePeriod ? Math.round(wavePeriod.value) : '—'} s · SST ${
-                      seaTemperature ? `${seaTemperature.value.toFixed(1)}°C` : '—'
+                      seaTemperature
+                        ? `${convertTemperature(seaTemperature.value, units.temperature).toFixed(1)}${temperatureUnit}`
+                        : '—'
                     }`
                   : 'marine model has no data at this position'}
               </p>
@@ -232,11 +254,22 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
             <div className="metric-card">
               <p className="eyebrow">Air temperature</p>
               <p className="metric-value">
-                {airTemperature ? Math.round(airTemperature.value) : '—'}
-                <small> °C</small>
+                {airTemperature ? Math.round(convertTemperature(airTemperature.value, units.temperature)) : '—'}
+                <small> {temperatureUnit}</small>
               </p>
               <p className="metric-sub">next 24 h</p>
               <Sparkline points={report.temperature} colour="#57d2a0" />
+            </div>
+            <div className="metric-card">
+              <p className="eyebrow">Pressure</p>
+              <p className="metric-value">
+                {pressure
+                  ? convertPressure(pressure.value, units.pressure).toFixed(pressureDecimals(units.pressure))
+                  : '—'}
+                <small> {pressureUnitLabel(units.pressure)}</small>
+              </p>
+              <p className="metric-sub">mean sea level · next 24 h</p>
+              <Sparkline points={report.pressure} colour="#9ab7c6" />
             </div>
           </div>
 
@@ -245,7 +278,7 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
             <>
               <p className="menu-note" data-tide-source={tide.source}>
                 {tide.source === 'noaa'
-                  ? `${tide.label} · ${Math.round(tide.distanceKm ?? 0)} km away · ${tide.datum}`
+                  ? `${tide.label} · ${formatDistance((tide.distanceKm ?? 0) * 1000, units.distance)} away · ${tide.datum}`
                   : `${tide.label} · heights above ${tide.datum}`}
               </p>
               {tide.heightNow !== null && (
@@ -274,7 +307,7 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
           {current && currentNow ? (
             <>
               <p className="menu-note">
-                {current.station.name} · {current.distanceKm.toFixed(0)} km away · NOAA current predictions
+                {current.station.name} · {formatDistance(current.distanceKm * 1000, units.distance)} away · NOAA current predictions
               </p>
               <div
                 className="current-readout"
@@ -317,7 +350,9 @@ export function WeatherPanel({ lat, lon }: WeatherPanelProps) {
             </>
           ) : modelCurrent ? (
             <>
-              <p className="menu-note">Open-Meteo surface-current model · ~8 km</p>
+              <p className="menu-note">
+                Open-Meteo surface-current model · ~{formatDistance(8000, units.distance)}
+              </p>
               <div
                 className="current-readout"
                 data-current-source="model"

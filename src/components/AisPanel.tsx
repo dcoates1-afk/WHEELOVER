@@ -12,6 +12,8 @@ import {
 } from '../lib/aisVessel';
 import type { VesselKind } from '../lib/aisVessel';
 import { vesselCountry } from '../lib/mmsi';
+import { formatDistance } from '../lib/settings';
+import type { DistanceUnit } from '../lib/settings';
 
 interface AisPanelProps {
   state: AisState;
@@ -22,6 +24,8 @@ interface AisPanelProps {
   showOnChart: boolean;
   onToggleChart: (value: boolean) => void;
   onFocusVessel: (vessel: AisVessel) => void;
+  /** Unit the range to each target is written in. */
+  distanceUnit?: DistanceUnit;
 }
 
 const STATE_LABEL: Record<AisState, string> = {
@@ -43,6 +47,7 @@ export function AisPanel({
   showOnChart,
   onToggleChart,
   onFocusVessel,
+  distanceUnit,
 }: AisPanelProps) {
   const sorted = useMemo(() => {
     return [...vessels]
@@ -145,7 +150,7 @@ export function AisPanel({
                   {vessel.name ? ` · MMSI ${vessel.mmsi}` : ' · name pending'}
                 </span>
                 <span className="vessel-numbers">
-                  <span>{(metres / 1852).toFixed(1)} NM</span>
+                  <span>{formatDistance(metres, distanceUnit)}</span>
                   <span>{vessel.sog !== null ? `${vessel.sog.toFixed(1)} kn` : '—'}</span>
                   <span>{vessel.cog !== null ? `${Math.round(vessel.cog)}°` : '—'}</span>
                   <span>{relativeAge(vessel.lastSeen)}</span>

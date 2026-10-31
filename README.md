@@ -116,9 +116,11 @@ steals a map tap.
 - **Depth numbers** — numeric depth labels sampled from the seabed grid for the
   current view, refreshed after each pan. GEBCO's 15 arc-second global grid
   answers the whole grid in one batch; inside European waters at zoom 14+ every
-  other label is refined with EMODnet's ~115 m DTM. Values are in metres below
-  sea level and these are modelled samples, not surveyed soundings; the menu
-  states the unit and measurement type.
+  other label is refined with EMODnet's ~115 m DTM. Values are depths below sea
+  level, written in the Depth unit from Settings (feet, fathoms or metres) and
+  rounded chart-style — one decimal in the shallows, whole units deeper. The
+  numbers stay bare on the chart; the tooltip, the click popup and the menu hint
+  carry the unit. These are modelled samples, not surveyed soundings.
 - **Charted soundings** — the ENC's charted spot depths (`SoundingsP`), drawn as
   transparent tiles in a pane above the contours. Only available in US waters
   and only from zoom 15, where NOAA renders them; they keep the chart's printed
@@ -288,6 +290,10 @@ cannot be redistributed; their entries record why.
 
 ## Stations
 
+The menu's *Stations* section carries AIS and the COLREGs guide. Weather, tides
+and tidal current have their own drawer: the **Weather conditions** button in the
+top-left corner of the chart opens the same panel that used to sit in the menu.
+
 - **AIS** — live vessels from AISStream through the relay, drawn like a traffic
   display: the hull is coloured by class (cargo green, tanker red, passenger
   blue, high-speed cyan, fishing orange, tug brown, pleasure and sailing
@@ -324,8 +330,9 @@ cannot be redistributed; their entries record why.
   rule number, title, keyword or part, with regional modifications for the
   **US** (Inland Rules, 33 CFR 83/84), **Canada** (TP 14202) and **Europe**
   (CEVNI, IALA A). Summaries only, with links to the official texts.
-- **Weather, tides & currents, worldwide** — Open-Meteo wind, gusts, wave
-  height/period, sea and air temperature for the chart position or GPS fix.
+- **Weather, tides & currents, worldwide** *(top-left Weather conditions)* —
+  Open-Meteo wind, gusts, wave height/period, sea and air temperature and mean
+  sea-level pressure for the chart position or GPS fix.
   Tides and currents are NOAA first: the nearest tide station within 120 km
   (harmonic predictions on MLLW) and current station within 60 km (flood/ebb
   sets, slack water, next turns, 12-hour curve, cosine-interpolated between
@@ -339,7 +346,7 @@ cannot be redistributed; their entries record why.
 
 ## Display themes
 
-Under *Chart detail* the menu offers Day, Night and Red, persisted in
+Under *Settings → Map display* the menu offers Day, Night and Red, persisted in
 `wheel-over:chart-prefs`. Earlier builds used `leeward:` and `marnav:` storage
 prefixes; those saved settings are still read and rewritten under the new keys:
 
@@ -354,6 +361,117 @@ prefixes; those saved settings are still read and rewritten under the new keys:
 
 The tint layer is `pointer-events: none` and sits below every control, so panning
 and tapping are unaffected.
+
+## Settings, profile and boat
+
+*Settings* in the main menu holds the display choice, the unit conventions, and
+the alert preferences. They live in `wheel-over:settings` in `localStorage` and
+are validated on read, so a stale or hand-edited value falls back to the default
+instead of breaking the panel.
+
+- **Units** — distance (nautical miles with feet or yards, feet/yards with
+  statute miles, metres with nautical miles or kilometres), speed (kn, mph, kph,
+  m/s), depth (feet, fathoms, metres), bearing (true, magnetic, polar grid),
+  relative bearing (360° or red/green), coordinates (lat/long, UTM/UPS, MGRS,
+  GEOREF, AMG, NZMG, polar grid, ITM, Irish Grid), fuel (gallons, litres),
+  temperature (°C, °F), wind speed (kn, mph, kph), pressure (bar, Pa, hPa, kPa,
+  psi, inHg, mmHg, mbar) and rate of turn (°/s, °/min, rpm).
+- **Live in the readouts** — the coordinate choice writes the position panel and
+  the corner cursor readout (`src/lib/coordinates.ts`); speed converts the SOG
+  figure; wind speed, temperature and pressure convert the conditions panel,
+  which now reads mean sea-level pressure from Open-Meteo as well.
+- **Notifications** — arrival, anchor drift, off course, shallow water and AIS
+  proximity, plus alert sound and vibration. Anchor drift, off course, shallow
+  water and AIS proximity all raise real chart alerts (see *Chart alerts* below);
+  arrival is a stored preference only, and the app does not raise system
+  notifications by itself.
+- **My profile** — name, home port, experience and an emergency contact.
+- **Boat settings** — name, type, length, beam, draught, MMSI and call sign.
+  Draught is the figure the shallow-water alert compares against.
+
+## Chart alerts
+
+Four alerts are raised on the chart itself, in a stack above the bottom-left
+controls (`src/components/ChartAlerts.tsx`, driven by `src/lib/alerts.ts` and
+`src/hooks/useChartAlerts.ts`).
+
+- **Shallow water** — needs a draught in Boat settings and the Shallow water
+  switch on. The chart samples the modelled seabed at the vessel's fix (GEBCO,
+  refined by EMODnet inside European waters) after every 150 m of movement or
+  five minutes at rest, and compares it with the draught. No water left under the
+  keel is a danger; less than a metre of margin is a caution. Depths are shown in
+  the chosen depth unit.
+- **AIS proximity** — needs the AIS proximity switch on. Any target inside half a
+  nautical mile is reported with its distance, bearing, speed and whether it is
+  closing on the vessel; inside a quarter mile it escalates to a danger. The
+  range is written in the Distance unit from Settings, like the anchor circle.
+- **Anchor drift** — needs an anchor dropped in *Anchor watch & course* and the
+  Anchor drift switch on. Past the swing circle the card gives the distance and
+  the bearing back to the anchor; past twice the circle it is a danger, which is
+  an anchor that has broken out rather than a boat swinging on its scope.
+- **Off course** — needs a course to steer in the same section and the Off course
+  switch on. The card reads the heading (or the compass course when the device
+  reports no heading) against the course, names the side of the turn and the
+  number of degrees off; twice the tolerance is a danger. A vessel known to be
+  stopped is not judged, and an unknown speed is judged on the heading alone.
+
+Each card is dismissed on its own and comes back if the condition clears and
+returns. The alert sound (a short chime, two-tone for danger) and vibration follow
+their own switches. Turning a switch off stops the depth probing as well as the
+card. The depth figures are modelled, not surveyed, so an alert is a prompt to
+look at the chart.
+
+## Anchor watch and course
+
+*Anchor watch & course* in the menu holds the two watches the alerts read; the
+state lives in `wheel-over:voyage-watch` and is validated on read
+(`src/lib/voyageWatch.ts`).
+
+- **Anchor** — *Drop anchor here* records the current fix and a swing circle
+  (10–500 m, default 30 m); *Weigh anchor* clears it. The radius is a stepper:
+  − and + move it in 10 m steps and stay inside the limits, while the figure can
+  still be typed in full. It can be edited while the anchor is down, and a figure
+  that is not a usable radius snaps back to the circle being drawn when the field
+  loses focus.
+- **Course** — type a course to steer in degrees true with a tolerance (3–60°,
+  default 15°), or press *Hold current course* to take the heading being steered.
+  *Clear course* removes it.
+
+Both buttons need a live fix: without one they are disabled and the section says
+so.
+
+On the chart the watch is drawn in its own pane above the lanes and below the
+marks (`MapCanvas.tsx`): a dashed amber swing circle with an anchor glyph at the
+anchor itself and the radius written on the circle's northern edge, plus a
+dashed cyan ray from the vessel along the course to steer with a chevron at its
+end. The radius readout follows the stepper as it moves, so the circle can be
+read without opening the menu. The ray is a screen length rather than a fixed
+distance, so it reads the same at harbour zoom and at passage zoom, and it
+follows the vessel as fixes arrive.
+
+The stepper is in metres, and that is how the radius is stored, but the readouts
+follow the Distance unit from Settings (`formatDistance` in
+`src/lib/settings.ts`): the swing circle's label, the anchor drift card, the menu's
+anchor status line (whose field hint also spells out the equivalent), the AIS
+proximity card, the AIS station list, the vessel sheet's range, the transit gap and
+heritage offsets on a mark sheet, the tide and current station distances in
+Weather conditions, and the GPS accuracy figure. Feet, yards or metres are used
+for short ranges and nautical or statute miles take over at the long end, so the
+same 30 m circle reads `98 ft`, `33 yd` or `30 m`. A change of unit updates every
+one of them on the spot.
+
+Depths follow the Depth unit (`formatDepth` in `src/lib/depthLabels.ts` and
+`formatDepthWithUnit` in `src/lib/settings.ts`): the modelled depth numbers, the
+contour tooltips and popups, the shallow-water card, and the wreck sheet's charted
+sounding, reported depth, wreck-top clearance and NOAA expected depth. A soundings
+figure on a sheet keeps the mapped precision (`20.1 m`, or `66 ft`), while chart
+labels round. Wreck depths arrive as raw OpenStreetMap tags, so a value carrying a
+qualifier is shown exactly as mapped instead of being guessed at.
+
+Quantities that are not depths keep their own units: bridge clearance is a height
+above the water, light ranges and vessel dimensions stay in nautical miles and
+metres, and the ENC's own charted soundings keep the chart's printed unit because
+they are source raster.
 
 ## Vessel position
 

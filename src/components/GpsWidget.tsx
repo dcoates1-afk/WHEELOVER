@@ -1,6 +1,8 @@
 import type { GeoFix, GeoStatus } from '../hooks/useGeolocation';
 import { CompassRose } from './CompassRose';
-import { formatPosition } from '../lib/navaids';
+import { formatCoordinate } from '../lib/coordinates';
+import { DEFAULT_SETTINGS, convertSpeed, formatDistance, speedUnitLabel } from '../lib/settings';
+import type { UnitSettings } from '../lib/settings';
 
 interface GpsWidgetProps {
   fix: GeoFix | null;
@@ -10,9 +12,19 @@ interface GpsWidgetProps {
   onCentre: () => void;
   onEnable: () => void;
   onClose: () => void;
+  units?: UnitSettings;
 }
 
-export function GpsWidget({ fix, status, error, gpsMode, onCentre, onEnable, onClose }: GpsWidgetProps) {
+export function GpsWidget({
+  fix,
+  status,
+  error,
+  gpsMode,
+  onCentre,
+  onEnable,
+  onClose,
+  units = DEFAULT_SETTINGS.units,
+}: GpsWidgetProps) {
   return (
     <aside className="gps-widget" aria-label="Vessel position">
       <header className="gps-head">
@@ -38,17 +50,17 @@ export function GpsWidget({ fix, status, error, gpsMode, onCentre, onEnable, onC
         <>
           <div className="gps-body">
             <dl className="gps-readout">
-              <div>
-                <dt>Latitude</dt>
-                <dd>{formatPosition(fix.lat, fix.lon).split('  ')[0]}</dd>
-              </div>
-              <div>
-                <dt>Longitude</dt>
-                <dd>{formatPosition(fix.lat, fix.lon).split('  ')[1]}</dd>
+              <div className="gps-position">
+                <dt>Position</dt>
+                <dd>{formatCoordinate(fix.lat, fix.lon, units.coordinates)}</dd>
               </div>
               <div>
                 <dt>Speed over ground</dt>
-                <dd>{fix.sog !== null ? `${fix.sog.toFixed(1)} kn` : '—'}</dd>
+                <dd>
+                  {fix.sog !== null
+                    ? `${convertSpeed(fix.sog, units.speed).toFixed(1)} ${speedUnitLabel(units.speed)}`
+                    : '—'}
+                </dd>
               </div>
               <div>
                 <dt>Course / heading</dt>
@@ -56,7 +68,7 @@ export function GpsWidget({ fix, status, error, gpsMode, onCentre, onEnable, onC
               </div>
               <div>
                 <dt>Accuracy</dt>
-                <dd>±{Math.round(fix.accuracy)} m</dd>
+                <dd>±{formatDistance(fix.accuracy, units.distance)}</dd>
               </div>
               <div>
                 <dt>Updated</dt>

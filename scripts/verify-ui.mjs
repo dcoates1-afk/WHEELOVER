@@ -184,11 +184,9 @@ async function run() {
   );
   check('depth shading overlay has been removed', !menuText.includes('Depth shading'));
   check(
-    'menu states the depth measurement units and types',
-    ['Depth measurements', 'Metres below sea level', "chart's printed unit"].every((text) =>
-      menuText.includes(text),
-    ),
-    'metres for modelled numbers, chart unit for NOAA soundings',
+    'depth measurement notes have left the menu',
+    !menuText.includes('Depth measurements') && !menuText.includes('Metres below sea level'),
+    'depth units are chosen once under Settings',
   );
   await page.locator('.legend summary').click();
   await page.waitForTimeout(300);
@@ -226,6 +224,9 @@ async function run() {
 
   // Display themes: night dims, red protects night vision, day is the default.
   console.log('step: themes');
+  // Map display now lives inside the Settings section, opened from its shortcut.
+  await page.locator('.menu-shortcuts button', { hasText: 'Settings' }).click();
+  await page.waitForTimeout(250);
   await page.locator('.segmented-three button', { hasText: 'Night' }).click();
   await page.waitForTimeout(250);
   check('night theme applies to the app shell', (await page.locator('.app.theme-night').count()) === 1);
@@ -234,6 +235,8 @@ async function run() {
   await page.screenshot({ path: `${artifacts}phone-night.png` });
 
   await openMenu(page);
+  await page.locator('.menu-shortcuts button', { hasText: 'Settings' }).click();
+  await page.waitForTimeout(250);
   await page.locator('.segmented-three button', { hasText: 'Red' }).click();
   await page.waitForTimeout(250);
   check('red theme applies to the app shell', (await page.locator('.app.theme-red').count()) === 1);
@@ -311,6 +314,8 @@ async function run() {
   );
 
   await openMenu(page);
+  await page.locator('.menu-shortcuts button', { hasText: 'Settings' }).click();
+  await page.waitForTimeout(250);
   await page.locator('.segmented-three button', { hasText: 'Day' }).click();
   await page.waitForTimeout(200);
   check('day theme restores the default palette', (await page.locator('.app.theme-day').count()) === 1);
@@ -795,8 +800,11 @@ async function run() {
   await page.screenshot({ path: `${artifacts}colregs.png` });
 
   // 7. Weather, tides and currents outside NOAA coverage (the Solent): the
-  // global models fill in, with their datum stated.
-  await page.locator('.tab', { hasText: 'Weather' }).click();
+  // global models fill in, with their datum stated. Conditions have their own
+  // top-left menu rather than a station tab.
+  await page.locator('.station-drawer .icon-button').click();
+  await page.locator('[data-testid="weather-button"]').click();
+  await page.waitForSelector('[data-testid="weather-panel"]');
   await page.waitForSelector('.metric-card', { timeout: 20_000 });
   await page.locator('.menu-note[data-tide-source]').waitFor({ timeout: 30_000 }).catch(() => {});
   await page
@@ -840,7 +848,7 @@ async function run() {
     `${solentSet}°`,
   );
   await page.screenshot({ path: `${artifacts}weather.png` });
-  await page.locator('.station-drawer .icon-button').click();
+  await page.locator('.weather-panel .icon-button').click();
 
   // 8. NOAA base map and coverage guard
   await openMenu(page);
@@ -1058,7 +1066,8 @@ async function run() {
   // 12d. Weather & tides carries NOAA tidal-current predictions for the chart
   // position: drift, the set of the stream and the next predicted turns.
   console.log('step: currents');
-  await usPage.locator('.menu-row.nav-row', { hasText: 'Weather & tides' }).first().click();
+  await usPage.locator('[data-testid="weather-button"]').click();
+  await usPage.waitForSelector('[data-testid="weather-panel"]');
   const currentReadout = usPage.locator('.current-readout');
   await currentReadout.waitFor({ timeout: 30_000 }).catch(() => {});
   const currentShown = (await currentReadout.count()) > 0;

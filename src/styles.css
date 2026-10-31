@@ -261,6 +261,27 @@ ul {
   transition: transform 0.4s ease-out;
 }
 
+/* Anchor swing radius, written on the circle's northern edge. */
+.marnav-anchor-label-wrap {
+  background: transparent;
+  border: 0;
+}
+
+.marnav-anchor-label {
+  display: inline-block;
+  transform: translate(-50%, -50%);
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 210, 74, 0.7);
+  background: rgba(4, 20, 31, 0.92);
+  color: #ffd24a;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 16px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Modelled depth numbers: bare chart ink, no plate. The halo keeps the number
    readable over pale ENC paper and dark satellite water alike. */
 .marnav-depth-wrap {
@@ -443,6 +464,86 @@ ul {
   display: none;
 }
 
+/* Conditions drawer: its own menu in the top-left corner of the chart. */
+.weather-button {
+  position: fixed;
+  z-index: 1200;
+  top: calc(var(--safe-top) + 12px);
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 1px solid rgba(61, 214, 255, 0.45);
+  border-radius: 16px;
+  background: rgba(6, 28, 41, 0.94);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.weather-button.open {
+  background: var(--accent);
+  color: #04202c;
+  border-color: var(--accent);
+}
+
+.weather-button.is-hidden {
+  display: none;
+}
+
+.weather-button-label {
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+.weather-panel {
+  position: fixed;
+  z-index: 1250;
+  top: calc(var(--safe-top) + 12px);
+  left: 12px;
+  bottom: calc(var(--safe-bottom) + 12px);
+  width: min(392px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--panel) 0%, #061a26 100%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  animation: sheet-up 0.18s ease-out;
+}
+
+.weather-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px calc(var(--safe-bottom) + 18px);
+}
+
+.weather-hint {
+  padding-top: 14px;
+}
+
+@media (max-width: 719px) {
+  .weather-button {
+    min-height: 48px;
+    padding: 0 12px;
+  }
+
+  .weather-button-label {
+    font-size: 12px;
+  }
+
+  .weather-panel {
+    width: calc(100vw - 16px);
+    top: calc(var(--safe-top) + 8px);
+    left: 8px;
+    bottom: calc(var(--safe-bottom) + 8px);
+  }
+}
+
 /*
  * Wordmark: floats over every base chart with no plate behind it, so it carries
  * its own dark halo the way a chart label does. The halo is what keeps it
@@ -592,6 +693,102 @@ ul {
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+
+/* Alerts from the boat settings: depth under the keel and close traffic. The
+   stack sits bottom-left, clear of the zoom/locate controls. */
+.chart-alerts {
+  position: fixed;
+  z-index: 1190;
+  left: 12px;
+  bottom: calc(var(--safe-bottom) + 64px);
+  display: grid;
+  gap: 8px;
+  width: min(360px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.chart-alert {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid rgba(143, 176, 192, 0.28);
+  border-left-width: 3px;
+  border-radius: 12px;
+  background: rgba(4, 20, 31, 0.96);
+  color: var(--ink);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  animation: sheet-up 0.16s ease-out;
+}
+
+.chart-alert.danger {
+  border-left-color: #e23b3b;
+}
+
+.chart-alert.caution {
+  border-left-color: #f4c531;
+}
+
+.chart-alert-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  color: var(--muted);
+}
+
+.chart-alert.danger .chart-alert-icon {
+  color: #ff6a5f;
+}
+
+.chart-alert.caution .chart-alert-icon {
+  color: #f4c531;
+}
+
+.chart-alert-text {
+  min-width: 0;
+}
+
+.chart-alert-title {
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.chart-alert-detail {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.chart-alert-dismiss {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.chart-alert-dismiss:active {
+  background: rgba(143, 176, 192, 0.18);
+  color: var(--ink);
+}
+
+@media (max-width: 719px) {
+  .chart-alerts {
+    left: 8px;
+    width: calc(100vw - 16px);
+    bottom: calc(var(--safe-bottom) + 56px);
+  }
 }
 
 .menu-button-label {
@@ -983,46 +1180,120 @@ ul {
 }
 
 /* What the depth overlays actually measure and in which unit. */
-.depth-units {
-  display: grid;
-  gap: 8px;
-  margin: 10px 4px 0;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(12, 42, 60, 0.5);
-}
-
-.depth-units h4 {
+/* Settings groups and the rows that hold a picker or a text field. */
+.settings-group {
+  margin: 14px 4px 2px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--accent);
 }
 
-.depth-units dl {
-  display: grid;
-  gap: 6px;
+.settings-group:first-child {
+  margin-top: 2px;
 }
 
-.depth-units dl div {
-  display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 10px;
-  align-items: baseline;
+.menu-select,
+.menu-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(143, 176, 192, 0.12);
 }
 
-.depth-units dt {
-  font-size: 11px;
-  font-weight: 650;
+.menu-select:last-child,
+.menu-field:last-child {
+  border-bottom: 0;
+}
+
+.menu-select select,
+.menu-field input {
+  flex: 0 1 52%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(4, 20, 31, 0.85);
   color: var(--ink);
+  font-size: 13px;
+  font-weight: 550;
 }
 
-.depth-units dd {
+.menu-select select:focus-visible,
+.menu-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.menu-field input::placeholder {
+  color: rgba(159, 182, 194, 0.6);
+}
+
+/* Number field with − and + buttons: the figure stays typable, the buttons keep
+   it inside the limits. */
+.stepper-field .stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 52%;
+  min-width: 0;
+}
+
+.stepper-field .stepper input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper-button {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(12, 42, 60, 0.9);
+  color: var(--ink);
+  font-size: 19px;
+  line-height: 1;
+}
+
+.stepper-button:active {
+  transform: translateY(1px);
+}
+
+.menu-field-pair {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 4px 0 8px;
+  border-bottom: 1px solid rgba(143, 176, 192, 0.12);
+}
+
+.menu-field-pair .menu-field {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-height: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.menu-field-pair .menu-field input {
+  flex: none;
+  width: 100%;
+}
+
+.menu-field-pair .row-label {
   font-size: 12px;
-  line-height: 1.4;
-  color: var(--muted);
 }
 
 .inline-warning {
@@ -1273,6 +1544,18 @@ ul {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* The position row carries a whole grid reference, so it spans the readout
+   and wraps rather than being clipped. */
+.gps-position {
+  grid-column: 1 / -1;
+}
+
+.gps-position dd {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 13px;
 }
 
 .gps-actions {

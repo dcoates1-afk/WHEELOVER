@@ -17,6 +17,15 @@ describe('depth number formatting', () => {
     expect(formatDepth(1234)).toBe('1234');
   });
 
+  it('writes the number in the chosen depth unit', () => {
+    expect(formatDepth(3.24, 'm')).toBe('3.2');
+    expect(formatDepth(0.6, 'ft')).toBe('2.0');
+    expect(formatDepth(3.24, 'ft')).toBe('11');
+    expect(formatDepth(12.6, 'ft')).toBe('41');
+    expect(formatDepth(12.6, 'fathoms')).toBe('6.9');
+    expect(formatDepth(0.05, 'ft')).toBe('');
+  });
+
   it('leaves land, nodata and missing values blank', () => {
     expect(formatDepth(null)).toBe('');
     expect(formatDepth(undefined)).toBe('');

@@ -14,6 +14,8 @@ export interface WeatherReport {
   waves: SeriesPoint[];
   wavePeriod: SeriesPoint[];
   seaTemperature: SeriesPoint[];
+  /** Mean sea-level pressure in hectopascals, hourly. */
+  pressure: SeriesPoint[];
   /** Sea level above mean sea level from the global tide model, hourly. */
   seaLevel: SeriesPoint[];
   /** Surface current speed in km/h from the global ocean model. */
@@ -54,7 +56,7 @@ export async function fetchWeather(lat: number, lon: number, signal?: AbortSigna
   const forecastParams = new URLSearchParams({
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
-    hourly: 'temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m',
+    hourly: 'temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl',
     wind_speed_unit: 'kn',
     timezone: 'UTC',
     forecast_days: '2',
@@ -97,6 +99,7 @@ export async function fetchWeather(lat: number, lon: number, signal?: AbortSigna
     waves: series(marine?.hourly, 'wave_height'),
     wavePeriod: series(marine?.hourly, 'wave_period'),
     seaTemperature: series(marine?.hourly, 'sea_surface_temperature'),
+    pressure: series(forecast.hourly, 'pressure_msl'),
     seaLevel,
     currentSpeed,
     currentDirection,

@@ -33,11 +33,12 @@ function wreck(overrides: Partial<Navaid> = {}): Navaid {
   };
 }
 
-function render(mark: Navaid): string {
+function render(mark: Navaid, depthUnit?: 'ft' | 'fathoms' | 'm'): string {
   return renderToStaticMarkup(createElement(NavaidSheet, {
     mark,
     onCentre: () => undefined,
     onClose: () => undefined,
+    depthUnit,
   }));
 }
 
@@ -108,6 +109,11 @@ describe('wreck detail sheet', () => {
 
     expect(html).toContain('NOAA ENC Direct GIS category');
     expect(html).toContain('20.1 m');
+    // Depth unit from Settings is applied to the sourced figures, keeping their
+    // precision rather than rounding like a chart label.
+    const feet = render(wreck({ wreckChartExpectedDepth: '20.1', wreckClearance: '2' }), 'ft');
+    expect(feet).toContain('65.9 ft');
+    expect(feet).toContain('6.6 ft (reported)');
     expect(html).toContain('20080905');
     expect(html).toContain('NOAA ENC Direct to GIS');
     expect(html).not.toContain('not certified for navigation');

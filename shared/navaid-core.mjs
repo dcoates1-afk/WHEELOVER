@@ -380,17 +380,21 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
     
-    // 1. Calculate standard degrees normally to keep the shape engine stable
+    // 1. Calculate the standard baseline degrees exactly as you intended
     const normalLat = destinationLatitude * 180 / Math.PI;
     const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
 
-    // 2. TRUE HORIZONTAL MIRROR FLIP: Invert longitude delta relative to the center lighthouse (lon)
-    // This perfectly mirrors East for West visually without spinning or rotating the shape.
-    const flippedLonDeg = lon - (normalLon - lon);
+    // 2. SCALE MATRIX: Vector distance from the center lighthouse
+    const deltaLat = normalLat - lat;
+    const deltaLon = normalLon - lon;
+
+    // 3. TRIPLE VISUAL SIZE: Multiply the vectors by 3 without touching the geographic projection engine
+    const tripledLat = lat + (deltaLat * 3);
+    const tripledLon = lon + (deltaLon * 3);
 
     return /** @type {[number, number]} */ ([
-      normalLat, // Keep normal latitude completely untouched so North and South do not shift
-      flippedLonDeg,
+      tripledLat,
+      tripledLon
     ]);
   });
 }

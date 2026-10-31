@@ -361,6 +361,10 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   if (![lat, lon, start, end, radiusMeters, stepDegrees].every(Number.isFinite) ||
     Math.abs(lat) > 90 || Math.abs(lon) > 180 || start < 0 || start > 360 || end < 0 || end > 360 ||
     radiusMeters <= 0 || stepDegrees <= 0) return [];
+    
+  // TRIPLE RADIUS LENGTH: Extends the sector arc distance out onto the map grid
+  const tripledRadiusMeters = radiusMeters * 3;
+
   const rawSpan = end - start;
   const span = Math.abs(rawSpan) === 360 ? 360 : (rawSpan + 360) % 360;
   if (span <= 0) return [];
@@ -370,7 +374,10 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   const longitude = lon * Math.PI / 180;
   return Array.from({ length: steps + 1 }, (_, index) => {
     const bearing = (start + span * index / steps) * Math.PI / 180;
-    const angularDistance = radiusMeters / radius;
+    
+    // Updated to use the tripled distance for the great-circle calculations
+    const angularDistance = tripledRadiusMeters / radius;
+    
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
       Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),

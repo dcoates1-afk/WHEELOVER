@@ -7,7 +7,6 @@ import { WebSocketServer } from 'ws';
 import { createAisRelay } from './aisRelay';
 import { createDepthHandler } from './depthProxy';
 import { createOverpassHandler } from './overpassProxy';
-import { createWreckResearchHandler } from './wreckResearchProxy';
 import { createNatura2000Handler } from './natura2000Proxy';
 
 const root = resolve(process.cwd(), 'dist');
@@ -19,7 +18,6 @@ const relay = createAisRelay({ apiKey: aisKey, log });
 const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
 const overpassHandler = createOverpassHandler(log);
 const depthHandler = createDepthHandler(log);
-const wreckResearchHandler = createWreckResearchHandler();
 const natura2000Handler = createNatura2000Handler();
 const contourDir = process.env.WHEELOVER_CONTOUR_DATA_DIR ? resolve(process.env.WHEELOVER_CONTOUR_DATA_DIR) : resolve(root, 'contours');
 const marineDir = process.env.WHEELOVER_MARINE_DATA_DIR ? resolve(process.env.WHEELOVER_MARINE_DATA_DIR) : null;
@@ -121,10 +119,6 @@ async function handleHttp(req: IncomingMessage, res: ServerResponse) {
   }
   if (url.pathname === '/api/depth') {
     await depthHandler(req, res);
-    return;
-  }
-  if (url.pathname === '/api/wreck-research') {
-    await wreckResearchHandler(req, res);
     return;
   }
   if (url.pathname === '/api/natura2000') {

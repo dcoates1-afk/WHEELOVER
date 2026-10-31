@@ -590,8 +590,14 @@ npm run sync:hook -- --source <workspace> # install the hook in the clone
 ```
 
 `sync:fix` copies only the files the workspace has; a file the clone still
-carries after the workspace dropped it is reported and left for you to `git rm`,
-because deleting from the repository is a decision the script should not make.
+carries after the workspace dropped it is reported, with the `git rm` that clears
+it, because deleting from the repository is a decision the script should not
+make. A file the workspace has deleted counts as gone even before its index entry
+is removed, so its stale copy cannot hide in the clone.
+
+`scripts/check-clone-sync.test.mjs` drives the checker as a subprocess against
+throwaway checkouts — clean, missing, stale, deleted and CRLF-versus-LF — and runs
+in `npm test` alongside the app tests.
 
 Freebuff worktrees change path, so the hook does not hold one. The check takes
 `WHEELOVER_WORKSPACE` when it is set, then the workspace an install pinned with

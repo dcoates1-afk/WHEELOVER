@@ -383,17 +383,19 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
 
-    // 1. Calculate standard degrees normally so the geometry is perfectly intact
+    // 1. Calculate standard degrees normally to protect math stability
     const normalLat = destinationLatitude * 180 / Math.PI;
-    const finalLonDeg = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
+    const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
 
-    // 2. VERTICAL FLIP: Invert the latitude delta relative to the central beacon (lat)
-    // This perfectly flips North to South visually while leaving East/West Longitude completely alone.
+    // 2. VERTICAL FLIP: Invert latitude delta relative to center
     const flippedLatDeg = lat - (normalLat - lat);
+
+    // 3. HORIZONTAL FLIP: Invert longitude delta relative to center
+    const flippedLonDeg = lon - (normalLon - lon);
 
     return /** @type {[number, number]} */ ([
       flippedLatDeg,
-      finalLonDeg,
+      flippedLonDeg,
     ]);
   });
 }

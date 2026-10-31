@@ -361,8 +361,8 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   if (![lat, lon, start, end, radiusMeters, stepDegrees].every(Number.isFinite) ||
     Math.abs(lat) > 90 || Math.abs(lon) > 180 || start < 0 || start > 360 || end < 0 || end > 360 ||
     radiusMeters <= 0 || stepDegrees <= 0) return [];
-    
-  // TRIPLE RADIUS LENGTH: Extends the sector arc distance out onto the map grid
+
+  // TRIPLE RADIUS: Multiplies the incoming radius by 3 to extend the arc length visually
   const tripledRadiusMeters = radiusMeters * 3;
 
   const rawSpan = end - start;
@@ -375,8 +375,8 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   return Array.from({ length: steps + 1 }, (_, index) => {
     const bearing = (start + span * index / steps) * Math.PI / 180;
     
-    // Updated to use the tripled distance for the great-circle calculations
-    const angularDistance = tripledRadiusMeters / radius;
+    // Updated to use tripledRadiusMeters here
+    const angularDistance = tripledRadiusMeters / radius; 
     
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
@@ -386,9 +386,16 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
+    
+    const normalLat = destinationLatitude * 180 / Math.PI;
+    const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
+
+    // Retaining your true East-West mirror flip from the previous step
+    const flippedLonDeg = lon - (normalLon - lon);
+
     return /** @type {[number, number]} */ ([
-      destinationLatitude * 180 / Math.PI,
-      ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180,
+      normalLat,
+      flippedLonDeg,
     ]);
   });
 }

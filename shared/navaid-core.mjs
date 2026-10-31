@@ -379,13 +379,21 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
+    
+    // 1. Calculate standard degrees normally to preserve the exact geometric shape
+    const normalLat = destinationLatitude * 180 / Math.PI;
+    const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
+
+    // 2. TRUE HORIZONTAL MIRROR FLIP: Invert longitude delta relative to center lighthouse (lon)
+    // This flips East to West perfectly without rotating or shifting the vertical North-South position.
+    const flippedLonDeg = lon - (normalLon - lon);
+
     return /** @type {[number, number]} */ ([
-      destinationLatitude * 180 / Math.PI,
-      ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180,
+      normalLat,
+      flippedLonDeg,
     ]);
   });
 }
-
 const LIGHT_SECTOR_FIELDS = {
   character: 'character',
   colour: 'colour',

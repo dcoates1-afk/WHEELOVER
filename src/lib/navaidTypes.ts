@@ -58,6 +58,8 @@ export interface Navaid {
   buoyageSystem?: string | null;
   /** Cautious plain-language surface-navigation effect from wreck tags only. */
   wreckBoatingEffect?: string | null;
+  /** Remaining charted tags as mapped, shown on the card as they were sourced. */
+  details?: Record<string, string>;
   /** Painted physical colour of the mark, separate from its light colour. */
   colour: string | null;
   colourPattern?: string | null;

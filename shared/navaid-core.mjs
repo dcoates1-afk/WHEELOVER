@@ -233,7 +233,11 @@ export function classifyTags(tags) {
   if (AREA_TYPES.has(type)) return null;
 
   if (type === 'lighthouse' || type === 'landmark' || type === 'mast' || type === 'tower') {
-    if (type === 'lighthouse' || tags['seamark:light:character']) {
+    // A lighthouse is a major light, and so is any of these structures carrying
+    // a mapped light. `lightChar` also covers lights mapped only as numbered
+    // sector records (Hurst Point, St Catherine's Point), which the unnumbered
+    // tag check used to miss and leave ranked as a plain landmark.
+    if (type === 'lighthouse' || lightChar) {
       return { ...base, category: 'major_light', priority: PRIORITY.major_light, lit: true };
     }
     return { ...base, category: 'landmark', priority: PRIORITY.landmark };
@@ -369,12 +373,13 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
   const latitude = lat * Math.PI / 180;
   const longitude = lon * Math.PI / 180;
 
-  // TRIPLE RADIUS: Multiplies the incoming radius by 3 to extend the arc length
-  const tripledRadiusMeters = radiusMeters * 3;
+  // The drawn arc runs half as far again as the charted radius so the sector
+  // reads at a glance without running off the chart.
+  const drawnRadiusMeters = radiusMeters * 1.5;
 
   return Array.from({ length: steps + 1 }, (_, index) => {
     const bearing = (start + span * index / steps) * Math.PI / 180;
-    const angularDistance = tripledRadiusMeters / radius;
+    const angularDistance = drawnRadiusMeters / radius;
     const destinationLatitude = Math.asin(
       Math.sin(latitude) * Math.cos(angularDistance) +
       Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),
@@ -431,7 +436,115 @@ export function mergeLightSectors(preferred = [], supplemental = []) {
   return [...sectors.values()].sort((a, b) => a.sector - b.sector);
 }
 
-function lightSectorsFromTags(tags) {
+/**
+ * Bearings to draw for one light sector. Charted sectors carry their own
+ * limits; a directional (leading) light carries only an orientation, so it is
+ * drawn as a narrow beam either side of that bearing instead of vanishing.
+ * Three degrees total reads as a beam rather than a sector, and keeps
+ * neighbouring directional lights distinct where they are charted only 1.5°
+ * apart (the three Iso lights at Hurst Point).
+ */
+export const DIRECTIONAL_BEAM_HALF_DEGREES = 1.5;
+
+/** Screen length of a drawn sector fan, before the charted range caps it. */
+const SECTOR_FAN_PX = 72;
+/** Close-in zooms, where the fan is stretched so the sector still reads. */
+const SECTOR_FAN_STRETCH_FROM_ZOOM = 13;
+const SECTOR_FAN_STRETCH_TO_ZOOM = 16;
+const SECTOR_FAN_STRETCH = 2;
+
+/**
+ * Radius a sector fan is drawn at, in metres.
+ *
+ * The fan is a screen length, so it keeps its apparent size as the chart
+ * shrinks around it — except between zooms 13 and 16, where it stretches from
+ * its normal length to twice that by zoom 16, so an approach fan covers the
+ * water the navigator is actually looking at. The charted range still caps the
+ * result at the call site.
+ */
+export function lightSectorDisplayRadius(zoom, metresPerPixel) {
+  if (!Number.isFinite(zoom) || !Number.isFinite(metresPerPixel) || metresPerPixel <= 0) return 0;
+  const stretch = zoom <= SECTOR_FAN_STRETCH_FROM_ZOOM
+    ? 1
+    : zoom >= SECTOR_FAN_STRETCH_TO_ZOOM
+      ? SECTOR_FAN_STRETCH
+      : 1 + (SECTOR_FAN_STRETCH - 1) * ((zoom - SECTOR_FAN_STRETCH_FROM_ZOOM) / (SECTOR_FAN_STRETCH_TO_ZOOM - SECTOR_FAN_STRETCH_FROM_ZOOM));
+  return Math.max(100, Math.min(12 * 1852, metresPerPixel * SECTOR_FAN_PX * stretch));
+}
+
+export function lightSectorDrawLimits(sector) {
+  const start = sector?.start == null || sector.start === '' ? NaN : Number(sector.start);
+  const end = sector?.end == null || sector.end === '' ? NaN : Number(sector.end);
+  if (Number.isFinite(start) && Number.isFinite(end)) return [start, end];
+  if (String(sector?.category ?? '').toLowerCase() !== 'directional') return null;
+  const orientation = Number(sector?.orientation);
+  if (!Number.isFinite(orientation) || orientation < 0 || orientation > 360) return null;
+  const wrap = (bearing) => ((bearing % 360) + 360) % 360;
+  return [wrap(orientation - DIRECTIONAL_BEAM_HALF_DEGREES), wrap(orientation + DIRECTIONAL_BEAM_HALF_DEGREES)];
+}
+
+/**
+ * Bearing values arrive in several shapes from real OSM data: a plain number,
+ * a number with a degree sign and stray spaces ("023.4 °"), a value outside
+ * the compass ("-20"), or a comma list of boundaries on one record
+ * ("240,300"). Clean and wrap them before anything tries to draw an arc, and
+ * expand a list into the separate sectors it describes.
+ */
+function cleanBearing(value) {
+  if (value === undefined || value === null) return value;
+  const text = String(value).trim();
+  if (text === '') return value;
+  if (/^[+-]?\d+(?:\.\d+)?$/.test(text)) {
+    const number = Number(text);
+    if (number >= 0 && number <= 360) return text;
+    return String(Number((((number % 360) + 360) % 360).toFixed(4)));
+  }
+  const cleaned = text.replace(/[°º]/g, '').replace(/\s+/g, '');
+  const number = Number(cleaned);
+  if (!Number.isFinite(number)) return value;
+  return String(Number((((number % 360) + 360) % 360).toFixed(4)));
+}
+
+function splitBearingList(value) {
+  if (value === undefined || value === null) return [];
+  return String(value)
+    .split(/\s*[,;]\s*/)
+    .map(cleanBearing)
+    .filter((entry) => entry !== undefined && entry !== null && String(entry).trim() !== '');
+}
+
+function expandSectorBearings(sectors) {
+  const expanded = [];
+  let nextSector = sectors.reduce((max, sector) => Math.max(max, sector.sector), 0) + 1;
+  for (const sector of sectors) {
+    const starts = splitBearingList(sector.start);
+    const ends = splitBearingList(sector.end);
+    const count = Math.max(starts.length, ends.length);
+    if (count <= 1) {
+      const start = cleanBearing(sector.start);
+      const end = cleanBearing(sector.end);
+      expanded.push({ ...sector, start, end, orientation: cleanBearing(sector.orientation) });
+      continue;
+    }
+    // One list on each side pairs in order (the usual way a range of bearings
+    // is written); a single value on the other side applies to every pair.
+    for (let index = 0; index < count; index += 1) {
+      const record = {
+        ...sector,
+        sector: index === 0 ? sector.sector : nextSector++,
+        start: starts[index] ?? starts[0] ?? sector.start,
+        end: ends[index] ?? ends[0] ?? sector.end,
+      };
+      if (starts.length > 1 || ends.length > 1) {
+        delete record.orientation;
+      }
+      expanded.push(record);
+    }
+  }
+  return expanded.sort((a, b) => a.sector - b.sector);
+}
+
+export function lightSectorsFromTags(tags) {
   const sectors = new Map();
   const shared = {};
   for (const [key, rawValue] of Object.entries(tags)) {
@@ -448,7 +561,7 @@ function lightSectorsFromTags(tags) {
     else shared[field] = value;
     sectors.set(sector, record);
   }
-  return mergeLightSectors([...sectors.values()].map((sector) => ({ ...shared, ...sector })));
+  return expandSectorBearings(mergeLightSectors([...sectors.values()].map((sector) => ({ ...shared, ...sector }))));
 }
 
 export function distanceMeters(aLat, aLon, bLat, bLon) {

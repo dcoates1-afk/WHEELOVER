@@ -4,7 +4,9 @@ import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import type { ChartFeature } from '../lib/overpass';
-import { distanceMeters, lightSectorArc, mirrorLightSectorBearings } from '../../shared/navaid-core.mjs';
+import { MARINE_AREA_GROUP_META } from '../lib/marineAreas';
+import { markDetailLabel } from '../../shared/mark-detail-core.mjs';
+import { distanceMeters, lightSectorArc, lightSectorDisplayRadius, lightSectorDrawLimits, mirrorLightSectorBearings } from '../../shared/navaid-core.mjs';
 import type { ProtectedAreaFeature } from '../lib/protectedAreas';
 import { ialaRegion, quickInfo, symbolForMark } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
@@ -102,7 +104,9 @@ function sectorColour(value?: string): string {
   const colour = value?.split(/[;,]/)[0]?.trim().toLowerCase();
   if (colour === 'red') return '#e23b3b';
   if (colour === 'green') return '#26a65b';
-  if (colour === 'white') return '#f4f7f8';
+  // A white light is drawn yellow, the way OSM nautical styles do: white
+  // sectors would otherwise disappear into the chart and read as no sector.
+  if (colour === 'white') return '#ffe066';
   if (colour === 'yellow') return '#f4c531';
   if (colour === 'orange') return '#f28c28';
   if (colour === 'blue') return '#3d9bff';
@@ -113,16 +117,16 @@ function sectorColour(value?: string): string {
 
 function addLightSectors(group: L.LayerGroup, mark: Navaid, zoom: number): void {
   for (const sector of mark.lightSectors ?? []) {
-    // Missing limits do not define a reliable wedge. Draw only the explicitly
-    // mapped sector span rather than guessing 0°/360°.
-    if (sector.start == null || sector.end == null) continue;
-    const start = Number(sector.start);
-    const end = Number(sector.end);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start > 360 || end < 0 || end > 360) continue;
+    // Charted limits define a sector; a directional light defines only an
+    // orientation and is drawn as a narrow beam. Mark shards store the raw
+    // records, so this is resolved here rather than only when parsing OSM.
+    const limits = lightSectorDrawLimits(sector);
+    if (!limits) continue;
+    const [start, end] = limits;
     const span = Math.abs(end - start) === 360 ? 360 : (end - start + 360) % 360;
     if (span <= 0 || span > 360) continue;
     const metresPerPixel = 40_075_016.686 * Math.max(0.01, Math.cos(mark.lat * Math.PI / 180)) / (256 * 2 ** zoom);
-    const displayRadius = Math.max(100, Math.min(12 * 1852, metresPerPixel * 72));
+    const displayRadius = lightSectorDisplayRadius(zoom, metresPerPixel);
     const rangeNm = Number(sector.range);
     const radius = Number.isFinite(rangeNm) && rangeNm > 0 ? Math.min(displayRadius, rangeNm * 1852) : displayRadius;
     // Reflect the mapped bearings across the north-south axis, swapping
@@ -1021,10 +1025,41 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       if (map.hasLayer(group)) map.removeLayer(group);
       return;
     }
-    for (const feature of props.protectedAreaFeatures) {
+    const hiddenAreas = props.preferences.hiddenAreaGroups ?? [];
+    // Worldwide OSM areas: protected and conservation designations, reefs,
+    // banks, restricted areas and military ranges, each with its own toggle.
+    for (const feature of props.chartFeatures) {
+      if (feature.type !== 'protected_area') continue;
+      const meta = MARINE_AREA_GROUP_META[feature.areaGroup ?? 'protected'];
+      if (!meta || hiddenAreas.includes(meta.id)) continue;
+      const style: L.PathOptions = {
+        color: meta.colour,
+        weight: 2,
+        opacity: 0.92,
+        dashArray: '7 5',
+        fillColor: meta.fill,
+        fillOpacity: 0.08,
+      };
+      const rings = feature.rings ?? [];
+      const lines = feature.lines ?? [];
+      const layer = rings.length > 0
+        ? L.polygon(rings, style)
+        : L.polyline(lines.length > 0 ? lines : [feature.path], { ...style, fill: false });
+      const rows = Object.entries(feature.properties)
+        .filter(([key]) => key !== 'name' && key !== 'seamark:name')
+        .map(([key, value]) => `<div><strong>${escapePopupText(markDetailLabel(key))}:</strong> ${escapePopupText(value)}</div>`)
+        .join('');
+      layer.bindTooltip(feature.name, { sticky: true, className: 'marnav-tip' });
+      layer.bindPopup(`<strong>${escapePopupText(feature.name)}</strong><div>${escapePopupText(feature.areaLabel ?? meta.label)}</div>${rows ? `<hr>${rows}` : ''}<hr><small>OpenStreetMap (ODbL) · <a href="/disclaimer">Data sources &amp; disclaimer</a> · <a href="${escapePopupText(feature.sourceUrl)}" target="_blank" rel="noopener noreferrer">Source feature ↗</a></small>`, { className: 'reporting-system-popup', maxWidth: 360 });
+      group.addLayer(layer);
+    }
+    // European Natura 2000 sites arrive as complete GeoJSON boundaries from
+    // EMODnet and belong to the conservation group.
+    const showConservation = !hiddenAreas.includes('conservation');
+    for (const feature of showConservation ? props.protectedAreaFeatures : []) {
       const layer = L.geoJSON(feature.geometry as GeoJSON.GeoJsonObject, {
         pane: 'lanes',
-        style: { color: '#8a54c7', weight: 2, opacity: 0.92, dashArray: '7 5', fillColor: '#ad82e5', fillOpacity: 0.08 },
+        style: { color: MARINE_AREA_GROUP_META.conservation.colour, weight: 2, opacity: 0.92, dashArray: '7 5', fillColor: MARINE_AREA_GROUP_META.conservation.fill, fillOpacity: 0.08 },
       });
       const rows = Object.entries(feature.properties).map(([key, value]) => `<div><strong>${escapePopupText(key.replace(/_/g, ' '))}:</strong> ${escapePopupText(value)}</div>`).join('');
       const candidateWrecks = props.marks
@@ -1040,9 +1075,9 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       layer.bindPopup(`<strong>${escapePopupText(feature.name)}</strong>${rows ? `<hr>${rows}` : ''}${nearbyWrecks ? `<hr><strong>Charted wrecks within mapped site geometry (possible association)</strong>${nearbyWrecks}` : ''}<hr><small>Protected-site designation only; it does not establish a boating prohibition. Check site-specific rules with the responsible authority. EMODnet Human Activities / EEA, CC BY 4.0. <a href="${escapePopupText(feature.sourceUrl)}" target="_blank" rel="noopener noreferrer">Dataset information ↗</a></small>`, { className: 'reporting-system-popup', maxWidth: 360 });
       group.addLayer(layer);
     }
-    if (props.protectedAreaFeatures.length > 0) group.addTo(map);
+    if (group.getLayers().length > 0) group.addTo(map);
     else if (map.hasLayer(group)) map.removeLayer(group);
-  }, [props.marks, props.protectedAreaFeatures, props.preferences.overlays.protectedAreas]);
+  }, [props.marks, props.chartFeatures, props.protectedAreaFeatures, props.preferences.overlays.protectedAreas, props.preferences.hiddenAreaGroups]);
 
   // NAVAID markers.
   useEffect(() => {

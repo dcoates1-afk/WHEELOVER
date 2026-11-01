@@ -97,6 +97,27 @@ describe('wreck detail sheet', () => {
     expect(html).toContain('data-mark-annotation="racon"');
   });
 
+  it('lists every mapped sector, including a directional beam, and the remaining detail', () => {
+    const html = render(wreck({
+      category: 'major_light',
+      form: 'landmark',
+      lit: true,
+      lightSectors: [
+        { sector: 1, character: 'Fl', colour: 'white', start: '080', end: '104', range: '13' },
+        { sector: 2, character: 'Iso', colour: 'green', category: 'directional', orientation: '39.8', range: '17', height: '19' },
+      ],
+      details: { 'seamark:light:reference': 'A 0538.1', 'seamark:landmark:structure': 'tower' },
+    }));
+
+    expect(html).toContain('Light sector 1');
+    expect(html).toContain('080°–104°');
+    expect(html).toContain('Light sector 2 (directional)');
+    expect(html).toContain('beam 39.8°');
+    expect(html).toContain('19 m above datum');
+    expect(html).toContain('<dt>Light reference</dt><dd>A 0538.1</dd>');
+    expect(html).toContain('Charted detail · Landmark structure');
+  });
+
   it('renders NOAA ENC Direct GIS attributes with the navigation-safety warning', () => {
     const html = render(wreck({
       id: 'noaa-enc:node/610308',

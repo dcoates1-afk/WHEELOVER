@@ -1,5 +1,6 @@
 import { sanitizeHiddenGroups } from './navaidGroups';
 import { sanitizeHiddenPoiGroups } from './poiGroups';
+import { sanitizeHiddenAreaGroups, type MarineAreaGroup } from './marineAreas';
 
 export type BaseLayerId = 'osm' | 'satellite' | 'nautical' | 'relief' | 'noaa' | 'rnc';
 export type ThemeId = 'day' | 'night' | 'red';
@@ -27,6 +28,8 @@ export interface ChartPreferences {
   hiddenGroups: string[];
   /** Public-place groups the user switched off. */
   hiddenPoiGroups: string[];
+  /** Marine-area groups the user switched off. */
+  hiddenAreaGroups: MarineAreaGroup[];
 }
 
 export const CHART_STORAGE_KEY = 'wheel-over:chart-prefs';
@@ -46,14 +49,18 @@ export const DEFAULT_PREFERENCES: ChartPreferences = {
     soundings: false,
     depthLabels: false,
     pois: false,
-    bridges: false,
-    protectedAreas: false,
+    // Bridges and marine areas are chart context a navigator expects to see, so
+    // they start on. A saved record keeps whatever this device chose: only a
+    // device with no stored value for the key inherits these defaults.
+    bridges: true,
+    protectedAreas: true,
   },
   showAllMarks: false,
   showPosition: false,
   theme: 'day',
   hiddenGroups: [],
   hiddenPoiGroups: [],
+  hiddenAreaGroups: [],
 };
 
 const BASE_IDS: BaseLayerId[] = ['osm', 'satellite', 'nautical', 'relief', 'noaa', 'rnc'];
@@ -65,6 +72,7 @@ function defaults(): ChartPreferences {
     overlays: { ...DEFAULT_PREFERENCES.overlays },
     hiddenGroups: [...DEFAULT_PREFERENCES.hiddenGroups],
     hiddenPoiGroups: [...DEFAULT_PREFERENCES.hiddenPoiGroups],
+    hiddenAreaGroups: [...DEFAULT_PREFERENCES.hiddenAreaGroups],
   };
 }
 
@@ -88,6 +96,7 @@ export function sanitizePreferences(value: unknown): ChartPreferences {
     theme,
     hiddenGroups: sanitizeHiddenGroups(input.hiddenGroups),
     hiddenPoiGroups: sanitizeHiddenPoiGroups(input.hiddenPoiGroups),
+    hiddenAreaGroups: sanitizeHiddenAreaGroups(input.hiddenAreaGroups),
   };
 }
 

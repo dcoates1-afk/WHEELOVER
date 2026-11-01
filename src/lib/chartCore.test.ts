@@ -8,8 +8,12 @@ import {
   cellKey,
   ialaRegion,
   lightSectorArc,
+  lightSectorDisplayRadius,
+  lightSectorDrawLimits,
+  lightSectorsFromTags,
   mirrorLightSectorBearings,
   mergeLightSectors,
+  minZoomFor,
   normalizeElement,
   selectVisibleNavaids,
 } from '../../shared/navaid-core.mjs';
@@ -45,16 +49,16 @@ function mark(overrides: Partial<Navaid> & { category: NavaidCategory }): Navaid
 }
 
 describe('sector light geometry', () => {
-  it('uses north-clockwise bearings, triples the drawn reach and mirrors latitude', () => {
+  it('uses north-clockwise bearings, draws half again the charted reach and mirrors latitude', () => {
     const arc = lightSectorArc(0, 0, 350, 10, 1000, 10);
     expect(arc.length).toBeGreaterThan(2);
-    // The arc reaches three times the supplied radius, so a 1000 m sector is
-    // drawn 3000 m out: ±0.00468° of longitude either side of due north.
-    expect(arc[0][1]).toBeCloseTo(-0.00468, 4);
-    expect(arc.at(-1)![1]).toBeCloseTo(0.00468, 4);
+    // The arc runs half again the supplied radius, so a 1000 m sector is
+    // drawn 1500 m out: ±0.00234° of longitude either side of due north.
+    expect(arc[0][1]).toBeCloseTo(-0.00234, 4);
+    expect(arc.at(-1)![1]).toBeCloseTo(0.00234, 4);
     // Latitude is mirrored about the light, so the sector that crosses north
     // is drawn south of it, while its longitude stays as charted.
-    expect(arc[Math.floor(arc.length / 2)][0]).toBeLessThan(-0.02);
+    expect(arc[Math.floor(arc.length / 2)][0]).toBeLessThan(-0.01);
   });
 
   it('mirrors east and west bearings while keeping north and south fixed', () => {
@@ -71,6 +75,62 @@ describe('sector light geometry', () => {
     expect(lightSectorArc(50, -1, -1, 20, 1000)).toEqual([]);
   });
 
+  // Hurst Point charts three Iso leading lights at 39.8°, 41.3° and 42.8°.
+  // They have an orientation but no limits, so the drawn limits come from the
+  // renderer's helper, which also covers marks read from prebuilt shards.
+  it('draws a directional light as a narrow beam about its orientation', () => {
+    const beams = ['39.8', '41.3', '42.8'].map((orientation) => lightSectorDrawLimits({ category: 'directional', orientation }));
+    for (const [index, beam] of beams.entries()) {
+      const centre = 39.8 + index * 1.5;
+      expect(beam?.[0]).toBeCloseTo(centre - 1.5, 3);
+      expect(beam?.[1]).toBeCloseTo(centre + 1.5, 3);
+    }
+  });
+
+  it('wraps a directional beam that straddles north', () => {
+    const limits = lightSectorDrawLimits({ category: 'directional', orientation: '359' });
+    expect(limits?.[0]).toBeCloseTo(357.5, 3);
+    expect(limits?.[1]).toBeCloseTo(0.5, 3);
+  });
+
+  it('prefers charted sector limits over the orientation', () => {
+    expect(lightSectorDrawLimits({ start: '080', end: '104', orientation: '39.8' })).toEqual([80, 104]);
+  });
+
+  it('reads bearings written with a degree sign and stray spaces', () => {
+    const sectors = lightSectorsFromTags({
+      'seamark:light:1:sector_start': '023.4°',
+      'seamark:light:1:sector_end': '024.3 °',
+    });
+    expect(sectors).toHaveLength(1);
+    expect(lightSectorDrawLimits(sectors[0])?.[0]).toBeCloseTo(23.4, 3);
+    expect(lightSectorDrawLimits(sectors[0])?.[1]).toBeCloseTo(24.3, 3);
+
+    const negative = lightSectorsFromTags({
+      'seamark:light:1:sector_start': '-20',
+      'seamark:light:1:sector_end': '180',
+    });
+    expect(lightSectorDrawLimits(negative[0])).toEqual([340, 180]);
+  });
+
+  it('expands a comma list of bearings into one sector per pair', () => {
+    const sectors = lightSectorsFromTags({
+      'seamark:light:1:character': 'Fl',
+      'seamark:light:1:colour': 'white',
+      'seamark:light:1:sector_start': '240,300',
+      'seamark:light:1:sector_end': '120,285',
+    });
+    expect(sectors).toHaveLength(2);
+    expect(sectors.map((sector) => lightSectorDrawLimits(sector))).toEqual([[240, 120], [300, 285]]);
+    expect(sectors.every((sector) => sector.character === 'Fl')).toBe(true);
+    expect(new Set(sectors.map((sector) => sector.sector)).size).toBe(2);
+  });
+
+  it('draws nothing for a sector with no limits that is not directional', () => {
+    expect(lightSectorDrawLimits({ category: 'leading', orientation: '120' })).toBeNull();
+    expect(lightSectorDrawLimits({ orientation: '120' })).toBeNull();
+  });
+
   it('merges records for each sector without losing unique sectors or filled values', () => {
     expect(mergeLightSectors(
       [{ sector: 1, character: 'Fl', colour: 'red', start: '340' }, { sector: 3, colour: 'green' }],
@@ -85,6 +145,24 @@ describe('sector light geometry', () => {
   it('renders a full-circle sector and north-crossing span', () => {
     expect(lightSectorArc(0, 0, 0, 360, 1000)).toHaveLength(91);
     expect(lightSectorArc(0, 0, 350, 10, 1000)).toHaveLength(6);
+  });
+
+  it('doubles the drawn fan between zoom 13 and zoom 16', () => {
+    const base = lightSectorDisplayRadius(12, 6);
+    expect(lightSectorDisplayRadius(13, 6)).toBeCloseTo(base, 6);
+    expect(lightSectorDisplayRadius(16, 6)).toBeCloseTo(base * 2, 6);
+    expect(lightSectorDisplayRadius(18, 6)).toBeCloseTo(base * 2, 6);
+    // The stretch is linear across the band, not a step at either end.
+    const middle = lightSectorDisplayRadius(14.5, 6);
+    expect(middle).toBeGreaterThan(base);
+    expect(middle).toBeLessThan(base * 2);
+  });
+
+  it('keeps the fan radius a screen length and refuses bad inputs', () => {
+    // Same zoom, half the ground per pixel, half the drawn radius.
+    expect(lightSectorDisplayRadius(11, 12)).toBeCloseTo(lightSectorDisplayRadius(11, 24) / 2, 6);
+    expect(lightSectorDisplayRadius(11, 0)).toBe(0);
+    expect(lightSectorDisplayRadius(Number.NaN, 12)).toBe(0);
   });
 });
 
@@ -167,6 +245,23 @@ describe('classification', () => {
     // role stays a generic range mark.
     expect(role('bearing')).toBe('light');
     expect(role('leading')).toBe('range');
+  });
+
+  it('ranks a landmark carrying a numbered sector light as a major light', () => {
+    // Hurst Point is charted as a landmark whose lights are all numbered sector
+    // records, so it has no unnumbered light character to be recognised by.
+    const hurst = classifyTags({
+      'seamark:type': 'landmark',
+      'man_made': 'lighthouse',
+      'seamark:light:1:character': 'Fl',
+      'seamark:light:1:colour': 'white',
+      'seamark:light:1:sector_start': '080',
+      'seamark:light:1:sector_end': '104',
+    });
+    expect(hurst?.category).toBe('major_light');
+    expect(minZoomFor(hurst!.category)).toBeLessThan(13);
+    // An unlit landmark keeps its landmark rank.
+    expect(classifyTags({ 'seamark:type': 'landmark' })?.category).toBe('landmark');
   });
 
   it('plots wrecks that carry no seamark schema', () => {

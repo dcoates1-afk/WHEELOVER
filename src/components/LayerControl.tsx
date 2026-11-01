@@ -20,6 +20,12 @@ import { STATION_LABELS, STATION_TABS } from '../lib/station';
 import { symbolFor } from '../lib/navaids';
 import { NAVAID_GROUPS, isGroupHidden, toggleGroup } from '../lib/navaidGroups';
 import { POI_GROUPS, isPoiGroupHidden, togglePoiGroup } from '../lib/poiGroups';
+import {
+  MARINE_AREA_GROUPS,
+  MARINE_AREA_GROUP_META,
+  isAreaGroupHidden,
+  toggleAreaGroup,
+} from '../lib/marineAreas';
 import { poiIconSvg } from '../lib/pois';
 import { formatBytes } from '../lib/noaaChart';
 import {
@@ -900,11 +906,56 @@ export function LayerControl({
                   onChange={(value) => setOverlay('bridges', value)}
                 />
                 <ToggleRow
-                  label="Protected sites"
-                  hint="EMODnet Natura 2000 marine designations · zoom 6+ · Europe"
+                  label="Marine areas & restrictions"
+                  hint="Protected sites, conservation designations, reefs, banks, danger areas and ranges · zoom 8+ · worldwide OSM + European Natura 2000"
                   checked={preferences.overlays.protectedAreas}
                   onChange={(value) => setOverlay('protectedAreas', value)}
                 />
+                {preferences.overlays.protectedAreas && (
+                  <>
+                    <p className="menu-note">
+                      Tap a class to show or hide it; the choice is remembered on this device. Mapped outlines are
+                      indicative, not a survey or a legal boundary.
+                    </p>
+                    <ul className="legend-grid poi-legend">
+                      {MARINE_AREA_GROUPS.map((group) => {
+                        const meta = MARINE_AREA_GROUP_META[group];
+                        const hidden = isAreaGroupHidden(preferences.hiddenAreaGroups, group);
+                        return (
+                          <li key={group}>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={!hidden}
+                              aria-label={`${meta.label} — ${hidden ? 'hidden' : 'shown'}`}
+                              className={`legend-item ${hidden ? 'is-off' : ''}`}
+                              data-area-group={group}
+                              onClick={() =>
+                                onChange({
+                                  ...preferences,
+                                  hiddenAreaGroups: toggleAreaGroup(preferences.hiddenAreaGroups, group),
+                                })
+                              }
+                            >
+                              <span className="poi-chip" style={{ background: meta.colour }} aria-hidden="true" />
+                              <span className="legend-label">{meta.label}</span>
+                              <span className="legend-state">{hidden ? 'Off' : 'On'}</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {preferences.hiddenAreaGroups.length > 0 && (
+                      <button
+                        type="button"
+                        className="secondary-button legend-reset"
+                        onClick={() => onChange({ ...preferences, hiddenAreaGroups: [] })}
+                      >
+                        Show every marine-area class
+                      </button>
+                    )}
+                  </>
+                )}
                 <a className="menu-row disclaimer-link" href="/disclaimer" onClick={() => onOpen(false)}>Data sources &amp; disclaimer<span className="chevron" aria-hidden="true">›</span></a>
                 <ToggleRow
                   label="AIS targets"

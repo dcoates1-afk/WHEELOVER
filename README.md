@@ -218,9 +218,174 @@ every seamark, merges duplicates and writes:
 Current build: **3,256 unique aids** from 3,693 raw records, **248 duplicates
 merged**, two regions (Solent & Isle of Wight, New York Harbor), 21 shards.
 
+### Light sector bearings
+
+Sector lights are drawn from two places. The regional bundles above carry sectors
+that were checked against the charted bearings, and they always win. Worldwide
+sectors come from a separate compact index, `public/marine-db/light-sectors/`,
+because the worldwide mark archive was built from a planet snapshot that stored a
+light summary but no per-sector bearings.
+
+`npm run lights:build` parses the Overpass sector-light pull in
+`data-raw/osm-light-sectors.json` into 5° cells keyed by OSM id. The pull uses a
+key regex so it cannot miss sectors that start on light 2 or above:
+
+```
+[out:json][timeout:500];
+(
+  nwr[~"^seamark:light:([0-9]+:)?sector_start$"~"."];
+);
+out center tags;
+```
+
+Each index entry carries its position and `seamark:type`. The chart loads only
+the cells in view and attaches a light to the archive mark with the same OSM id,
+re-ranking an unlit landmark that carries a sector light so it is not held back
+to landmark zoom. Lights whose own id has no archive mark are attached to the
+nearest lit mark or landmark within 250 m instead — a lighthouse is often mapped
+as a multipolygon while the archive holds the structure under another id. Only
+light, lighthouse and beacon types take part (an object carrying light tags but
+no `seamark:type` counts as a light), so a warning signal or daymark is never
+pulled onto a neighbouring buoy.
+
+A handful of charted lights have no archive mark anywhere, because the planet
+snapshot the archive was built from skipped them. `lights:build` reads the
+archive, flags those entries `standalone`, and the chart draws a light mark from
+the index for them, so their sectors appear instead of vanishing. The flag is
+only set when no archive mark sits within 250 m, and the chart still skips a
+standalone light if a mark is plotted at its position, so a newer archive can
+never double one up. Entries also carry any mapped fog signal and radar
+transponder. A light drawn from the index keeps them, and an attached mark whose
+own record has none picks them up, since the archive snapshot stores no signal
+tags at all — only the light's character and sectors.
+
+`npm run lights:verify` audits every built sector record for unusable or missing
+limits, validates the index, and checks that every drawable sector light in the
+pull reached the index. It also splits the entries with no id match into types
+the archive never plots (warning signals, daymarks, topmarks) and lights with no
+mark anywhere, which is the short list worth chasing in OSM.
+
+The index snapshot date is recorded in its manifest; refresh the Overpass pull
+before rebuilding it when the chart needs newer sector data.
+
+### Sound signals and racons
+
+The same archive snapshot carried no sound signal or radar transponder tags at
+all (every `seamark:fog_signal` and `seamark:radar_transponder` tag was dropped),
+so a buoy with a bell or a racon drew without either. Those details are few
+enough worldwide to ship as a second compact index in
+`public/marine-db/signals/`, keyed by OSM id and loaded by viewport.
+
+`npm run signals:build` parses `data-raw/osm-signals.json` into 5° cells. The
+pull unions the presence tag with the detail tags, or a signal recorded only as
+`seamark:fog_signal:category` is lost:
+
+```
+[out:json][timeout:900];
+(
+  nwr["seamark:fog_signal"="yes"];
+  nwr["seamark:fog_signal:category"];
+  nwr["seamark:radar_transponder:category"];
+);
+out center tags;
+```
+
+The chart fills only the details a mark is missing, so a regional record checked
+against the chart always wins. `npm run signals:verify` checks every cell is
+present and counted, rejects entries with no signal or position, and reports how
+many marks gain a sound signal or racon and how many index entries have no
+archive mark to attach to.
+
 The NOAA station indexes used for tides and currents are built the same way:
 `npm run tides:build` writes 3,502 tide stations and `npm run currents:build`
 writes 2,807 current stations into `src/data/`, from NOAA CO-OPS metadata.
+
+### Live coverage lines on the disclaimer page
+
+The disclaimer page (`/disclaimer`) states how much of each worldwide extract is
+loaded, and how old it is, in lines that read their own manifests at runtime with
+`cache: 'no-store'`. None of the lines is hard-coded copy:
+
+- **Light sectors** — in the "Other data limitations" list, under *Light
+  sectors*: "Current extract: *N* sector lights carrying *M* sector bearings —
+  from the OpenStreetMap snapshot of *date*." It reads `count`, `records` and
+  `sourceTimestamp` from `public/marine-db/light-sectors/manifest.json`.
+- **Sound signals and racons** — in its own section on the page: "Current
+  extract: *N* mapped objects — *F* sound signals and *R* radar transponders —
+  from the OpenStreetMap snapshot of *date*." It reads `count`, `fogSignals`,
+  `racons` and `sourceTimestamp` from `public/marine-db/signals/manifest.json`.
+- **Bridges and marine areas** — in the "Bridges and marine areas" section:
+  "Most recent chart view drawn: *B* bridges over tidal water and *A*
+  marine-area outlines — from the OpenStreetMap snapshot of *date*." These
+  overlays are queried per view instead of built into an extract, so the line
+  reads the last successful fetch from `/api/overpass?stats=chart-features`,
+  which the proxy writes to `.marnav-cache/overpass/chart-features-latest.json`.
+  The counts come from the same selection the chart uses
+  (`chartFeaturesFromElements`), so a bridge whose crossing cannot be proven is
+  not counted; `behind` is set when the mirror that answered was further behind
+  than the seven-day limit, and the page then says that view may include
+  superseded features.
+
+A line is only written once its source parses and reports a positive count;
+until then, and when the fetch fails, the page falls back to "The extract's size
+and snapshot date are read from its manifest when this page loads." The date is
+formatted in UTC (en-GB, e.g. 1 November 2026) so a reader west of Greenwich
+never sees the previous day, and every line says plainly that the date is the age
+of the mapped data rather than of the page.
+
+Rebuilding the index is therefore what refreshes the page: `lights:build` or
+`signals:build` rewrites the counts, and the snapshot date moves with the
+Overpass pull the build reads, so no copy needs editing. The two extracts are
+independent, so a fresh sector pull can show a newer date than the signal pull
+until both are rebuilt.
+
+### Bridges over tidal water
+
+The bridge overlay is fetched by viewport through `/api/overpass`
+(`kind=chart-features`) and keeps only crossings of tidal water. Two things kept
+bridges off the chart before:
+
+- **Relations had no geometry.** Large seas, estuaries, harbours and protected
+  areas are multipolygon relations, and an Overpass `out geom` reply puts a
+  relation's geometry on its members, not on the element. The parser now reads
+  every member line, joins member ways into rings where they meet, and tests the
+  bridge against those. Bridges mapped as relations are handled the same way.
+- **Tidal water was too narrowly defined.** Only `tidal=yes` counted, but most
+  tidal water is mapped by what it is: `water=sea|estuary|lagoon|harbour|dock`,
+  `natural=bay|strait`, `waterway=tidal_channel|dock`, or a seamark harbour
+  type. Inland rivers, canals and lakes still do not count, so a bridge over a
+  non-tidal river stays off the overlay. `man_made=bridge` outlines are fetched
+  as well as `bridge=*` ways.
+
+Split ways of one named crossing are coalesced into a single mark within 300 m,
+so a long bridge keeps one clickable label instead of a row of them.
+
+### Marine areas and restrictions
+
+`Marine areas & restrictions` in *Map options* draws mapped outlines around
+protected and restricted water, and each class has its own switch, remembered in
+`wheel-over:chart-prefs` (`hiddenAreaGroups`):
+
+- **Protected areas & reserves** — `boundary=protected_area`,
+  `boundary=national_park`, `leisure=nature_reserve` and `protect_class`, where
+  the designation is an ecological reserve, nature area or similar.
+- **Conservation designations** — the same mapped sites where the wording names
+  a conservation designation: special areas of conservation, special protection
+  areas, marine protected areas, highly protected marine areas, no-take zones,
+  migratory or habitat designations. European Natura 2000 boundaries from
+  EMODnet are drawn in this class too.
+- **Reefs** — `natural=reef`.
+- **Banks & shoals** — `natural=shoal|bank` and the matching seamark types.
+- **Danger & restricted areas** — charted restricted and caution areas.
+- **Military & test areas** — `military=danger_area|training_area|naval_base|test_range|range`
+  and `landuse=military`.
+
+The classification lives in `shared/marine-area-core.mjs`, so the proxy query,
+the chart parser and the menu agree on which switch owns a feature. Popups list
+the feature's mapped tags (designation, protection title, class, operator,
+access, dates, source) and link the OSM object. Coverage is community mapping,
+not a complete inventory, and a mapped boundary is not a legal limit or a
+survey; the disclaimer page states this once for the whole app.
 
 Ingest, classification, dedupe and declutter all live in `shared/navaid-core.mjs`
 and are imported by the app, the tests *and* the builder, so the database and the

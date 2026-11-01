@@ -72,6 +72,20 @@ describe('chart preferences', () => {
     expect(sanitizePreferences({ overlays: { openseamap: false } }).overlays.openseamap).toBe(false);
   });
 
+  it('starts bridges and marine areas on, and keeps a saved off choice', () => {
+    expect(DEFAULT_PREFERENCES.overlays.bridges).toBe(true);
+    expect(DEFAULT_PREFERENCES.overlays.protectedAreas).toBe(true);
+    // No stored value for the keys: the device never chose, so it gets the new
+    // default rather than the off value older builds wrote.
+    const older = sanitizePreferences({ base: 'osm', overlays: { navaids: true } });
+    expect(older.overlays.bridges).toBe(true);
+    expect(older.overlays.protectedAreas).toBe(true);
+    // A stored choice is preserved in both directions.
+    expect(sanitizePreferences({ overlays: { bridges: false } }).overlays.bridges).toBe(false);
+    expect(sanitizePreferences({ overlays: { protectedAreas: false } }).overlays.protectedAreas).toBe(false);
+    expect(sanitizePreferences({ overlays: { bridges: true } }).overlays.bridges).toBe(true);
+  });
+
   it('fills missing overlay keys from an older saved preference', () => {
     const old = sanitizePreferences({ base: 'noaa', overlays: { tss: true } });
     expect(old.overlays.contours).toBe(false);

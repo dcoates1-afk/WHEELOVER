@@ -157,10 +157,20 @@ export const SHOW_ALL_LIMIT: number;
 export const DEFAULT_MARK_LIMIT: number;
 
 export function ialaRegion(lat: number, lon: number): 'A' | 'B';
+export const DIRECTIONAL_BEAM_HALF_DEGREES: number;
+/** Radius, in metres, a sector fan is drawn at before the charted range caps it. */
+export function lightSectorDisplayRadius(zoom: number, metresPerPixel: number): number;
+export function lightSectorDrawLimits(sector: {
+  start?: string | number | null;
+  end?: string | number | null;
+  category?: string | null;
+  orientation?: string | number | null;
+}): [number, number] | null;
 export function mirrorLightSectorBearings(start: number, end: number): [number, number] | null;
 export function lightSectorArc(lat: number, lon: number, start: number, end: number, radiusMeters: number, stepDegrees?: number): [number, number][];
 export function classifyTags(tags: NavaidTagMap): ClassifiedMark | null;
 export function lightText(tags: NavaidTagMap): string | null;
+export function lightSectorsFromTags(tags: NavaidTagMap): NonNullable<Navaid['lightSectors']>;
 export function normalizeElement(
   element: unknown,
   regionId?: string | null,

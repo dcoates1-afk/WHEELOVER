@@ -1,0 +1,3719 @@
+{
+ "schema": 1,
+ "generatedAt": "2026-11-01T19:16:38.525Z",
+ "source": "OpenStreetMap contributors (ODbL)",
+ "sourceTimestamp": "2026-11-01T17:57:55Z",
+ "sources": [
+  {
+   "path": "data-raw\\osm-light-sectors.json",
+   "snapshot": "2026-11-01T17:57:55Z"
+  },
+  {
+   "path": "data-raw\\osm-signals.json",
+   "snapshot": "2026-11-01T17:34:36Z"
+  }
+ ],
+ "count": 10873,
+ "cells": [
+  {
+   "path": "mark-details/10_21.json",
+   "bounds": [
+    -40,
+    -75,
+    -35,
+    -70
+   ],
+   "count": 19
+  },
+  {
+   "path": "mark-details/10_24.json",
+   "bounds": [
+    -40,
+    -60,
+    -35,
+    -55
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/10_59.json",
+   "bounds": [
+    -40,
+    115,
+    -35,
+    120
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/10_63.json",
+   "bounds": [
+    -40,
+    135,
+    -35,
+    140
+   ],
+   "count": 10
+  },
+  {
+   "path": "mark-details/10_64.json",
+   "bounds": [
+    -40,
+    140,
+    -35,
+    145
+   ],
+   "count": 18
+  },
+  {
+   "path": "mark-details/10_65.json",
+   "bounds": [
+    -40,
+    145,
+    -35,
+    150
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/10_66.json",
+   "bounds": [
+    -40,
+    150,
+    -35,
+    155
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/10_70.json",
+   "bounds": [
+    -40,
+    170,
+    -35,
+    175
+   ],
+   "count": 59
+  },
+  {
+   "path": "mark-details/10_71.json",
+   "bounds": [
+    -40,
+    175,
+    -35,
+    180
+   ],
+   "count": 29
+  },
+  {
+   "path": "mark-details/11_21.json",
+   "bounds": [
+    -35,
+    -75,
+    -30,
+    -70
+   ],
+   "count": 11
+  },
+  {
+   "path": "mark-details/11_24.json",
+   "bounds": [
+    -35,
+    -60,
+    -30,
+    -55
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/11_25.json",
+   "bounds": [
+    -35,
+    -55,
+    -30,
+    -50
+   ],
+   "count": 11
+  },
+  {
+   "path": "mark-details/11_39.json",
+   "bounds": [
+    -35,
+    15,
+    -30,
+    20
+   ],
+   "count": 14
+  },
+  {
+   "path": "mark-details/11_40.json",
+   "bounds": [
+    -35,
+    20,
+    -30,
+    25
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/11_41.json",
+   "bounds": [
+    -35,
+    25,
+    -30,
+    30
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/11_42.json",
+   "bounds": [
+    -35,
+    30,
+    -30,
+    35
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/11_59.json",
+   "bounds": [
+    -35,
+    115,
+    -30,
+    120
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/11_63.json",
+   "bounds": [
+    -35,
+    135,
+    -30,
+    140
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/11_66.json",
+   "bounds": [
+    -35,
+    150,
+    -30,
+    155
+   ],
+   "count": 24
+  },
+  {
+   "path": "mark-details/11_70.json",
+   "bounds": [
+    -35,
+    170,
+    -30,
+    175
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/12_14.json",
+   "bounds": [
+    -30,
+    -110,
+    -25,
+    -105
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/12_21.json",
+   "bounds": [
+    -30,
+    -75,
+    -25,
+    -70
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/12_26.json",
+   "bounds": [
+    -30,
+    -50,
+    -25,
+    -45
+   ],
+   "count": 8
+  },
+  {
+   "path": "mark-details/12_39.json",
+   "bounds": [
+    -30,
+    15,
+    -25,
+    20
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/12_42.json",
+   "bounds": [
+    -30,
+    30,
+    -25,
+    35
+   ],
+   "count": 15
+  },
+  {
+   "path": "mark-details/12_58.json",
+   "bounds": [
+    -30,
+    110,
+    -25,
+    115
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/12_66.json",
+   "bounds": [
+    -30,
+    150,
+    -25,
+    155
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/13_0.json",
+   "bounds": [
+    -25,
+    -180,
+    -20,
+    -175
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/13_21.json",
+   "bounds": [
+    -25,
+    -75,
+    -20,
+    -70
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/13_26.json",
+   "bounds": [
+    -25,
+    -50,
+    -20,
+    -45
+   ],
+   "count": 14
+  },
+  {
+   "path": "mark-details/13_27.json",
+   "bounds": [
+    -25,
+    -45,
+    -20,
+    -40
+   ],
+   "count": 15
+  },
+  {
+   "path": "mark-details/13_30.json",
+   "bounds": [
+    -25,
+    -30,
+    -20,
+    -25
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/13_38.json",
+   "bounds": [
+    -25,
+    10,
+    -20,
+    15
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/13_43.json",
+   "bounds": [
+    -25,
+    35,
+    -20,
+    40
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/13_44.json",
+   "bounds": [
+    -25,
+    40,
+    -20,
+    45
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/13_45.json",
+   "bounds": [
+    -25,
+    45,
+    -20,
+    50
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/13_47.json",
+   "bounds": [
+    -25,
+    55,
+    -20,
+    60
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/13_59.json",
+   "bounds": [
+    -25,
+    115,
+    -20,
+    120
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/13_66.json",
+   "bounds": [
+    -25,
+    150,
+    -20,
+    155
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/13_69.json",
+   "bounds": [
+    -25,
+    165,
+    -20,
+    170
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/14_0.json",
+   "bounds": [
+    -20,
+    -180,
+    -15,
+    -175
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/14_1.json",
+   "bounds": [
+    -20,
+    -175,
+    -15,
+    -170
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/14_21.json",
+   "bounds": [
+    -20,
+    -75,
+    -15,
+    -70
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/14_28.json",
+   "bounds": [
+    -20,
+    -40,
+    -15,
+    -35
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/14_34.json",
+   "bounds": [
+    -20,
+    -10,
+    -15,
+    -5
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/14_38.json",
+   "bounds": [
+    -20,
+    10,
+    -15,
+    15
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/14_43.json",
+   "bounds": [
+    -20,
+    35,
+    -15,
+    40
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/14_45.json",
+   "bounds": [
+    -20,
+    45,
+    -15,
+    50
+   ],
+   "count": 10
+  },
+  {
+   "path": "mark-details/14_65.json",
+   "bounds": [
+    -20,
+    145,
+    -15,
+    150
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/14_69.json",
+   "bounds": [
+    -20,
+    165,
+    -15,
+    170
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/14_71.json",
+   "bounds": [
+    -20,
+    175,
+    -15,
+    180
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/15_1.json",
+   "bounds": [
+    -15,
+    -175,
+    -10,
+    -170
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/15_28.json",
+   "bounds": [
+    -15,
+    -40,
+    -10,
+    -35
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/15_44.json",
+   "bounds": [
+    -15,
+    40,
+    -10,
+    45
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/15_45.json",
+   "bounds": [
+    -15,
+    45,
+    -10,
+    50
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/15_46.json",
+   "bounds": [
+    -15,
+    50,
+    -10,
+    55
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/15_60.json",
+   "bounds": [
+    -15,
+    120,
+    -10,
+    125
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/15_62.json",
+   "bounds": [
+    -15,
+    130,
+    -10,
+    135
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/15_66.json",
+   "bounds": [
+    -15,
+    150,
+    -10,
+    155
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/16_28.json",
+   "bounds": [
+    -10,
+    -40,
+    -5,
+    -35
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/16_38.json",
+   "bounds": [
+    -10,
+    10,
+    -5,
+    15
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/16_50.json",
+   "bounds": [
+    -10,
+    70,
+    -5,
+    75
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/16_56.json",
+   "bounds": [
+    -10,
+    100,
+    -5,
+    105
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/16_57.json",
+   "bounds": [
+    -10,
+    105,
+    -5,
+    110
+   ],
+   "count": 10
+  },
+  {
+   "path": "mark-details/16_58.json",
+   "bounds": [
+    -10,
+    110,
+    -5,
+    115
+   ],
+   "count": 8
+  },
+  {
+   "path": "mark-details/16_59.json",
+   "bounds": [
+    -10,
+    115,
+    -5,
+    120
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/16_60.json",
+   "bounds": [
+    -10,
+    120,
+    -5,
+    125
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/16_62.json",
+   "bounds": [
+    -10,
+    130,
+    -5,
+    135
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/16_63.json",
+   "bounds": [
+    -10,
+    135,
+    -5,
+    140
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/16_65.json",
+   "bounds": [
+    -10,
+    145,
+    -5,
+    150
+   ],
+   "count": 10
+  },
+  {
+   "path": "mark-details/16_66.json",
+   "bounds": [
+    -10,
+    150,
+    -5,
+    155
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/16_67.json",
+   "bounds": [
+    -10,
+    155,
+    -5,
+    160
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/16_68.json",
+   "bounds": [
+    -10,
+    160,
+    -5,
+    165
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/16_7.json",
+   "bounds": [
+    -10,
+    -145,
+    -5,
+    -140
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/16_8.json",
+   "bounds": [
+    -10,
+    -140,
+    -5,
+    -135
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/17_24.json",
+   "bounds": [
+    -5,
+    -60,
+    0,
+    -55
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/17_25.json",
+   "bounds": [
+    -5,
+    -55,
+    0,
+    -50
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/17_26.json",
+   "bounds": [
+    -5,
+    -50,
+    0,
+    -45
+   ],
+   "count": 20
+  },
+  {
+   "path": "mark-details/17_27.json",
+   "bounds": [
+    -5,
+    -45,
+    0,
+    -40
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/17_28.json",
+   "bounds": [
+    -5,
+    -40,
+    0,
+    -35
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/17_29.json",
+   "bounds": [
+    -5,
+    -35,
+    0,
+    -30
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/17_38.json",
+   "bounds": [
+    -5,
+    10,
+    0,
+    15
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/17_43.json",
+   "bounds": [
+    -5,
+    35,
+    0,
+    40
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/17_55.json",
+   "bounds": [
+    -5,
+    95,
+    0,
+    100
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/17_56.json",
+   "bounds": [
+    -5,
+    100,
+    0,
+    105
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/17_57.json",
+   "bounds": [
+    -5,
+    105,
+    0,
+    110
+   ],
+   "count": 13
+  },
+  {
+   "path": "mark-details/17_61.json",
+   "bounds": [
+    -5,
+    125,
+    0,
+    130
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/17_62.json",
+   "bounds": [
+    -5,
+    130,
+    0,
+    135
+   ],
+   "count": 11
+  },
+  {
+   "path": "mark-details/17_63.json",
+   "bounds": [
+    -5,
+    135,
+    0,
+    140
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/17_65.json",
+   "bounds": [
+    -5,
+    145,
+    0,
+    150
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/18_25.json",
+   "bounds": [
+    0,
+    -55,
+    5,
+    -50
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/18_26.json",
+   "bounds": [
+    0,
+    -50,
+    5,
+    -45
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/18_34.json",
+   "bounds": [
+    0,
+    -10,
+    5,
+    -5
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/18_35.json",
+   "bounds": [
+    0,
+    -5,
+    5,
+    0
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/18_37.json",
+   "bounds": [
+    0,
+    5,
+    5,
+    10
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/18_55.json",
+   "bounds": [
+    0,
+    95,
+    5,
+    100
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/18_56.json",
+   "bounds": [
+    0,
+    100,
+    5,
+    105
+   ],
+   "count": 56
+  },
+  {
+   "path": "mark-details/18_57.json",
+   "bounds": [
+    0,
+    105,
+    5,
+    110
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/18_58.json",
+   "bounds": [
+    0,
+    110,
+    5,
+    115
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/18_59.json",
+   "bounds": [
+    0,
+    115,
+    5,
+    120
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/18_60.json",
+   "bounds": [
+    0,
+    120,
+    5,
+    125
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/18_61.json",
+   "bounds": [
+    0,
+    125,
+    5,
+    130
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/19_20.json",
+   "bounds": [
+    5,
+    -80,
+    10,
+    -75
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/19_24.json",
+   "bounds": [
+    5,
+    -60,
+    10,
+    -55
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/19_25.json",
+   "bounds": [
+    5,
+    -55,
+    10,
+    -50
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/19_35.json",
+   "bounds": [
+    5,
+    -5,
+    10,
+    0
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/19_36.json",
+   "bounds": [
+    5,
+    0,
+    10,
+    5
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/19_50.json",
+   "bounds": [
+    5,
+    70,
+    10,
+    75
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/19_51.json",
+   "bounds": [
+    5,
+    75,
+    10,
+    80
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/19_52.json",
+   "bounds": [
+    5,
+    80,
+    10,
+    85
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/19_54.json",
+   "bounds": [
+    5,
+    90,
+    10,
+    95
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/19_55.json",
+   "bounds": [
+    5,
+    95,
+    10,
+    100
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/19_56.json",
+   "bounds": [
+    5,
+    100,
+    10,
+    105
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/19_57.json",
+   "bounds": [
+    5,
+    105,
+    10,
+    110
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/19_58.json",
+   "bounds": [
+    5,
+    110,
+    10,
+    115
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/19_59.json",
+   "bounds": [
+    5,
+    115,
+    10,
+    120
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/19_60.json",
+   "bounds": [
+    5,
+    120,
+    10,
+    125
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/19_61.json",
+   "bounds": [
+    5,
+    125,
+    10,
+    130
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/20_19.json",
+   "bounds": [
+    10,
+    -85,
+    15,
+    -80
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/20_21.json",
+   "bounds": [
+    10,
+    -75,
+    15,
+    -70
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/20_22.json",
+   "bounds": [
+    10,
+    -70,
+    15,
+    -65
+   ],
+   "count": 11
+  },
+  {
+   "path": "mark-details/20_23.json",
+   "bounds": [
+    10,
+    -65,
+    15,
+    -60
+   ],
+   "count": 22
+  },
+  {
+   "path": "mark-details/20_31.json",
+   "bounds": [
+    10,
+    -25,
+    15,
+    -20
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/20_32.json",
+   "bounds": [
+    10,
+    -20,
+    15,
+    -15
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/20_44.json",
+   "bounds": [
+    10,
+    40,
+    15,
+    45
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/20_45.json",
+   "bounds": [
+    10,
+    45,
+    15,
+    50
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/20_46.json",
+   "bounds": [
+    10,
+    50,
+    15,
+    55
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/20_50.json",
+   "bounds": [
+    10,
+    70,
+    15,
+    75
+   ],
+   "count": 15
+  },
+  {
+   "path": "mark-details/20_51.json",
+   "bounds": [
+    10,
+    75,
+    15,
+    80
+   ],
+   "count": 8
+  },
+  {
+   "path": "mark-details/20_52.json",
+   "bounds": [
+    10,
+    80,
+    15,
+    85
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/20_54.json",
+   "bounds": [
+    10,
+    90,
+    15,
+    95
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/20_55.json",
+   "bounds": [
+    10,
+    95,
+    15,
+    100
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/20_56.json",
+   "bounds": [
+    10,
+    100,
+    15,
+    105
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/20_57.json",
+   "bounds": [
+    10,
+    105,
+    15,
+    110
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/20_60.json",
+   "bounds": [
+    10,
+    120,
+    15,
+    125
+   ],
+   "count": 19
+  },
+  {
+   "path": "mark-details/20_61.json",
+   "bounds": [
+    10,
+    125,
+    15,
+    130
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/20_64.json",
+   "bounds": [
+    10,
+    140,
+    15,
+    145
+   ],
+   "count": 8
+  },
+  {
+   "path": "mark-details/20_65.json",
+   "bounds": [
+    10,
+    145,
+    15,
+    150
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/21_16.json",
+   "bounds": [
+    15,
+    -100,
+    20,
+    -95
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/21_18.json",
+   "bounds": [
+    15,
+    -90,
+    20,
+    -85
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/21_19.json",
+   "bounds": [
+    15,
+    -85,
+    20,
+    -80
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/21_20.json",
+   "bounds": [
+    15,
+    -80,
+    20,
+    -75
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/21_21.json",
+   "bounds": [
+    15,
+    -75,
+    20,
+    -70
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/21_22.json",
+   "bounds": [
+    15,
+    -70,
+    20,
+    -65
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/21_23.json",
+   "bounds": [
+    15,
+    -65,
+    20,
+    -60
+   ],
+   "count": 21
+  },
+  {
+   "path": "mark-details/21_30.json",
+   "bounds": [
+    15,
+    -30,
+    20,
+    -25
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/21_31.json",
+   "bounds": [
+    15,
+    -25,
+    20,
+    -20
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/21_32.json",
+   "bounds": [
+    15,
+    -20,
+    20,
+    -15
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/21_4.json",
+   "bounds": [
+    15,
+    -160,
+    20,
+    -155
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/21_43.json",
+   "bounds": [
+    15,
+    35,
+    20,
+    40
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/21_46.json",
+   "bounds": [
+    15,
+    50,
+    20,
+    55
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/21_50.json",
+   "bounds": [
+    15,
+    70,
+    20,
+    75
+   ],
+   "count": 14
+  },
+  {
+   "path": "mark-details/21_52.json",
+   "bounds": [
+    15,
+    80,
+    20,
+    85
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/21_54.json",
+   "bounds": [
+    15,
+    90,
+    20,
+    95
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/21_55.json",
+   "bounds": [
+    15,
+    95,
+    20,
+    100
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/21_57.json",
+   "bounds": [
+    15,
+    105,
+    20,
+    110
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/21_58.json",
+   "bounds": [
+    15,
+    110,
+    20,
+    115
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/21_59.json",
+   "bounds": [
+    15,
+    115,
+    20,
+    120
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/21_60.json",
+   "bounds": [
+    15,
+    120,
+    20,
+    125
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/21_65.json",
+   "bounds": [
+    15,
+    145,
+    20,
+    150
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/22_13.json",
+   "bounds": [
+    20,
+    -115,
+    25,
+    -110
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/22_14.json",
+   "bounds": [
+    20,
+    -110,
+    25,
+    -105
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/22_19.json",
+   "bounds": [
+    20,
+    -85,
+    25,
+    -80
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/22_32.json",
+   "bounds": [
+    20,
+    -20,
+    25,
+    -15
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/22_4.json",
+   "bounds": [
+    20,
+    -160,
+    25,
+    -155
+   ],
+   "count": 8
+  },
+  {
+   "path": "mark-details/22_43.json",
+   "bounds": [
+    20,
+    35,
+    25,
+    40
+   ],
+   "count": 11
+  },
+  {
+   "path": "mark-details/22_46.json",
+   "bounds": [
+    20,
+    50,
+    25,
+    55
+   ],
+   "count": 17
+  },
+  {
+   "path": "mark-details/22_47.json",
+   "bounds": [
+    20,
+    55,
+    25,
+    60
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/22_49.json",
+   "bounds": [
+    20,
+    65,
+    25,
+    70
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/22_53.json",
+   "bounds": [
+    20,
+    85,
+    25,
+    90
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/22_54.json",
+   "bounds": [
+    20,
+    90,
+    25,
+    95
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/22_57.json",
+   "bounds": [
+    20,
+    105,
+    25,
+    110
+   ],
+   "count": 11
+  },
+  {
+   "path": "mark-details/22_58.json",
+   "bounds": [
+    20,
+    110,
+    25,
+    115
+   ],
+   "count": 69
+  },
+  {
+   "path": "mark-details/22_59.json",
+   "bounds": [
+    20,
+    115,
+    25,
+    120
+   ],
+   "count": 20
+  },
+  {
+   "path": "mark-details/22_60.json",
+   "bounds": [
+    20,
+    120,
+    25,
+    125
+   ],
+   "count": 17
+  },
+  {
+   "path": "mark-details/23_18.json",
+   "bounds": [
+    25,
+    -90,
+    30,
+    -85
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/23_19.json",
+   "bounds": [
+    25,
+    -85,
+    30,
+    -80
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/23_20.json",
+   "bounds": [
+    25,
+    -80,
+    30,
+    -75
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/23_32.json",
+   "bounds": [
+    25,
+    -20,
+    30,
+    -15
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/23_33.json",
+   "bounds": [
+    25,
+    -15,
+    30,
+    -10
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/23_42.json",
+   "bounds": [
+    25,
+    30,
+    30,
+    35
+   ],
+   "count": 40
+  },
+  {
+   "path": "mark-details/23_43.json",
+   "bounds": [
+    25,
+    35,
+    30,
+    40
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/23_45.json",
+   "bounds": [
+    25,
+    45,
+    30,
+    50
+   ],
+   "count": 22
+  },
+  {
+   "path": "mark-details/23_46.json",
+   "bounds": [
+    25,
+    50,
+    30,
+    55
+   ],
+   "count": 22
+  },
+  {
+   "path": "mark-details/23_47.json",
+   "bounds": [
+    25,
+    55,
+    30,
+    60
+   ],
+   "count": 13
+  },
+  {
+   "path": "mark-details/23_59.json",
+   "bounds": [
+    25,
+    115,
+    30,
+    120
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/23_60.json",
+   "bounds": [
+    25,
+    120,
+    30,
+    125
+   ],
+   "count": 22
+  },
+  {
+   "path": "mark-details/23_61.json",
+   "bounds": [
+    25,
+    125,
+    30,
+    130
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/24_11.json",
+   "bounds": [
+    30,
+    -125,
+    35,
+    -120
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/24_12.json",
+   "bounds": [
+    30,
+    -120,
+    35,
+    -115
+   ],
+   "count": 82
+  },
+  {
+   "path": "mark-details/24_19.json",
+   "bounds": [
+    30,
+    -85,
+    35,
+    -80
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/24_20.json",
+   "bounds": [
+    30,
+    -80,
+    35,
+    -75
+   ],
+   "count": 15
+  },
+  {
+   "path": "mark-details/24_23.json",
+   "bounds": [
+    30,
+    -65,
+    35,
+    -60
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/24_32.json",
+   "bounds": [
+    30,
+    -20,
+    35,
+    -15
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/24_34.json",
+   "bounds": [
+    30,
+    -10,
+    35,
+    -5
+   ],
+   "count": 24
+  },
+  {
+   "path": "mark-details/24_38.json",
+   "bounds": [
+    30,
+    10,
+    35,
+    15
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/24_40.json",
+   "bounds": [
+    30,
+    20,
+    35,
+    25
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/24_41.json",
+   "bounds": [
+    30,
+    25,
+    35,
+    30
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/24_42.json",
+   "bounds": [
+    30,
+    30,
+    35,
+    35
+   ],
+   "count": 18
+  },
+  {
+   "path": "mark-details/24_59.json",
+   "bounds": [
+    30,
+    115,
+    35,
+    120
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/24_60.json",
+   "bounds": [
+    30,
+    120,
+    35,
+    125
+   ],
+   "count": 39
+  },
+  {
+   "path": "mark-details/24_61.json",
+   "bounds": [
+    30,
+    125,
+    35,
+    130
+   ],
+   "count": 35
+  },
+  {
+   "path": "mark-details/24_62.json",
+   "bounds": [
+    30,
+    130,
+    35,
+    135
+   ],
+   "count": 10
+  },
+  {
+   "path": "mark-details/24_63.json",
+   "bounds": [
+    30,
+    135,
+    35,
+    140
+   ],
+   "count": 18
+  },
+  {
+   "path": "mark-details/25_11.json",
+   "bounds": [
+    35,
+    -125,
+    40,
+    -120
+   ],
+   "count": 54
+  },
+  {
+   "path": "mark-details/25_20.json",
+   "bounds": [
+    35,
+    -80,
+    40,
+    -75
+   ],
+   "count": 49
+  },
+  {
+   "path": "mark-details/25_29.json",
+   "bounds": [
+    35,
+    -35,
+    40,
+    -30
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/25_30.json",
+   "bounds": [
+    35,
+    -30,
+    40,
+    -25
+   ],
+   "count": 23
+  },
+  {
+   "path": "mark-details/25_34.json",
+   "bounds": [
+    35,
+    -10,
+    40,
+    -5
+   ],
+   "count": 49
+  },
+  {
+   "path": "mark-details/25_35.json",
+   "bounds": [
+    35,
+    -5,
+    40,
+    0
+   ],
+   "count": 19
+  },
+  {
+   "path": "mark-details/25_36.json",
+   "bounds": [
+    35,
+    0,
+    40,
+    5
+   ],
+   "count": 37
+  },
+  {
+   "path": "mark-details/25_37.json",
+   "bounds": [
+    35,
+    5,
+    40,
+    10
+   ],
+   "count": 35
+  },
+  {
+   "path": "mark-details/25_38.json",
+   "bounds": [
+    35,
+    10,
+    40,
+    15
+   ],
+   "count": 41
+  },
+  {
+   "path": "mark-details/25_39.json",
+   "bounds": [
+    35,
+    15,
+    40,
+    20
+   ],
+   "count": 36
+  },
+  {
+   "path": "mark-details/25_40.json",
+   "bounds": [
+    35,
+    20,
+    40,
+    25
+   ],
+   "count": 123
+  },
+  {
+   "path": "mark-details/25_41.json",
+   "bounds": [
+    35,
+    25,
+    40,
+    30
+   ],
+   "count": 102
+  },
+  {
+   "path": "mark-details/25_42.json",
+   "bounds": [
+    35,
+    30,
+    40,
+    35
+   ],
+   "count": 8
+  },
+  {
+   "path": "mark-details/25_43.json",
+   "bounds": [
+    35,
+    35,
+    40,
+    40
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/25_45.json",
+   "bounds": [
+    35,
+    45,
+    40,
+    50
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/25_46.json",
+   "bounds": [
+    35,
+    50,
+    40,
+    55
+   ],
+   "count": 13
+  },
+  {
+   "path": "mark-details/25_59.json",
+   "bounds": [
+    35,
+    115,
+    40,
+    120
+   ],
+   "count": 22
+  },
+  {
+   "path": "mark-details/25_60.json",
+   "bounds": [
+    35,
+    120,
+    40,
+    125
+   ],
+   "count": 19
+  },
+  {
+   "path": "mark-details/25_61.json",
+   "bounds": [
+    35,
+    125,
+    40,
+    130
+   ],
+   "count": 42
+  },
+  {
+   "path": "mark-details/25_62.json",
+   "bounds": [
+    35,
+    130,
+    40,
+    135
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/25_63.json",
+   "bounds": [
+    35,
+    135,
+    40,
+    140
+   ],
+   "count": 11
+  },
+  {
+   "path": "mark-details/25_64.json",
+   "bounds": [
+    35,
+    140,
+    40,
+    145
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/26_11.json",
+   "bounds": [
+    40,
+    -125,
+    45,
+    -120
+   ],
+   "count": 40
+  },
+  {
+   "path": "mark-details/26_18.json",
+   "bounds": [
+    40,
+    -90,
+    45,
+    -85
+   ],
+   "count": 18
+  },
+  {
+   "path": "mark-details/26_19.json",
+   "bounds": [
+    40,
+    -85,
+    45,
+    -80
+   ],
+   "count": 29
+  },
+  {
+   "path": "mark-details/26_20.json",
+   "bounds": [
+    40,
+    -80,
+    45,
+    -75
+   ],
+   "count": 11
+  },
+  {
+   "path": "mark-details/26_21.json",
+   "bounds": [
+    40,
+    -75,
+    45,
+    -70
+   ],
+   "count": 132
+  },
+  {
+   "path": "mark-details/26_22.json",
+   "bounds": [
+    40,
+    -70,
+    45,
+    -65
+   ],
+   "count": 69
+  },
+  {
+   "path": "mark-details/26_23.json",
+   "bounds": [
+    40,
+    -65,
+    45,
+    -60
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/26_34.json",
+   "bounds": [
+    40,
+    -10,
+    45,
+    -5
+   ],
+   "count": 68
+  },
+  {
+   "path": "mark-details/26_35.json",
+   "bounds": [
+    40,
+    -5,
+    45,
+    0
+   ],
+   "count": 45
+  },
+  {
+   "path": "mark-details/26_36.json",
+   "bounds": [
+    40,
+    0,
+    45,
+    5
+   ],
+   "count": 54
+  },
+  {
+   "path": "mark-details/26_37.json",
+   "bounds": [
+    40,
+    5,
+    45,
+    10
+   ],
+   "count": 116
+  },
+  {
+   "path": "mark-details/26_38.json",
+   "bounds": [
+    40,
+    10,
+    45,
+    15
+   ],
+   "count": 136
+  },
+  {
+   "path": "mark-details/26_39.json",
+   "bounds": [
+    40,
+    15,
+    45,
+    20
+   ],
+   "count": 167
+  },
+  {
+   "path": "mark-details/26_40.json",
+   "bounds": [
+    40,
+    20,
+    45,
+    25
+   ],
+   "count": 20
+  },
+  {
+   "path": "mark-details/26_41.json",
+   "bounds": [
+    40,
+    25,
+    45,
+    30
+   ],
+   "count": 27
+  },
+  {
+   "path": "mark-details/26_42.json",
+   "bounds": [
+    40,
+    30,
+    45,
+    35
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/26_43.json",
+   "bounds": [
+    40,
+    35,
+    45,
+    40
+   ],
+   "count": 13
+  },
+  {
+   "path": "mark-details/26_44.json",
+   "bounds": [
+    40,
+    40,
+    45,
+    45
+   ],
+   "count": 24
+  },
+  {
+   "path": "mark-details/26_45.json",
+   "bounds": [
+    40,
+    45,
+    45,
+    50
+   ],
+   "count": 24
+  },
+  {
+   "path": "mark-details/26_46.json",
+   "bounds": [
+    40,
+    50,
+    45,
+    55
+   ],
+   "count": 24
+  },
+  {
+   "path": "mark-details/26_60.json",
+   "bounds": [
+    40,
+    120,
+    45,
+    125
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/26_62.json",
+   "bounds": [
+    40,
+    130,
+    45,
+    135
+   ],
+   "count": 29
+  },
+  {
+   "path": "mark-details/26_63.json",
+   "bounds": [
+    40,
+    135,
+    45,
+    140
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/26_64.json",
+   "bounds": [
+    40,
+    140,
+    45,
+    145
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/26_65.json",
+   "bounds": [
+    40,
+    145,
+    45,
+    150
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/27_10.json",
+   "bounds": [
+    45,
+    -130,
+    50,
+    -125
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/27_11.json",
+   "bounds": [
+    45,
+    -125,
+    50,
+    -120
+   ],
+   "count": 165
+  },
+  {
+   "path": "mark-details/27_12.json",
+   "bounds": [
+    45,
+    -120,
+    50,
+    -115
+   ],
+   "count": 28
+  },
+  {
+   "path": "mark-details/27_17.json",
+   "bounds": [
+    45,
+    -95,
+    50,
+    -90
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/27_18.json",
+   "bounds": [
+    45,
+    -90,
+    50,
+    -85
+   ],
+   "count": 20
+  },
+  {
+   "path": "mark-details/27_19.json",
+   "bounds": [
+    45,
+    -85,
+    50,
+    -80
+   ],
+   "count": 18
+  },
+  {
+   "path": "mark-details/27_21.json",
+   "bounds": [
+    45,
+    -75,
+    50,
+    -70
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/27_22.json",
+   "bounds": [
+    45,
+    -70,
+    50,
+    -65
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/27_23.json",
+   "bounds": [
+    45,
+    -65,
+    50,
+    -60
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/27_24.json",
+   "bounds": [
+    45,
+    -60,
+    50,
+    -55
+   ],
+   "count": 17
+  },
+  {
+   "path": "mark-details/27_25.json",
+   "bounds": [
+    45,
+    -55,
+    50,
+    -50
+   ],
+   "count": 33
+  },
+  {
+   "path": "mark-details/27_34.json",
+   "bounds": [
+    45,
+    -10,
+    50,
+    -5
+   ],
+   "count": 15
+  },
+  {
+   "path": "mark-details/27_35.json",
+   "bounds": [
+    45,
+    -5,
+    50,
+    0
+   ],
+   "count": 321
+  },
+  {
+   "path": "mark-details/27_36.json",
+   "bounds": [
+    45,
+    0,
+    50,
+    5
+   ],
+   "count": 23
+  },
+  {
+   "path": "mark-details/27_37.json",
+   "bounds": [
+    45,
+    5,
+    50,
+    10
+   ],
+   "count": 101
+  },
+  {
+   "path": "mark-details/27_38.json",
+   "bounds": [
+    45,
+    10,
+    50,
+    15
+   ],
+   "count": 51
+  },
+  {
+   "path": "mark-details/27_39.json",
+   "bounds": [
+    45,
+    15,
+    50,
+    20
+   ],
+   "count": 13
+  },
+  {
+   "path": "mark-details/27_41.json",
+   "bounds": [
+    45,
+    25,
+    50,
+    30
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/27_42.json",
+   "bounds": [
+    45,
+    30,
+    50,
+    35
+   ],
+   "count": 29
+  },
+  {
+   "path": "mark-details/27_43.json",
+   "bounds": [
+    45,
+    35,
+    50,
+    40
+   ],
+   "count": 8
+  },
+  {
+   "path": "mark-details/27_46.json",
+   "bounds": [
+    45,
+    50,
+    50,
+    55
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/27_63.json",
+   "bounds": [
+    45,
+    135,
+    50,
+    140
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/27_64.json",
+   "bounds": [
+    45,
+    140,
+    50,
+    145
+   ],
+   "count": 16
+  },
+  {
+   "path": "mark-details/27_65.json",
+   "bounds": [
+    45,
+    145,
+    50,
+    150
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/28_10.json",
+   "bounds": [
+    50,
+    -130,
+    55,
+    -125
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/28_16.json",
+   "bounds": [
+    50,
+    -100,
+    55,
+    -95
+   ],
+   "count": 9
+  },
+  {
+   "path": "mark-details/28_24.json",
+   "bounds": [
+    50,
+    -60,
+    55,
+    -55
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/28_3.json",
+   "bounds": [
+    50,
+    -165,
+    55,
+    -160
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/28_33.json",
+   "bounds": [
+    50,
+    -15,
+    55,
+    -10
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/28_34.json",
+   "bounds": [
+    50,
+    -10,
+    55,
+    -5
+   ],
+   "count": 112
+  },
+  {
+   "path": "mark-details/28_35.json",
+   "bounds": [
+    50,
+    -5,
+    55,
+    0
+   ],
+   "count": 195
+  },
+  {
+   "path": "mark-details/28_36.json",
+   "bounds": [
+    50,
+    0,
+    55,
+    5
+   ],
+   "count": 478
+  },
+  {
+   "path": "mark-details/28_37.json",
+   "bounds": [
+    50,
+    5,
+    55,
+    10
+   ],
+   "count": 163
+  },
+  {
+   "path": "mark-details/28_38.json",
+   "bounds": [
+    50,
+    10,
+    55,
+    15
+   ],
+   "count": 211
+  },
+  {
+   "path": "mark-details/28_39.json",
+   "bounds": [
+    50,
+    15,
+    55,
+    20
+   ],
+   "count": 28
+  },
+  {
+   "path": "mark-details/28_40.json",
+   "bounds": [
+    50,
+    20,
+    55,
+    25
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/28_64.json",
+   "bounds": [
+    50,
+    140,
+    55,
+    145
+   ],
+   "count": 15
+  },
+  {
+   "path": "mark-details/28_67.json",
+   "bounds": [
+    50,
+    155,
+    55,
+    160
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/28_68.json",
+   "bounds": [
+    50,
+    160,
+    55,
+    165
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/28_9.json",
+   "bounds": [
+    50,
+    -135,
+    55,
+    -130
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/29_34.json",
+   "bounds": [
+    55,
+    -10,
+    60,
+    -5
+   ],
+   "count": 83
+  },
+  {
+   "path": "mark-details/29_35.json",
+   "bounds": [
+    55,
+    -5,
+    60,
+    0
+   ],
+   "count": 107
+  },
+  {
+   "path": "mark-details/29_36.json",
+   "bounds": [
+    55,
+    0,
+    60,
+    5
+   ],
+   "count": 32
+  },
+  {
+   "path": "mark-details/29_37.json",
+   "bounds": [
+    55,
+    5,
+    60,
+    10
+   ],
+   "count": 441
+  },
+  {
+   "path": "mark-details/29_38.json",
+   "bounds": [
+    55,
+    10,
+    60,
+    15
+   ],
+   "count": 663
+  },
+  {
+   "path": "mark-details/29_39.json",
+   "bounds": [
+    55,
+    15,
+    60,
+    20
+   ],
+   "count": 471
+  },
+  {
+   "path": "mark-details/29_40.json",
+   "bounds": [
+    55,
+    20,
+    60,
+    25
+   ],
+   "count": 237
+  },
+  {
+   "path": "mark-details/29_41.json",
+   "bounds": [
+    55,
+    25,
+    60,
+    30
+   ],
+   "count": 30
+  },
+  {
+   "path": "mark-details/29_42.json",
+   "bounds": [
+    55,
+    30,
+    60,
+    35
+   ],
+   "count": 15
+  },
+  {
+   "path": "mark-details/29_65.json",
+   "bounds": [
+    55,
+    145,
+    60,
+    150
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/29_66.json",
+   "bounds": [
+    55,
+    150,
+    60,
+    155
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/29_67.json",
+   "bounds": [
+    55,
+    155,
+    60,
+    160
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/29_68.json",
+   "bounds": [
+    55,
+    160,
+    60,
+    165
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/29_69.json",
+   "bounds": [
+    55,
+    165,
+    60,
+    170
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/29_8.json",
+   "bounds": [
+    55,
+    -140,
+    60,
+    -135
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/29_9.json",
+   "bounds": [
+    55,
+    -135,
+    60,
+    -130
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/30_1.json",
+   "bounds": [
+    60,
+    -175,
+    65,
+    -170
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/30_19.json",
+   "bounds": [
+    60,
+    -85,
+    65,
+    -80
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/30_20.json",
+   "bounds": [
+    60,
+    -80,
+    65,
+    -75
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/30_26.json",
+   "bounds": [
+    60,
+    -50,
+    65,
+    -45
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/30_31.json",
+   "bounds": [
+    60,
+    -25,
+    65,
+    -20
+   ],
+   "count": 30
+  },
+  {
+   "path": "mark-details/30_32.json",
+   "bounds": [
+    60,
+    -20,
+    65,
+    -15
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/30_33.json",
+   "bounds": [
+    60,
+    -15,
+    65,
+    -10
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/30_34.json",
+   "bounds": [
+    60,
+    -10,
+    65,
+    -5
+   ],
+   "count": 34
+  },
+  {
+   "path": "mark-details/30_35.json",
+   "bounds": [
+    60,
+    -5,
+    65,
+    0
+   ],
+   "count": 33
+  },
+  {
+   "path": "mark-details/30_36.json",
+   "bounds": [
+    60,
+    0,
+    65,
+    5
+   ],
+   "count": 136
+  },
+  {
+   "path": "mark-details/30_37.json",
+   "bounds": [
+    60,
+    5,
+    65,
+    10
+   ],
+   "count": 506
+  },
+  {
+   "path": "mark-details/30_38.json",
+   "bounds": [
+    60,
+    10,
+    65,
+    15
+   ],
+   "count": 117
+  },
+  {
+   "path": "mark-details/30_39.json",
+   "bounds": [
+    60,
+    15,
+    65,
+    20
+   ],
+   "count": 157
+  },
+  {
+   "path": "mark-details/30_40.json",
+   "bounds": [
+    60,
+    20,
+    65,
+    25
+   ],
+   "count": 409
+  },
+  {
+   "path": "mark-details/30_41.json",
+   "bounds": [
+    60,
+    25,
+    65,
+    30
+   ],
+   "count": 499
+  },
+  {
+   "path": "mark-details/30_42.json",
+   "bounds": [
+    60,
+    30,
+    65,
+    35
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/30_43.json",
+   "bounds": [
+    60,
+    35,
+    65,
+    40
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/30_44.json",
+   "bounds": [
+    60,
+    40,
+    65,
+    45
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/30_6.json",
+   "bounds": [
+    60,
+    -150,
+    65,
+    -145
+   ],
+   "count": 4
+  },
+  {
+   "path": "mark-details/30_71.json",
+   "bounds": [
+    60,
+    175,
+    65,
+    180
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/31_2.json",
+   "bounds": [
+    65,
+    -170,
+    70,
+    -165
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/31_25.json",
+   "bounds": [
+    65,
+    -55,
+    70,
+    -50
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/31_31.json",
+   "bounds": [
+    65,
+    -25,
+    70,
+    -20
+   ],
+   "count": 18
+  },
+  {
+   "path": "mark-details/31_32.json",
+   "bounds": [
+    65,
+    -20,
+    70,
+    -15
+   ],
+   "count": 14
+  },
+  {
+   "path": "mark-details/31_33.json",
+   "bounds": [
+    65,
+    -15,
+    70,
+    -10
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/31_37.json",
+   "bounds": [
+    65,
+    5,
+    70,
+    10
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/31_38.json",
+   "bounds": [
+    65,
+    10,
+    70,
+    15
+   ],
+   "count": 432
+  },
+  {
+   "path": "mark-details/31_39.json",
+   "bounds": [
+    65,
+    15,
+    70,
+    20
+   ],
+   "count": 226
+  },
+  {
+   "path": "mark-details/31_40.json",
+   "bounds": [
+    65,
+    20,
+    70,
+    25
+   ],
+   "count": 124
+  },
+  {
+   "path": "mark-details/31_41.json",
+   "bounds": [
+    65,
+    25,
+    70,
+    30
+   ],
+   "count": 93
+  },
+  {
+   "path": "mark-details/31_42.json",
+   "bounds": [
+    65,
+    30,
+    70,
+    35
+   ],
+   "count": 17
+  },
+  {
+   "path": "mark-details/31_43.json",
+   "bounds": [
+    65,
+    35,
+    70,
+    40
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/31_44.json",
+   "bounds": [
+    65,
+    40,
+    70,
+    45
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/31_47.json",
+   "bounds": [
+    65,
+    55,
+    70,
+    60
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/31_68.json",
+   "bounds": [
+    65,
+    160,
+    70,
+    165
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/32_39.json",
+   "bounds": [
+    70,
+    15,
+    75,
+    20
+   ],
+   "count": 22
+  },
+  {
+   "path": "mark-details/32_40.json",
+   "bounds": [
+    70,
+    20,
+    75,
+    25
+   ],
+   "count": 84
+  },
+  {
+   "path": "mark-details/32_41.json",
+   "bounds": [
+    70,
+    25,
+    75,
+    30
+   ],
+   "count": 60
+  },
+  {
+   "path": "mark-details/32_42.json",
+   "bounds": [
+    70,
+    30,
+    75,
+    35
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/32_47.json",
+   "bounds": [
+    70,
+    55,
+    75,
+    60
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/32_48.json",
+   "bounds": [
+    70,
+    60,
+    75,
+    65
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/32_51.json",
+   "bounds": [
+    70,
+    75,
+    75,
+    80
+   ],
+   "count": 5
+  },
+  {
+   "path": "mark-details/32_52.json",
+   "bounds": [
+    70,
+    80,
+    75,
+    85
+   ],
+   "count": 17
+  },
+  {
+   "path": "mark-details/33_38.json",
+   "bounds": [
+    75,
+    10,
+    80,
+    15
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/33_39.json",
+   "bounds": [
+    75,
+    15,
+    80,
+    20
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/5_24.json",
+   "bounds": [
+    -65,
+    -60,
+    -60,
+    -55
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/6_22.json",
+   "bounds": [
+    -60,
+    -70,
+    -55,
+    -65
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/7_21.json",
+   "bounds": [
+    -55,
+    -75,
+    -50,
+    -70
+   ],
+   "count": 12
+  },
+  {
+   "path": "mark-details/7_22.json",
+   "bounds": [
+    -55,
+    -70,
+    -50,
+    -65
+   ],
+   "count": 22
+  },
+  {
+   "path": "mark-details/7_23.json",
+   "bounds": [
+    -55,
+    -65,
+    -50,
+    -60
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/7_24.json",
+   "bounds": [
+    -55,
+    -60,
+    -50,
+    -55
+   ],
+   "count": 6
+  },
+  {
+   "path": "mark-details/8_21.json",
+   "bounds": [
+    -50,
+    -75,
+    -45,
+    -70
+   ],
+   "count": 11
+  },
+  {
+   "path": "mark-details/8_22.json",
+   "bounds": [
+    -50,
+    -70,
+    -45,
+    -65
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/8_69.json",
+   "bounds": [
+    -50,
+    165,
+    -45,
+    170
+   ],
+   "count": 7
+  },
+  {
+   "path": "mark-details/8_70.json",
+   "bounds": [
+    -50,
+    170,
+    -45,
+    175
+   ],
+   "count": 8
+  },
+  {
+   "path": "mark-details/9_0.json",
+   "bounds": [
+    -45,
+    -180,
+    -40,
+    -175
+   ],
+   "count": 3
+  },
+  {
+   "path": "mark-details/9_21.json",
+   "bounds": [
+    -45,
+    -75,
+    -40,
+    -70
+   ],
+   "count": 22
+  },
+  {
+   "path": "mark-details/9_23.json",
+   "bounds": [
+    -45,
+    -65,
+    -40,
+    -60
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/9_64.json",
+   "bounds": [
+    -45,
+    140,
+    -40,
+    145
+   ],
+   "count": 2
+  },
+  {
+   "path": "mark-details/9_65.json",
+   "bounds": [
+    -45,
+    145,
+    -40,
+    150
+   ],
+   "count": 23
+  },
+  {
+   "path": "mark-details/9_69.json",
+   "bounds": [
+    -45,
+    165,
+    -40,
+    170
+   ],
+   "count": 1
+  },
+  {
+   "path": "mark-details/9_70.json",
+   "bounds": [
+    -45,
+    170,
+    -40,
+    175
+   ],
+   "count": 64
+  },
+  {
+   "path": "mark-details/9_71.json",
+   "bounds": [
+    -45,
+    175,
+    -40,
+    180
+   ],
+   "count": 2
+  }
+ ]
+}

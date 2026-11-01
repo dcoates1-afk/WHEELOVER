@@ -1,7 +1,7 @@
 {
   "schema": 2,
-  "version": "20261028134024-543d534d43",
-  "generatedAt": "2026-10-28T13:40:24.039Z",
+  "version": "20261101154433-7e296f926e",
+  "generatedAt": "2026-11-01T15:44:33.132Z",
   "cellSize": 0.25,
   "regions": [
     {
@@ -13,7 +13,7 @@
         51.05,
         -0.75
       ],
-      "count": 2118,
+      "count": 2119,
       "sources": [
         "osm",
         "emodnet-heritage"
@@ -37,7 +37,7 @@
             51,
             -1.25
           ],
-          "count": 508
+          "count": 509
         },
         {
           "path": "solent/203_-4.json",
@@ -133,12 +133,12 @@
       "categoryCounts": {
         "gate": 14,
         "facility": 76,
-        "light": 216,
+        "light": 218,
         "marina": 55,
-        "landmark": 7,
-        "major_light": 9,
+        "landmark": 5,
+        "major_light": 11,
         "hazard": 182,
-        "lateral_starboard": 382,
+        "lateral_starboard": 381,
         "lateral_port": 422,
         "wreck": 115,
         "cardinal_south": 29,
@@ -277,8 +277,8 @@
       ],
       "categoryCounts": {
         "marina": 93,
-        "major_light": 13,
-        "landmark": 9,
+        "major_light": 15,
+        "landmark": 7,
         "light": 28,
         "facility": 58,
         "safe_water": 2,
@@ -455,7 +455,7 @@
   ],
   "stats": {
     "rawRecords": 3696,
-    "uniqueAids": 3305,
+    "uniqueAids": 3306,
     "duplicatesRemoved": 202
   }
 }

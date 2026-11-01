@@ -136,7 +136,7 @@ export function marineShardsForBounds(manifest: MarineManifest, layer: MarineLay
   return (manifest.layers[layer]?.shards ?? []).filter((shard) => marineBoundsIntersect(shard.bounds, bounds));
 }
 
-function marineDataUrl(path: string, configuredBase = import.meta.env.VITE_MARINE_DATA_URL): string {
+export function marineDataUrl(path: string, configuredBase = import.meta.env.VITE_MARINE_DATA_URL): string {
   return configuredBase
     ? new URL(path, `${configuredBase.replace(/\/+$/, '')}/`).toString()
     : `/marine-db/${path}`;

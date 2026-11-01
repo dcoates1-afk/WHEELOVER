@@ -26,7 +26,7 @@ import {
 } from './lib/chartPreferences';
 import type { ChartPreferences } from './lib/chartPreferences';
 import { filterNavaidsByGroups } from './lib/navaidGroups';
-import { annotateTransits } from './lib/navaids';
+import { annotateTransits, reconcileLightRank } from './lib/navaids';
 import {
   formatBytes,
   noaaCacheStats,
@@ -45,6 +45,14 @@ import { ialaRegion } from './lib/navaids';
 import type { NavaidManifest } from './lib/navaidDb';
 import { queryChartFeatures, queryNavaids, type ChartFeature } from './lib/overpass';
 import { loadMarineData, type MarineFeature } from './lib/marineDb';
+import {
+  applyLightSectorIndex,
+  loadLightSectors,
+  standaloneLightMarks,
+  type LightSectorEntry,
+} from './lib/lightSectors';
+import { applyMarkSignals, loadMarkSignals, type SignalEntry } from './lib/markSignals';
+import { applyMarkDetailIndex, loadMarkDetails, type MarkDetailEntry } from './lib/markDetails';
 import { loadNatura2000, type ProtectedAreaFeature } from './lib/protectedAreas';
 import { POI_MIN_ZOOM, queryPois } from './lib/pois';
 import type { Poi } from './lib/pois';
@@ -138,6 +146,12 @@ export default function App() {
   const [noaaCovered, setNoaaCovered] = useState(false);
   const [marks, setMarks] = useState<Navaid[]>([]);
   const [worldwideNavaids, setWorldwideNavaids] = useState<Navaid[] | null>(null);
+  // Sector bearings for the worldwide archive marks, loaded by viewport.
+  const [lightSectorIndex, setLightSectorIndex] = useState<Map<string, LightSectorEntry>>(new Map());
+  // Sound signals and racons, which the archive snapshot did not carry.
+  const [markSignalIndex, setMarkSignalIndex] = useState<Map<string, SignalEntry>>(new Map());
+  // The rest of each mark's charted detail, which the archive dropped too.
+  const [markDetailIndex, setMarkDetailIndex] = useState<Map<string, MarkDetailEntry>>(new Map());
   const [pois, setPois] = useState<Poi[]>([]);
   const [marineFeatures, setMarineFeatures] = useState<{ ferries: MarineFeature[]; bridges: MarineFeature[]; tss: MarineFeature[] } | null>(null);
   const [chartFeatures, setChartFeatures] = useState<ChartFeature[]>([]);
@@ -331,6 +345,29 @@ export default function App() {
           // Keep the last successful overlay or checked-in regional bundle on
           // fetch failures; never replace useful chart geometry with emptiness.
         });
+      // Sector bearings are a separate index because the worldwide archive was
+      // built without them. A failure leaves the marks drawn without sectors,
+      // never without the marks.
+      void loadLightSectors(view.bounds, { signal: controller.signal })
+        .then((sectors) => {
+          if (id === marineRequestId.current) setLightSectorIndex(sectors);
+        })
+        .catch(() => {});
+      // Sound signals and racons are indexed separately for the same reason:
+      // the archive snapshot dropped them. A failure leaves the marks without
+      // their bell or racon, never without the mark itself.
+      void loadMarkSignals(view.bounds, { signal: controller.signal })
+        .then((signals) => {
+          if (id === marineRequestId.current) setMarkSignalIndex(signals);
+        })
+        .catch(() => {});
+      // The remaining charted detail — topmark, shape, colours, structure,
+      // heights, light references — is indexed the same way.
+      void loadMarkDetails(view.bounds, { signal: controller.signal })
+        .then((details) => {
+          if (id === marineRequestId.current) setMarkDetailIndex(details);
+        })
+        .catch(() => {});
     }, 250);
     return () => {
       clearTimeout(timer);
@@ -342,19 +379,22 @@ export default function App() {
   const chartFeatureRequestId = useRef(0);
   useEffect(() => {
     const wantsFeatures = preferences.overlays.bridges || preferences.overlays.protectedAreas;
-    if (!wantsFeatures || view.zoom < 8) {
-      setChartFeatures([]);
-      return;
-    }
     const [south, west, north, east] = view.bounds;
-    if (north - south > 2 || east - west > 2) {
+    if (!wantsFeatures || view.zoom < 8 || north - south > 2 || east - west > 2) {
+      // Drop any answer still in flight, so it cannot refill a cleared overlay.
+      chartFeatureRequestId.current += 1;
       setChartFeatures([]);
       return;
     }
-    const id = ++chartFeatureRequestId.current;
-    const controller = new AbortController();
     const timer = setTimeout(() => {
-      void queryChartFeatures(view.bounds, { signal: controller.signal })
+      // Not aborted on a view change: the map settles in several steps, and an
+      // abort on each one left the overlay with no reply at all. Stale answers
+      // are dropped by request id instead, and the proxy caches the query. The
+      // id is taken when the query fires, not when it is scheduled: a render
+      // during the debounce otherwise superseded the reply and left the overlay
+      // empty even though the request had succeeded.
+      const id = ++chartFeatureRequestId.current;
+      void queryChartFeatures(view.bounds)
         .then(({ features }) => {
           if (id === chartFeatureRequestId.current) setChartFeatures(features);
         })
@@ -362,10 +402,7 @@ export default function App() {
           if (id === chartFeatureRequestId.current) setChartFeatures([]);
         });
     }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
+    return () => clearTimeout(timer);
   }, [preferences.overlays.bridges, preferences.overlays.protectedAreas, view]);
 
   const protectedAreaRequestId = useRef(0);
@@ -458,10 +495,22 @@ export default function App() {
       // Booleans are not empty strings, so the field sweep above skips them.
       if (!global.fogSignal && local.fogSignal) enriched.fogSignal = local.fogSignal;
       if (!global.radarReflector && local.radarReflector) enriched.radarReflector = local.radarReflector;
-      merged.set(local.id, enriched);
+      // A light the archive does not record must take the regional class, or it
+      // keeps the archive's unlit rank and stays hidden at low zoom.
+      merged.set(local.id, reconcileLightRank(enriched, local));
     }
-    return annotateTransits(filterNavaidsByGroups([...merged.values()], preferences.hiddenGroups));
-  }, [marks, worldwideNavaids, preferences.hiddenGroups]);
+    // Attach worldwide sector bearings last, so a regional record that already
+    // carries checked sectors keeps them.
+    const withSectors = applyLightSectorIndex([...merged.values()], lightSectorIndex);
+    // A few charted lights have no archive mark at all; their sectors come in
+    // with the index, so the mark is drawn from the index too.
+    const withStandalone = [...withSectors, ...standaloneLightMarks(lightSectorIndex, withSectors)];
+    // Sound signals and racons last, filling only what the mark still lacks.
+    const withSignals = applyMarkSignals(withStandalone, markSignalIndex);
+    // Charted detail fills whatever the mark still has blank.
+    const withDetails = applyMarkDetailIndex(withSignals, markDetailIndex);
+    return annotateTransits(filterNavaidsByGroups(withDetails, preferences.hiddenGroups));
+  }, [marks, worldwideNavaids, lightSectorIndex, markSignalIndex, markDetailIndex, preferences.hiddenGroups]);
 
   const marksInView = useMemo(() => {
     const [south, west, north, east] = view.bounds;

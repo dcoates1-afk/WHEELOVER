@@ -1,9 +1,52 @@
+import { useEffect, useState } from 'react';
 import './landing.css';
 import './disclaimer.css';
+import { marineDataUrl } from './lib/marineDb';
 import { SHIP_REPORTING_SYSTEMS } from './lib/shipReportingSystems';
 
+/** Counts and snapshot date of the sound-signal and racon extract. */
+interface SignalCoverage {
+  count: number;
+  fogSignals: number;
+  racons: number;
+  sourceTimestamp: string | null;
+}
+
+/** Counts and snapshot date of the mark-detail extract. */
+interface MarkDetailCoverage {
+  count: number;
+  sourceTimestamp: string | null;
+}
+
+/** Counts and snapshot date of the sector-light extract. */
+interface SectorCoverage {
+  count: number;
+  records: number;
+  sourceTimestamp: string | null;
+}
+
+/** What the live bridge and marine-area overlays last drew, and from which snapshot. */
+interface ChartFeatureCoverage {
+  bridges: number;
+  areas: number;
+  sourceTimestamp: string | null;
+  /** The mirror that answered was behind current OpenStreetMap data. */
+  behind: boolean;
+}
+
+const formatSnapshot = (value: string | null): string | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  // Snapshot timestamps are UTC; format them in UTC so the date does not shift
+  // by a day just because the reader's device sits west of Greenwich.
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
+};
+
+const number = (value: number): string => value.toLocaleString('en-GB');
+
 const sources = [
-  { name: 'OpenStreetMap', detail: 'Community-mapped chart features, TSS, ferry routes, bridges, and places. © OpenStreetMap contributors; data are available under the Open Database Licence (ODbL), including its attribution and share-alike terms for derived databases.', href: 'https://www.openstreetmap.org/copyright' },
+  { name: 'OpenStreetMap', detail: 'Community-mapped chart features, light sector bearings, sound signals and racons, TSS, ferry routes, bridges, marine protected areas, conservation designations, reefs, banks, restricted areas, military ranges, and places. © OpenStreetMap contributors; data are available under the Open Database Licence (ODbL), including its attribution and share-alike terms for derived databases.', href: 'https://www.openstreetmap.org/copyright' },
   { name: 'Esri — basemaps, imagery and relief', detail: 'World Ocean Base (Esri, Garmin, GEBCO, NOAA NGDC), World Imagery (Esri, Maxar, Earthstar Geographics) and World Shaded Relief (Esri, NOAA, USGS) are served by Esri under its respective terms.', href: 'https://www.esri.com/en-us/legal/terms' },
   { name: 'Shom — France', detail: 'Traffic-separation features from “Traffic separation schemes” (BDML_DST, 2021), Open Licence Etalab v2.0. Required credit: “Shom, 2021. Traffic separation schemes.” Shom metadata says “Do not use for navigation.”', href: 'https://services.data.shom.fr/geonetwork/srv/api/records/BDML_DST.xml' },
   { name: 'Fisheries and Oceans Canada / Canadian Hydrographic Service', detail: 'TSS feature classes from Vessel Traffic Routes. Open Government Licence — Canada permits adaptation and redistribution with source acknowledgement; attribution: “Contains information licensed under the Open Government Licence – Canada.”', href: 'https://open.canada.ca/data/en/dataset/6ab2803a-aace-4e60-83ed-44a7e0ccd1d8' },
@@ -20,6 +63,81 @@ const sources = [
 ];
 
 export default function DisclaimerPage() {
+  // The extract's size and snapshot date are read from its own manifest, so a
+  // rebuilt index updates this page without anyone editing the copy.
+  const [signals, setSignals] = useState<SignalCoverage | null>(null);
+  const [sectors, setSectors] = useState<SectorCoverage | null>(null);
+  const [details, setDetails] = useState<MarkDetailCoverage | null>(null);
+  const [chartFeatures, setChartFeatures] = useState<ChartFeatureCoverage | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const readManifest = (path: string) =>
+      fetch(marineDataUrl(path), { cache: 'no-store' })
+        .then((response) => (response.ok ? response.json() : null))
+        .catch(() => null);
+    void readManifest('signals/manifest.json').then((raw: unknown) => {
+      if (cancelled || !raw || typeof raw !== 'object') return;
+      const manifest = raw as Partial<SignalCoverage>;
+      const count = Number(manifest.count);
+      if (!Number.isFinite(count) || count <= 0) return;
+      setSignals({
+        count,
+        fogSignals: Number(manifest.fogSignals) || 0,
+        racons: Number(manifest.racons) || 0,
+        sourceTimestamp: typeof manifest.sourceTimestamp === 'string' ? manifest.sourceTimestamp : null,
+      });
+    });
+    void readManifest('mark-details/manifest.json').then((raw: unknown) => {
+      if (cancelled || !raw || typeof raw !== 'object') return;
+      const manifest = raw as Partial<MarkDetailCoverage>;
+      const count = Number(manifest.count);
+      if (!Number.isFinite(count) || count <= 0) return;
+      setDetails({
+        count,
+        sourceTimestamp: typeof manifest.sourceTimestamp === 'string' ? manifest.sourceTimestamp : null,
+      });
+    });
+    // Bridges and marine areas are queried per chart view rather than built into
+    // an extract, so the server reports its last successful query instead.
+    const stats = new URL('/api/overpass?stats=chart-features', window.location.origin);
+    void fetch(stats, { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : null))
+      .catch(() => null)
+      .then((raw: unknown) => {
+        if (cancelled || !raw || typeof raw !== 'object') return;
+        const record = raw as { bridges?: unknown; areas?: unknown; sourceTimestamp?: unknown; behind?: unknown };
+        const bridges = Number(record.bridges);
+        const areas = Number(record.areas);
+        if (!Number.isFinite(bridges) || !Number.isFinite(areas) || bridges + areas <= 0) return;
+        const sourceTimestamp = Number(record.sourceTimestamp);
+        setChartFeatures({
+          bridges,
+          areas,
+          sourceTimestamp: Number.isFinite(sourceTimestamp) && sourceTimestamp > 0
+            ? new Date(sourceTimestamp).toISOString()
+            : null,
+          behind: record.behind === true,
+        });
+      });
+    void readManifest('light-sectors/manifest.json').then((raw: unknown) => {
+      if (cancelled || !raw || typeof raw !== 'object') return;
+      const manifest = raw as Partial<SectorCoverage>;
+      const lights = Number(manifest.count);
+      if (!Number.isFinite(lights) || lights <= 0) return;
+      setSectors({
+        count: lights,
+        records: Number(manifest.records) || 0,
+        sourceTimestamp: typeof manifest.sourceTimestamp === 'string' ? manifest.sourceTimestamp : null,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const signalSnapshot = formatSnapshot(signals?.sourceTimestamp ?? null);
+  const detailSnapshot = formatSnapshot(details?.sourceTimestamp ?? null);
+  const sectorSnapshot = formatSnapshot(sectors?.sourceTimestamp ?? null);
+  const chartFeatureSnapshot = formatSnapshot(chartFeatures?.sourceTimestamp ?? null);
   return (
     <main className="disclaimer-page">
       <header className="disclaimer-header">
@@ -47,11 +165,34 @@ export default function DisclaimerPage() {
           <p>Inventory depth fields are historical measurements or estimates with their own, often unclear, reference and precision. They are not clearances, not least depths over the wreck, and not soundings: do not use them to judge whether water is safe. Recorded protection status is as held by the inventory and may be out of date, incomplete, or irrelevant to the jurisdiction that now manages the site, so it cannot establish whether diving, anchoring, fishing or entry is permitted. The paired records were matched when the offline mark database was built, so a record added to the inventory afterwards will not appear.</p>
         </section>
         <section>
+          <h2>Sound signals and racons</h2>
+          <p>Bell, horn, whistle and radar-transponder symbols come from a separate worldwide community-mapped extract. The worldwide mark archive used to draw the chart keeps a light&apos;s character and sectors but carries no sound-signal or radar-transponder tags at all, so these details are attached from that extract when the chart is viewed.</p>
+          <p>{signals
+            ? <>Current extract: {number(signals.count)} mapped objects — {number(signals.fogSignals)} sound signals and {number(signals.racons)} radar transponders{signalSnapshot ? <> — from the OpenStreetMap snapshot of {signalSnapshot}</> : null}.</>
+            : <>The extract&apos;s size and snapshot date are read from its manifest when this page loads.</>} That date is the age of the mapped data, not of this page. Rebuilding the index from a newer extract is what refreshes it.</p>
+          <p>The extract fills in only what a chart mark is missing; a mark&apos;s own record always wins. Its coverage is community mapping, not a complete inventory: aids that carry a real bell, horn or racon but are unmapped show nothing, mapped signals that belong to an object with no chart mark cannot be drawn, and a missing symbol does not establish that an aid is silent or has no transponder. Signals are shown as a movement aid only — they can be decommissioned, seasonal, or operated on demand, so treat the current chart, Light List, sailing directions and notices as authoritative.</p>
+        </section>
+        <section>
+          <h2>Bridges and marine areas</h2>
+          <p>The bridge-clearance and marine-area overlays are not shipped with the app as a fixed extract. Each chart view asks OpenStreetMap for the bridges over tidal water inside it, and for the protected, conservation, reef, bank, restricted and military areas mapped there; the answer is cached and reused for that view.</p>
+          <p>{chartFeatures
+            ? <>Most recent chart view drawn: {number(chartFeatures.bridges)} {chartFeatures.bridges === 1 ? 'bridge' : 'bridges'} over tidal water and {number(chartFeatures.areas)} marine-area outlines{chartFeatureSnapshot ? <> — from the OpenStreetMap snapshot of {chartFeatureSnapshot}</> : null}{chartFeatures.behind ? <>, and the mirror that answered was behind current data, so that view may include superseded features</> : null}.</>
+            : <>The most recent view&apos;s counts and snapshot date are read from the chart server when this page loads.</>} That date is the age of the mapped data, not of this page, and it describes the last view fetched rather than worldwide coverage.</p>
+          <p>A view that has not been fetched yet, or a query the OpenStreetMap mirrors could not answer, draws nothing: an empty overlay means the data is missing, not that a crossing or a designated area is absent.</p>
+        </section>
+        <section>
           <h2>Other data limitations</h2>
           <ul>
             <li><strong>Depths and contours:</strong> modelled or interpolated seabed grids are not surveyed soundings and cannot establish safe depth. Grid resolution, survey density, vertical datum, and shoreline alignment vary by source and region. NOAA ENC displays and converted GIS features still require current official chart use.</li>
             <li><strong>Navigation marks, wrecks, and bridges:</strong> chart-derived, open-data, and community records can have uncertain positions, names, classifications, dates, depth references, clearance values, or status. Heritage and dive information is contextual and does not establish identity, access, or safety.</li>
-            <li><strong>Protected and restricted waters:</strong> a mapped designation boundary does not itself define current access rules or prove a boating prohibition. Restrictions may be seasonal, locally defined, or absent from the displayed data.</li>
+            <li><strong>Mark detail (topmarks, shapes, colours, structure, heights, references):</strong> the worldwide archive keeps only a mark&apos;s name, class and light summary, so the remaining charted detail is attached from a separate community-mapped extract and only fills fields the mark&apos;s own record leaves blank. It is community mapping, not a complete inventory: an unmapped topmark or reference shows nothing, and a blank value does not establish that an aid carries no such feature. {details
+              ? <>Current extract: {number(details.count)} mapped marks{detailSnapshot ? <> — from the OpenStreetMap snapshot of {detailSnapshot}</> : null}. That date is the age of the mapped data, not of this page.</>
+              : <>The extract&apos;s size and snapshot date are read from its manifest when this page loads.</>}</li>
+            <li><strong>Light sectors:</strong> sector bearings come from a separate community-mapped extract, so they can be partial, out of date, or mapped without the limits that would let them be drawn. A drawn arc is not a surveyed light boundary; use the current chart and Light List. {sectors
+              ? <>Current extract: {number(sectors.count)} sector lights carrying {number(sectors.records)} sector bearings{sectorSnapshot ? <> — from the OpenStreetMap snapshot of {sectorSnapshot}</> : null}. That date is the age of the mapped data, not of this page.</>
+              : <>The extract&apos;s size and snapshot date are read from its manifest when this page loads.</>}</li>
+            <li><strong>Sound signals and racons:</strong> drawn only where a community-mapped record exists, matched to the aid by identity and only filling what its own record lacks. Silence or a transponder on one aid says nothing about a neighbouring one; see “Sound signals and racons” above.</li>
+            <li><strong>Marine areas and restrictions:</strong> the overlay draws community-mapped protected areas and reserves, conservation designations (including SACs, SPAs, marine protected areas and no-take sites), reefs, banks and shoals, charted restricted and caution areas, and military danger, training and test areas, together with European Natura 2000 site boundaries. A mapped designation outline does not itself define current access rules or prove a boating prohibition: restrictions may be seasonal, locally defined, mapped as a different designation, or absent from the data, and coverage varies greatly by country. Reefs, banks and ranges are drawn from mapped outlines only and are not a survey. The popups list the mapped tags for the feature; only the official chart, local notices and the managing authority establish a legal limit or a closed area.</li>
             <li><strong>Weather, tides, and currents:</strong> model output and station predictions may differ from conditions at sea. Forecasts, datum, station distance, and rapidly changing conditions matter.</li>
             <li><strong>AIS:</strong> received positions can be delayed, intermittent, or absent. When the relay is in demo mode, plotted traffic is simulated.</li>
             <li><strong>COLREG study notes and ship-reporting systems:</strong> study summaries are not the legal text. Plotted reporting-system extents are informational and may be partial; they do not establish the reporting area or current reporting obligation.</li>

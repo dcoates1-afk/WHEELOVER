@@ -15,6 +15,34 @@ export const CATEGORY_LABELS = RAW_CATEGORY_LABELS as Record<NavaidCategory, str
 export const annotateTransits = RAW_ANNOTATE_TRANSITS as (items: Navaid[]) => Navaid[];
 export { ialaRegion, selectVisibleNavaids };
 
+/**
+ * The worldwide archive carries positions and names but no light records, so a
+ * light that is charted as a building or landmark reaches the chart from the
+ * archive as a lightless landmark. The regional build is the only record that
+ * knows the aid is lit, and its classification has to win: otherwise the mark
+ * keeps the landmark rank and vanishes below its zoom floor even though the
+ * sectors themselves have been merged in.
+ */
+export function reconcileLightRank(archived: Navaid, regional: Navaid): Navaid {
+  const regionalLit = Boolean(regional.lightSectors?.length || regional.light || regional.lightCharacter);
+  if (!regionalLit) return archived;
+  // The archive's own class decides: if it already calls the aid a light, keep
+  // it. A landmark/other class means the archive has no idea the aid is lit.
+  if (LIGHT_CATEGORIES.has(archived.category)) return archived;
+  return {
+    ...archived,
+    category: regional.category,
+    priority: regional.priority,
+    lit: regional.lit,
+    light: regional.light ?? archived.light,
+    lightCharacter: regional.lightCharacter ?? archived.lightCharacter,
+    lightSectors: regional.lightSectors,
+  };
+}
+
+/** Classes that are already ranked as aids carrying a light. */
+const LIGHT_CATEGORIES = new Set<NavaidCategory>(['major_light', 'light', 'range', 'transit_front', 'transit_rear']);
+
 export interface SymbolSpec {
   svg: string;
   label: string;

@@ -8,6 +8,7 @@ import {
 } from '../lib/navaids';
 import type { Navaid, NavaidCategory } from '../lib/navaids';
 import { convertDepth, depthUnitLabel, formatDistance } from '../lib/settings';
+import { markDetailRows } from '../../shared/mark-detail-core.mjs';
 import type { DepthUnit, DistanceUnit } from '../lib/settings';
 
 /**
@@ -125,6 +126,17 @@ export function NavaidSheet({
     mark.diveEntry,
     mark.diveHazard,
   ].some(Boolean);
+  // Charted detail gets its own rows where a navigator looks for it; every
+  // remaining mapped tag stays on the card below, so nothing is dropped.
+  const lightReference = mark.details?.['seamark:light:reference'];
+  const structure = mark.details?.['seamark:structure'];
+  const operator = mark.details?.operator;
+  const website = mark.details?.website ?? mark.details?.['contact:website'];
+  const heritageLink = mark.details?.wikidata ?? mark.details?.wikipedia;
+  const PROMOTED = ['seamark:light:reference', 'seamark:structure', 'operator', 'website', 'contact:website', 'wikidata', 'wikipedia'];
+  const detailRows = markDetailRows(
+    Object.fromEntries(Object.entries(mark.details ?? {}).filter(([key]) => !PROMOTED.includes(key))),
+  );
   const form =
     FORM_LABELS[mark.category] ??
     (mark.form === 'beacon' && mark.lit === false ? 'Unlit beacon (day mark)' : mark.form);
@@ -183,23 +195,38 @@ export function NavaidSheet({
             <Row label="Mark category" value={mark.markCategory} />
           ) : null}
           <Row label="Light character / flash" value={mark.light ? `${mark.light}${mark.lightCategory ? ` · ${mark.lightCategory.replace(/_/g, ' ')}` : ''}` : mark.lightCharacter ?? (mark.lit === false && mark.form === 'beacon' ? 'Unlit daymark' : null)} />
+          <Row label="Light reference" value={lightReference} />
           {mark.lit !== false && mark.form !== 'mark' && !mark.lightCharacter && !mark.light ? <Row label="Light character status" value="Not specified in the mapped source (not assumed steady)" /> : null}
           <Row label="Buoyage system" value={mark.buoyageSystem?.replace(/-/g, ' ').toUpperCase()} />
-          {mark.lightSectors?.map((sector) => (
-            <Row
-              key={`light-sector-${sector.sector}`}
-              label={`Light sector ${sector.sector}`}
-              value={[
-                sector.character,
-                sector.group ? `group ${sector.group}` : null,
-                sector.colour,
-                sector.period ? `${sector.period} s` : null,
-                sector.start && sector.end ? `${sector.start}°–${sector.end}°` : null,
-                sector.range ? `${sector.range} NM` : null,
-                sector.sequence,
-              ].filter(Boolean).join(' · ')}
-            />
-          ))}
+          {mark.lightSectors?.map((sector) => {
+            const directional = sector.category?.toLowerCase() === 'directional';
+            return (
+              <Row
+                key={`light-sector-${sector.sector}`}
+                label={`Light sector ${sector.sector}${directional ? ' (directional)' : ''}`}
+                value={[
+                  sector.character,
+                  sector.group ? `group ${sector.group}` : null,
+                  sector.colour,
+                  sector.period ? `${sector.period} s` : null,
+                  sector.start && sector.end
+                    ? `${sector.start}°–${sector.end}°`
+                    : directional && sector.orientation
+                      ? `beam ${sector.orientation}°`
+                      : null,
+                  sector.range ? `${sector.range} NM` : null,
+                  sector.height ? `${sector.height} m above datum` : null,
+                  sector.category && sector.category.toLowerCase() !== 'directional'
+                    ? sector.category.replace(/_/g, ' ')
+                    : null,
+                  sector.visibility,
+                  sector.sequence,
+                  sector.multiple ? `${sector.multiple} lights` : null,
+                  sector.exhibition ? `exhibition ${sector.exhibition}` : null,
+                ].filter(Boolean).join(' · ')}
+              />
+            );
+          })}
           <Row label="Light colour" value={mark.lightColour} />
           <Row label="Signal group" value={mark.lightGroup} />
           <Row label="Signal period" value={mark.lightPeriod ? `${mark.lightPeriod} s` : null} />
@@ -226,7 +253,11 @@ export function NavaidSheet({
           <Row label="Topmark shape" value={mark.topmarkShape} />
           <Row label="Topmark colour" value={mark.topmarkColour} />
           <Row label="Shape" value={mark.shape} />
+          <Row label="Structure" value={structure} />
           <Row label="Height" value={mark.height} />
+          <Row label="Operator" value={operator} />
+          <Row label="Website" value={website} />
+          <Row label="Heritage reference" value={heritageLink} />
           <Row label="Vertical datum" value={mark.verticalDatum} />
           <Row label="Position quality" value={mark.positionQuality} />
           <Row label="Nominal range" value={mark.range ? `${mark.range} NM` : null} />
@@ -279,6 +310,9 @@ export function NavaidSheet({
                   .join(' · ') || null
               : mark.description
           } />
+          {detailRows.map(([label, value], index) => (
+            <Row key={`charted-detail-${index}-${label}`} label={`Charted detail · ${label}`} value={value} />
+          ))}
           <Row label="Source citation" value={mark.sourceCitation} />
           <Row label="Heritage dataset source" value={mark.wreckInventorySource} />
           {mark.wreckInventoryUrl && <Row label="Heritage dataset metadata" value={mark.wreckInventoryUrl} />}

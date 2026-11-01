@@ -1,5 +1,5 @@
 import type { Navaid } from './navaidTypes';
-import { marineDataUrl } from './marineDb';
+import { loadShardBatch, marineDataUrl } from './marineDb';
 import { markDetailFields } from '../../shared/mark-detail-core.mjs';
 
 /**
@@ -161,12 +161,20 @@ export async function loadMarkDetails(
 ): Promise<Map<string, MarkDetailEntry>> {
   const manifest = await readManifest(options.baseUrl);
   const cells = markDetailCellsForBounds(manifest, bounds);
-  const responses = await Promise.all(
-    cells.map(async (cell) => {
-      const response = await fetch(marineDataUrl(cell.path, options.baseUrl), { signal: options.signal });
-      if (!response.ok) throw new Error(`Mark-detail shard unavailable: ${cell.path}`);
-      return validateMarkDetailCell(await response.json());
-    }),
+  // Skip a cell that cannot be read rather than rejecting the whole index.
+  const responses = await loadShardBatch(
+    cells.map((cell) => cell.path),
+    async (path) => {
+      try {
+        const response = await fetch(marineDataUrl(path, options.baseUrl), { signal: options.signal });
+        if (!response.ok) return null;
+        return validateMarkDetailCell(await response.json());
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        return null;
+      }
+    },
+    options,
   );
   const merged = new Map<string, MarkDetailEntry>();
   for (const entries of responses) {

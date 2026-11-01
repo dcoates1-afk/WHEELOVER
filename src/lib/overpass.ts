@@ -66,6 +66,8 @@ function pointInRing(lon: number, lat: number, ring: number[][]): boolean {
 }
 
 const WATER_CROSSING_TOLERANCE_METERS = 100;
+/** The tolerance in degrees, padded so a pruned pair is never a real crossing. */
+const WATER_CROSSING_TOLERANCE_DEGREES = 0.01;
 
 /** Order the popup reads best in: what it is, then who runs it, then the rest. */
 const PROPERTY_ORDER = [
@@ -177,30 +179,77 @@ function waterPoint(line: Point[]): Point[] {
   return line;
 }
 
+type Area = [number, number, number, number];
+
+function boundsOfPaths(paths: [number, number][][]): Area {
+  let south = Infinity;
+  let west = Infinity;
+  let north = -Infinity;
+  let east = -Infinity;
+  for (const path of paths) {
+    for (const [lat, lon] of path) {
+      if (lat < south) south = lat;
+      if (lat > north) north = lat;
+      if (lon < west) west = lon;
+      if (lon > east) east = lon;
+    }
+  }
+  return [south, west, north, east];
+}
+
+function padArea([south, west, north, east]: Area, pad: number): Area {
+  return [south - pad, west - pad, north + pad, east + pad];
+}
+
+function areasOverlap([south, west, north, east]: Area, [otherSouth, otherWest, otherNorth, otherEast]: Area): boolean {
+  return south <= otherNorth && north >= otherSouth && west <= otherEast && east >= otherWest;
+}
+
 /**
- * Whether a bridge crosses water the tide reaches.
+ * A tidal water body with its joined lines and extent, prepared once.
  *
- * A bridge is often a multipolygon relation, and a sea, estuary or harbour is
- * almost always one, so both sides are read from every line the element holds
- * rather than from a single `geometry` array (which a relation does not have).
- * Water shapes count as areas even when they are not tagged `natural=water`:
- * a mapped bay, harbour basin or sea is still water a boat can float on.
+ * Stitching every water shape for every bridge, and testing every one of its
+ * segments against every bridge segment, is quadratic enough to spend tens of
+ * seconds on a coastal view. Preparing the water once and skipping shapes and
+ * segments whose extent cannot reach the bridge gives the same answer for a
+ * fraction of the work.
  */
-export function bridgeCrossesWater(bridge: RawChartElement, waters: RawChartElement[]): boolean {
-  const bridgePaths = bridgeLines(bridge);
-  if (bridgePaths.length === 0) return false;
-  return waters.some((water) => {
-    const waterTags = water.tags ?? {};
-    if (!isTidalWater(waterTags)) return false;
-    const waterway = waterTags.waterway?.toLowerCase();
-    const waterPaths = stitchPaths(elementPaths(water));
-    if (waterPaths.length === 0) return false;
-    return waterPaths.some((rawLine) => {
-      if (rawLine.length < 2) return false;
+interface PreparedWater {
+  paths: [number, number][][];
+  /** A mapped water surface rather than a centreline. */
+  surface: boolean;
+  bounds: Area;
+}
+
+function prepareWater(water: RawChartElement): PreparedWater | null {
+  const tags = water.tags ?? {};
+  if (!isTidalWater(tags)) return null;
+  const paths = stitchPaths(elementPaths(water));
+  if (paths.length === 0) return null;
+  return {
+    paths,
+    surface: tags.natural === 'water' || tags.waterway?.toLowerCase() === 'riverbank',
+    bounds: boundsOfPaths(paths),
+  };
+}
+
+/**
+ * Whether a bridge's lines meet any prepared water body.
+ *
+ * `bridgeBounds` must be the bridge's own extent; it prunes both whole water
+ * bodies and individual water segments, and the padding is generous against the
+ * 100 m tolerance so a crossing near the bridge's edge is still found.
+ */
+function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area, waters: PreparedWater[]): boolean {
+  const reach = padArea(bridgeBounds, WATER_CROSSING_TOLERANCE_DEGREES);
+  for (const water of waters) {
+    if (!areasOverlap(reach, water.bounds)) continue;
+    for (const rawLine of water.paths) {
+      if (rawLine.length < 2) continue;
       const first = rawLine[0];
       const last = rawLine[rawLine.length - 1];
       const closedRing = rawLine.length >= 4 && Math.abs(first[0] - last[0]) < 1e-9 && Math.abs(first[1] - last[1]) < 1e-9;
-      const waterArea = waterTags.natural === 'water' || waterway === 'riverbank' || closedRing;
+      const waterArea = water.surface || closedRing;
       const line: Point[] = waterPoint(rawLine.map(([lat, lon]) => ({ lat, lon })));
       if (waterArea && line.length >= 3) {
         const ring = line.map(({ lat, lon }) => [lon, lat]);
@@ -220,13 +269,36 @@ export function bridgeCrossesWater(bridge: RawChartElement, waters: RawChartElem
           const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
           const end = { lat: path[index][0], lon: path[index][1] };
           for (let waterIndex = 1; waterIndex < line.length; waterIndex += 1) {
-            if (segmentsWithinTolerance(start, end, line[waterIndex - 1], line[waterIndex])) return true;
+            const from = line[waterIndex - 1];
+            const to = line[waterIndex];
+            // A segment that cannot reach the bridge's extent cannot meet it.
+            if (
+              Math.min(from.lat, to.lat) > reach[2] || Math.max(from.lat, to.lat) < reach[0] ||
+              Math.min(from.lon, to.lon) > reach[3] || Math.max(from.lon, to.lon) < reach[1]
+            ) continue;
+            if (segmentsWithinTolerance(start, end, from, to)) return true;
           }
         }
       }
-      return false;
-    });
-  });
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether a bridge crosses water the tide reaches.
+ *
+ * A bridge is often a multipolygon relation, and a sea, estuary or harbour is
+ * almost always one, so both sides are read from every line the element holds
+ * rather than from a single `geometry` array (which a relation does not have).
+ * Water shapes count as areas even when they are not tagged `natural=water`:
+ * a mapped bay, harbour basin or sea is still water a boat can float on.
+ */
+export function bridgeCrossesWater(bridge: RawChartElement, waters: RawChartElement[]): boolean {
+  const bridgePaths = bridgeLines(bridge);
+  if (bridgePaths.length === 0) return false;
+  const prepared = waters.map(prepareWater).filter((water): water is PreparedWater => water !== null);
+  return bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), prepared);
 }
 
 function keyFor(bounds: Bounds): string {
@@ -313,15 +385,20 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
   bridges: ChartFeature[];
   areas: ChartFeature[];
 } {
-  const waterWays = elements.filter((element) => isTidalWater(element.tags));
+  const waterWays = elements
+    .map(prepareWater)
+    .filter((water): water is PreparedWater => water !== null);
   const bridges: ChartFeature[] = [];
   const areas: ChartFeature[] = [];
   for (const element of elements) {
     const tags = element.tags ?? {};
     const wayLike = element.type === 'way' || element.type === 'relation';
-    const bridge = wayLike &&
-      (tags['seamark:type'] === 'bridge' || Boolean(tags.bridge && tags.bridge !== 'no') || tags['man_made'] === 'bridge') &&
-      bridgeCrossesWater(element, waterWays);
+    const bridgePaths = wayLike &&
+      (tags['seamark:type'] === 'bridge' || Boolean(tags.bridge && tags.bridge !== 'no') || tags['man_made'] === 'bridge')
+      ? bridgeLines(element)
+      : [];
+    const bridge = bridgePaths.length > 0 &&
+      bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), waterWays);
     const area = classifyMarineArea(tags);
     if (!bridge && !area) continue;
     const paths = elementPaths(element);

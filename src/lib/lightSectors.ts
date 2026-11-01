@@ -1,5 +1,5 @@
 import type { Navaid } from './navaidTypes';
-import { marineDataUrl } from './marineDb';
+import { loadShardBatch, marineDataUrl } from './marineDb';
 import { fillSignalDetails, signalDetailsMissing } from './signalDetails';
 
 /**
@@ -148,15 +148,33 @@ export async function loadLightSectors(
   options: { signal?: AbortSignal; baseUrl?: string } = {},
 ): Promise<Map<string, LightSectorEntry>> {
   const manifest = await readManifest(options.baseUrl);
-  const cells = lightSectorCellsForBounds(manifest, bounds);
-  const responses = await Promise.all(
-    cells.map(async (cell) => {
-      const response = await fetch(marineDataUrl(cell.path, options.baseUrl), { signal: options.signal });
-      if (!response.ok) throw new Error(`Light-sector shard unavailable: ${cell.path}`);
-      return validateLightSectorCell(await response.json());
-    }),
-  );
+  return readSectorCells(lightSectorCellsForBounds(manifest, bounds), options);
+}
+
+/**
+ * Read the cells with a bounded number of requests in flight, skipping any that
+ * fail. A single unreadable cell used to reject the whole index, which removed
+ * every light sector on the chart instead of the sectors for that one cell.
+ */
+async function readSectorCells(
+  cells: LightSectorCell[],
+  options: { signal?: AbortSignal; baseUrl?: string },
+): Promise<Map<string, LightSectorEntry>> {
   const merged = new Map<string, LightSectorEntry>();
+  const responses = await loadShardBatch(
+    cells.map((cell) => cell.path),
+    async (path) => {
+      try {
+        const response = await fetch(marineDataUrl(path, options.baseUrl), { signal: options.signal });
+        if (!response.ok) return null;
+        return validateLightSectorCell(await response.json());
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        return null;
+      }
+    },
+    options,
+  );
   for (const entries of responses) {
     if (!entries) continue;
     for (const [id, entry] of entries) merged.set(id, entry);

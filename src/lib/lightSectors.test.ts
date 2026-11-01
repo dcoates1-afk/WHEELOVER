@@ -4,6 +4,7 @@ import {
   applyLightSectorIndex,
   applyLightSectors,
   lightSectorCellsForBounds,
+  loadLightSectors,
   standaloneLightMarks,
   validateLightSectorCell,
   validateLightSectorManifest,
@@ -318,5 +319,28 @@ describe('attaching sectors to archive marks', () => {
     const signal: LightSectorEntry = { ...entry, type: 'signal_station_warning', lat: 50.7, lon: -1.55 };
     const marks = [target];
     expect(applyLightSectorIndex(marks, new Map([['osm:node/99', signal]]))).toBe(marks);
+  });
+});
+
+describe('loading the sector index', () => {
+  it('keeps the cells it could read when one cell fails', async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('light-sectors/manifest.json')) {
+        return new Response(JSON.stringify(manifest), { status: 200 });
+      }
+      if (url.endsWith('light-sectors/51_70.json')) {
+        return new Response(JSON.stringify({ lights: { 'osm:node/1': entry } }), { status: 200 });
+      }
+      // The second cell, and any retry of it, is unavailable.
+      return new Response('', { status: 503 });
+    }) as typeof fetch;
+    try {
+      const sectors = await loadLightSectors([-40, -75, 55, -5]);
+      expect([...sectors.keys()]).toEqual(['osm:node/1']);
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 });

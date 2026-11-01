@@ -353,6 +353,29 @@ function tssStyle(type: string): L.PolylineOptions {
       return { color: '#f4faff', weight: 1.8, opacity: 0.9, dashArray: '12 7', pane: 'lanes' };
     case 'separation_line':
       return { color: '#ff7ad1', weight: 1.9, opacity: 0.9, dashArray: '10 6', pane: 'lanes' };
+    // Crossing and roundabout features used to fall through to the pale default
+    // below, which is all but invisible over a light chart, so these mapped
+    // schemes read as missing lanes.
+    case 'separation_crossing':
+      return {
+        color: '#9ef27a',
+        weight: 2,
+        opacity: 0.95,
+        dashArray: '6 4',
+        fillColor: '#9ef27a',
+        fillOpacity: 0.14,
+        pane: 'lanes',
+      };
+    case 'separation_roundabout':
+      return {
+        color: '#7ad9ff',
+        weight: 2,
+        opacity: 0.95,
+        dashArray: '8 5',
+        fillColor: '#7ad9ff',
+        fillOpacity: 0.16,
+        pane: 'lanes',
+      };
     default:
       return { color: '#e2f2fb', weight: 1.5, opacity: 0.8, dashArray: '2 6', pane: 'lanes' };
   }

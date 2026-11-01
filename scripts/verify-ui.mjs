@@ -11,9 +11,12 @@
  */
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const baseUrl = process.argv[2] ?? 'http://127.0.0.1:3000';
-const artifacts = new URL('../artifacts/', import.meta.url).pathname;
+// fileURLToPath keeps Windows drive letters intact: a bare URL pathname starts
+// with "/C:/", which mkdir turns into a literal "C:" directory on the drive.
+const artifacts = fileURLToPath(new URL('../artifacts/', import.meta.url));
 mkdirSync(artifacts, { recursive: true });
 
 const results = [];
@@ -96,7 +99,10 @@ async function run() {
   };
   recordBounds(page, sentBounds);
 
-  await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
+  // The marketing page owns "/"; the chart app lives at "/app".
+  await page.goto(new URL('app', baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString(), {
+    waitUntil: 'domcontentloaded',
+  });
   await waitForChart(page);
 
   // 1. Phone layout

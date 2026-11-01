@@ -1,5 +1,5 @@
 import type { Navaid } from './navaidTypes';
-import { marineDataUrl } from './marineDb';
+import { loadShardBatch, marineDataUrl } from './marineDb';
 import { fillSignalDetails, signalDetailsMissing, type SignalDetails } from './signalDetails';
 
 /**
@@ -120,12 +120,21 @@ export async function loadMarkSignals(
 ): Promise<Map<string, SignalEntry>> {
   const manifest = await readManifest(options.baseUrl);
   const cells = signalCellsForBounds(manifest, bounds);
-  const responses = await Promise.all(
-    cells.map(async (cell) => {
-      const response = await fetch(marineDataUrl(cell.path, options.baseUrl), { signal: options.signal });
-      if (!response.ok) throw new Error(`Mark-signal shard unavailable: ${cell.path}`);
-      return validateSignalCell(await response.json());
-    }),
+  // A cell that cannot be read is skipped: one bad request used to reject the
+  // whole index and strip every bell, horn and racon from the chart.
+  const responses = await loadShardBatch(
+    cells.map((cell) => cell.path),
+    async (path) => {
+      try {
+        const response = await fetch(marineDataUrl(path, options.baseUrl), { signal: options.signal });
+        if (!response.ok) return null;
+        return validateSignalCell(await response.json());
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        return null;
+      }
+    },
+    options,
   );
   const merged = new Map<string, SignalEntry>();
   for (const entries of responses) {

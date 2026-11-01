@@ -142,12 +142,106 @@ export function marineDataUrl(path: string, configuredBase = import.meta.env.VIT
     : `/marine-db/${path}`;
 }
 
+/**
+ * The manifest is the index for every shard, and it is over a megabyte. It only
+ * changes when the archive is rebuilt, so it is read once per session instead of
+ * on every pan: refetching it made each view wait for the index before any lane
+ * or mark could be requested.
+ */
+const manifestCache = new Map<string, Promise<MarineManifest>>();
+
+function manifestKey(baseUrl?: string): string {
+  return baseUrl ?? '';
+}
+
 async function readManifest(baseUrl?: string): Promise<MarineManifest> {
-  const response = await fetch(marineDataUrl('manifest.json', baseUrl), { cache: 'no-store' });
-  if (!response.ok) throw new Error(`Marine data manifest unavailable (HTTP ${response.status})`);
-  const manifest = validateMarineManifest(await response.json());
-  if (!manifest) throw new Error('Marine data manifest is invalid');
-  return manifest;
+  const key = manifestKey(baseUrl);
+  const cached = manifestCache.get(key);
+  if (cached) {
+    try {
+      return await cached;
+    } catch {
+      manifestCache.delete(key);
+    }
+  }
+  const request = (async () => {
+    const response = await fetch(marineDataUrl('manifest.json', baseUrl), { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Marine data manifest unavailable (HTTP ${response.status})`);
+    const manifest = validateMarineManifest(await response.json());
+    if (!manifest) throw new Error('Marine data manifest is invalid');
+    return manifest;
+  })();
+  manifestCache.set(key, request);
+  request.catch(() => manifestCache.delete(key));
+  return request;
+}
+
+/** Test and reload hook: forget the cached index so the next call re-reads it. */
+export function clearMarineManifestCache(): void {
+  manifestCache.clear();
+}
+
+/**
+ * How many shard requests a single view keeps in flight. A wide view can
+ * intersect hundreds of cells, and firing them all at once starves the browser's
+ * per-origin connection pool: the archive requests queue behind each other, the
+ * slowest ones time out, and the view is left with gaps where lanes and marks
+ * should be. A short queue keeps the same data with far fewer failures.
+ */
+export const SHARD_CONCURRENCY = 6;
+
+/**
+ * Run an async reader over every path with a bounded number in flight. A path
+ * that fails is skipped: one unreadable cell leaves a gap, while rejecting the
+ * batch used to discard every lane, mark or sector on screen because one request
+ * out of a hundred timed out.
+ */
+export async function loadShardBatch<T>(
+  paths: readonly string[],
+  read: (path: string) => Promise<T | null>,
+  options: { signal?: AbortSignal } = {},
+): Promise<T[]> {
+  const results: T[] = [];
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const index = next;
+      next += 1;
+      if (index >= paths.length) return;
+      if (options.signal?.aborted) return;
+      const value = await read(paths[index]);
+      if (value !== null) results.push(value);
+    }
+  };
+  const workers = Array.from(
+    { length: Math.min(SHARD_CONCURRENCY, paths.length) },
+    () => worker(),
+  );
+  await Promise.all(workers);
+  return results;
+}
+
+/**
+ * One shard, with a single retry. A shard that still fails reads as empty rather
+ * than failing the whole view.
+ */
+async function readShard(
+  path: string,
+  options: { signal?: AbortSignal; baseUrl?: string },
+): Promise<MarineFeature[]> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(marineDataUrl(path, options.baseUrl), { signal: options.signal });
+      if (!response.ok) throw new Error(`Marine data shard unavailable: ${path}`);
+      const payload = (await response.json()) as { features?: unknown };
+      return Array.isArray(payload.features) ? (payload.features as MarineFeature[]) : [];
+    } catch (error) {
+      // An aborted view is a deliberate cancellation, not a flaky request.
+      if (options.signal?.aborted) throw error;
+      if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
+  return [];
 }
 
 export async function loadMarineData(
@@ -158,13 +252,10 @@ export async function loadMarineData(
   const result: Record<MarineLayer, MarineFeature[]> = { navaids: [], ferries: [], bridges: [], tss: [] };
   for (const layer of ['navaids', 'ferries', 'bridges', 'tss'] as const) {
     const shards = marineShardsForBounds(manifest, layer, bounds);
-    const responses = await Promise.all(
-      shards.map(async (shard) => {
-        const response = await fetch(marineDataUrl(shard.path, options.baseUrl), { signal: options.signal });
-        if (!response.ok) throw new Error(`Marine data shard unavailable: ${shard.path}`);
-        const payload = (await response.json()) as { features?: unknown };
-        return Array.isArray(payload.features) ? (payload.features as MarineFeature[]) : [];
-      }),
+    const responses = await loadShardBatch(
+      shards.map((shard) => shard.path),
+      (path) => readShard(path, options),
+      options,
     );
     const seen = new Set<string>();
     for (const features of responses) {

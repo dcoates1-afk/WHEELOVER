@@ -111,6 +111,17 @@ describe('water-crossing bridge detection', () => {
       [{ type: 'way', tags: { waterway: 'river' }, geometry: [{ lat: 51, lon: -1.01 }, { lat: 51.001, lon: -1.01 }] }],
     )).toBe(false);
   });
+
+  it('keeps a bridge crossing a long channel whose segments run well past it', () => {
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 51, lon: -0.9 }, { lat: 51, lon: -1.1 }] },
+      [{
+        type: 'way',
+        tags: { waterway: 'tidal_channel', name: 'Long approach channel' },
+        geometry: [{ lat: 49, lon: -1 }, { lat: 53, lon: -1 }],
+      }],
+    )).toBe(true);
+  });
 });
 
 describe('chart feature popup data', () => {

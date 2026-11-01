@@ -45,12 +45,16 @@ function mark(overrides: Partial<Navaid> & { category: NavaidCategory }): Navaid
 }
 
 describe('sector light geometry', () => {
-  it('uses north-clockwise bearings and wraps sectors through north', () => {
+  it('uses north-clockwise bearings, triples the drawn reach and mirrors latitude', () => {
     const arc = lightSectorArc(0, 0, 350, 10, 1000, 10);
     expect(arc.length).toBeGreaterThan(2);
-    expect(arc[0][1]).toBeCloseTo(-0.00157, 4);
-    expect(arc.at(-1)![1]).toBeCloseTo(0.00157, 4);
-    expect(arc[Math.floor(arc.length / 2)][0]).toBeGreaterThan(0.008);
+    // The arc reaches three times the supplied radius, so a 1000 m sector is
+    // drawn 3000 m out: ±0.00468° of longitude either side of due north.
+    expect(arc[0][1]).toBeCloseTo(-0.00468, 4);
+    expect(arc.at(-1)![1]).toBeCloseTo(0.00468, 4);
+    // Latitude is mirrored about the light, so the sector that crosses north
+    // is drawn south of it, while its longitude stays as charted.
+    expect(arc[Math.floor(arc.length / 2)][0]).toBeLessThan(-0.02);
   });
 
   it('mirrors east and west bearings while keeping north and south fixed', () => {

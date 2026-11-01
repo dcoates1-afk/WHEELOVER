@@ -408,18 +408,25 @@ export default function App() {
   const protectedAreaRequestId = useRef(0);
   useEffect(() => {
     if (!preferences.overlays.protectedAreas || view.zoom < 6) {
+      // Drop any answer still in flight, so it cannot refill a cleared overlay.
+      protectedAreaRequestId.current += 1;
       setProtectedAreaFeatures([]);
       return;
     }
     const [south, west, north, east] = view.bounds;
     if (north - south > 2 || east - west > 2) {
+      protectedAreaRequestId.current += 1;
       setProtectedAreaFeatures([]);
       return;
     }
-    const id = ++protectedAreaRequestId.current;
-    const controller = new AbortController();
     const timer = setTimeout(() => {
-      void loadNatura2000(view.bounds, controller.signal)
+      // Same rule as the bridge overlay: the id is taken when the query fires
+      // and only a newer query supersedes an answer. Scheduling the id instead
+      // let a render during the debounce cancel the reply, and aborting on every
+      // re-run lost requests outright, so a successful fetch could leave the
+      // overlay empty. A superseded answer is dropped by id, not aborted.
+      const id = ++protectedAreaRequestId.current;
+      void loadNatura2000(view.bounds)
         .then((features) => {
           if (id === protectedAreaRequestId.current) setProtectedAreaFeatures(features);
         })
@@ -427,10 +434,7 @@ export default function App() {
           if (id === protectedAreaRequestId.current) setProtectedAreaFeatures([]);
         });
     }, 450);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
+    return () => clearTimeout(timer);
   }, [preferences.overlays.protectedAreas, view]);
 
   // Public places follow the viewport and only load once a harbour-scale view

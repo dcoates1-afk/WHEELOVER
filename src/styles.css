@@ -519,26 +519,41 @@ ul {
 
 .bridge-card dl {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 3px 16px;
   margin: 0;
 }
 
+/* Two columns only when the card itself is wide enough to hold them: on a
+   phone the popup is clamped to the map width, and two columns squeezed
+   labels into values and split words mid-word. The popup content is the
+   query container, so this follows the card's own width on any device. */
+.bridge-popup .leaflet-popup-content {
+  container-type: inline-size;
+}
+
+@container (min-width: 480px) {
+  .bridge-card dl {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .bridge-card dl > div {
   display: grid;
-  grid-template-columns: minmax(0, 42%) minmax(0, 58%);
-  gap: 6px;
+  grid-template-columns: minmax(0, 40%) minmax(0, 1fr);
+  gap: 10px;
 }
 
 .bridge-card dt {
   color: #8fb2c4;
+  overflow-wrap: break-word;
 }
 
 .bridge-card dd {
   margin: 0;
   text-align: right;
   color: #eaf6fb;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .bridge-card section {

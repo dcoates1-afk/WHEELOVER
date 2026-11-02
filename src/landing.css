@@ -92,7 +92,51 @@ body:has(.site-home) { background: var(--home-bg); color: var(--home-ink); font-
 .appview-status { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding: 11px 16px; border-top: 1px solid rgba(224, 240, 231, .18); background: rgba(6, 26, 33, .92); color: #c5d8d3; font: 8px var(--home-mono); }
 .appview-status .status-dot { display: inline-block; width: 5px; height: 5px; margin-right: 6px; border-radius: 50%; background: var(--home-cyan); box-shadow: 0 0 8px var(--home-cyan); vertical-align: middle; }
 
-/* Secondary pages (Features, Support, Future projects) share the site theme. */
+/* Fun refresh: friendlier chips, real screenshots in browser frames, a
+   sticker, wave dividers and a screenshot gallery — same navy/cyan theme. */
+:root { --home-warm: #f2a65a; }
+.home-hero h1 { font-size: clamp(48px, 5.6vw, 84px); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.chip { padding: 7px 12px; border: 1px solid rgba(61, 214, 255, .4); border-radius: 999px; background: rgba(61, 214, 255, .08); color: #d2eef8; font: 500 10px var(--home-mono); letter-spacing: .06em; }
+.browser-frame { overflow: hidden; border: 1px solid rgba(61, 214, 255, .28); border-radius: 14px; background: #061a26; box-shadow: 0 24px 80px rgba(0, 0, 0, .35); }
+.browser-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid rgba(143, 176, 192, .18); background: rgba(6, 26, 33, .95); }
+.browser-dots { display: inline-flex; gap: 6px; }
+.browser-dots i { width: 9px; height: 9px; border-radius: 50%; background: #66808a; }
+.browser-dots i:first-child { background: #f2a65a; }
+.browser-dots i:nth-child(2) { background: #3dd6ff; }
+.browser-url { color: #8fb0c0; font: 500 10px var(--home-mono); letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.browser-frame img { display: block; width: 100%; height: auto; }
+.shot-tilt { transform: rotate(-1.2deg); }
+.sticker { position: absolute; z-index: 3; right: 2%; bottom: 52px; transform: rotate(-6deg); padding: 10px 14px; border-radius: 8px; background: var(--home-warm); color: #1c2b33; font: 800 13px var(--home-display); letter-spacing: .01em; box-shadow: 0 10px 26px rgba(0, 0, 0, .4); }
+.hero-visual { position: relative; }
+.wave-divider { width: 100%; line-height: 0; }
+.wave-divider svg { width: 100%; height: 40px; fill: rgba(61, 214, 255, .12); }
+.home-screens { width: min(1260px, calc(100% - 96px)); margin: auto; padding: 20px 0 95px; }
+.screens-heading { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 35px; }
+.screens-heading h2 { margin-top: 22px; font: 500 34px var(--home-display); letter-spacing: -.045em; }
+.screens-heading > p { max-width: 420px; color: #879da3; font-size: 11px; line-height: 1.8; }
+.screen-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
+.screen-card { margin: 0; }
+.screen-card.tilt-left { transform: rotate(-1deg); }
+.screen-card.tilt-right { transform: rotate(1deg); }
+.screen-card figcaption { display: flex; flex-direction: column; gap: 5px; margin-top: 16px; }
+.screen-card figcaption strong { font: 600 14px var(--home-display); }
+.screen-card figcaption span { color: #94aab0; font-size: 11px; line-height: 1.7; }
+.feature-card { border-radius: 18px; transition: transform .2s ease, border-color .2s ease; }
+.feature-card:hover { transform: translateY(-4px); border-color: rgba(61, 214, 255, .45); }
+
+@media (max-width: 850px) {
+  .home-screens { width: min(100% - 52px, 680px); }
+  .screens-heading { align-items: start; flex-direction: column; gap: 12px; }
+  .screen-grid { grid-template-columns: 1fr; gap: 30px; }
+  .screen-card.tilt-left, .screen-card.tilt-right, .shot-tilt { transform: none; }
+  .sticker { bottom: 44px; font-size: 11px; }
+}
+@media (max-width: 560px) {
+  .home-screens { width: calc(100% - 38px); padding-bottom: 70px; }
+  .screens-heading h2 { font-size: 29px; }
+  .sticker { padding: 8px 11px; }
+}
 .site-page .page-hero { width: min(1260px, calc(100% - 96px)); margin: auto; padding: 72px 0 56px; }
 .site-page .page-hero h1 { margin: 25px 0 18px; font: 500 clamp(42px, 5.1vw, 68px)/1.1 var(--home-display); letter-spacing: -.055em; }
 .site-page .page-hero h1 em { color: var(--home-cyan); font-style: normal; }

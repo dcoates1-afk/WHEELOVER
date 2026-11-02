@@ -372,8 +372,10 @@ protected and restricted water, and each class has its own switch, remembered in
 - **Conservation designations** — the same mapped sites where the wording names
   a conservation designation: special areas of conservation, special protection
   areas, marine protected areas, highly protected marine areas, no-take zones,
-  migratory or habitat designations. European Natura 2000 boundaries from
-  EMODnet are drawn in this class too.
+  migratory or habitat designations. European conservation boundaries are drawn
+  in this class too: EMODnet's Natura 2000 layer plus its marine-protected-area
+  layer, which still carries UK and OSPAR sites, merged into one collection and
+  simplified to chart scale before they are sent to the browser.
 - **Reefs** — `natural=reef`.
 - **Banks & shoals** — `natural=shoal|bank` and the matching seamark types.
 - **Danger & restricted areas** — charted restricted and caution areas.

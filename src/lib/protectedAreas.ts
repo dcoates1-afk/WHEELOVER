@@ -17,6 +17,47 @@ function boundsKey(bounds: Bounds): string {
   return bounds.map((value) => value.toFixed(3)).join(',');
 }
 
+/** The protected-area layer ships site names with HTML entities in them. */
+function decodeEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+const CONSERVATION_DETAIL_FIELDS: Array<[string, string]> = [
+  ['designation_layer', 'Designation layer'],
+  ['designatio', 'Designation'],
+  ['sitetype', 'Site type'],
+  ['sitecode', 'Site code'],
+  ['orig_name', 'Source site name'],
+  ['country', 'Country'],
+  ['directive', 'Directive'],
+  ['iucn_cat', 'IUCN category'],
+  ['status', 'Status'],
+  ['status_yr', 'Status year'],
+  ['mang_auth', 'Managing authority'],
+  ['area_ha', 'Area (ha)'],
+  ['mar_perc', 'Marine share (%)'],
+  ['rep_m_area', 'Reported marine area (km²)'],
+  ['sitedesc', 'Site description'],
+  ['release_da', 'Release date'],
+  ['date_spa', 'SPA designated'],
+  ['date_sci', 'SCI designated'],
+  ['date_sac', 'SAC designated'],
+];
+
+/** Both EMODnet conservation layers are folded into one collection. */
+function featureName(properties: Record<string, unknown>): string {
+  for (const field of ['sitename', 'name', 'orig_name']) {
+    const value = properties[field];
+    if (typeof value === 'string' && value.trim()) return decodeEntities(value.trim());
+  }
+  return 'Unnamed conservation site';
+}
+
 export async function loadNatura2000(bounds: Bounds, signal?: AbortSignal): Promise<ProtectedAreaFeature[]> {
   const key = boundsKey(bounds);
   const cached = cache.get(key);
@@ -48,24 +89,36 @@ export async function loadNatura2000(bounds: Bounds, signal?: AbortSignal): Prom
     };
     collect(polygonGeometry.coordinates);
     if (coordinatePairs.length < 3) return [];
-    const lons = coordinatePairs.map(([lon]) => lon);
-    const lats = coordinatePairs.map(([, lat]) => lat);
-    const featureBounds: Bounds = [Math.min(...lats), Math.min(...lons), Math.max(...lats), Math.max(...lons)];
-    const name = typeof properties.sitename === 'string' && properties.sitename.trim() ? properties.sitename : 'Unnamed Natura 2000 site';
-    const detailKeys = ['sitecode', 'sitename', 'ms', 'country', 'sitetype', 'sitedesc', 'directive', 'area_ha', 'mar_perc', 'release_da', 'date_spa', 'date_sci', 'date_sac'];
-    const details = Object.fromEntries(detailKeys.flatMap((field) => {
+    // A detailed survey ring can hold hundreds of thousands of points, which is
+    // too many to spread into Math.min/Math.max, so reduce instead.
+    let west = Infinity;
+    let south = Infinity;
+    let east = -Infinity;
+    let north = -Infinity;
+    for (const [lon, lat] of coordinatePairs) {
+      if (lon < west) west = lon;
+      if (lon > east) east = lon;
+      if (lat < south) south = lat;
+      if (lat > north) north = lat;
+    }
+    const featureBounds: Bounds = [south, west, north, east];
+    const name = featureName(properties);
+    // The two source layers use different column names; both are labelled with
+    // the heading the chart popup prints.
+    const details = Object.fromEntries(CONSERVATION_DETAIL_FIELDS.flatMap(([field, label]) => {
       const value = properties[field];
       return value === null || value === undefined || value === '' || value === 0 || value === 'n/a'
         ? []
-        : [[field, String(value)]];
+        : [[label, String(value)]];
     }));
+    const recordLink = typeof properties.link === 'string' && /^https?:\/\//.test(properties.link) ? properties.link : null;
     return [{
-      id: String(feature.id ?? `${details.sitecode ?? name}:${featureBounds.join(',')}`),
+      id: String(feature.id ?? `${details['Site code'] ?? name}:${featureBounds.join(',')}`),
       name,
       bounds: featureBounds,
       geometry,
       properties: details,
-      sourceUrl: 'https://emodnet.ec.europa.eu/geonetwork/srv/api/records/ac911c34-1692-4642-a031-87bcb5822158',
+      sourceUrl: recordLink ?? 'https://emodnet.ec.europa.eu/geonetwork/srv/api/records/ac911c34-1692-4642-a031-87bcb5822158',
     }];
   });
   cache.set(key, { at: Date.now(), features });

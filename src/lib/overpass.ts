@@ -483,13 +483,31 @@ export async function queryChartFeaturePart(
     return { features: cached.features, cached: true, fetchedAt: cached.at };
   }
   const [south, west, north, east] = bounds;
-  const response = await fetch(
-    `/api/overpass?kind=chart-features&part=${part}&bbox=${south},${west},${north},${east}`,
-    { signal: options.signal },
-  );
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error ?? `Bridge and protected-area data unavailable (HTTP ${response.status})`);
+  // The Overpass mirrors are flaky: a single failed fetch used to leave the
+  // view with no bridges at all and no retry, which reads as bridges missing
+  // worldwide. Retry a failed part a couple of times before giving up, so a
+  // momentary mirror outage does not empty the chart.
+  const url = `/api/overpass?kind=chart-features&part=${part}&bbox=${south},${west},${north},${east}`;
+  let response: Response | undefined;
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (options.signal?.aborted) break;
+    try {
+      response = await fetch(url, { signal: options.signal });
+      if (response.ok) break;
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      lastError = new Error(body.error ?? `Bridge and protected-area data unavailable (HTTP ${response.status})`);
+      response = undefined;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Bridge and protected-area data unavailable');
+      response = undefined;
+    }
+    if (attempt < 2 && !options.signal?.aborted) {
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+    }
+  }
+  if (!response) {
+    throw lastError ?? new Error('Bridge and protected-area data unavailable');
   }
   const payload = (await response.json()) as {
     elements?: RawChartElement[];
@@ -680,21 +698,111 @@ export function coalesceBridges(bridges: ChartFeature[]): ChartFeature[] {
       groups.push(bridge);
       continue;
     }
-    if (bridgeNameKey(existing.name) === '' && key !== '') existing.name = bridge.name;
-    existing.path.push(...bridge.path);
-    const points = existing.path;
-    existing.lat = points.reduce((sum, [lat]) => sum + lat, 0) / points.length;
-    existing.lon = points.reduce((sum, [, lon]) => sum + lon, 0) / points.length;
-    existing.paths = [...existing.paths, ...(bridge.paths.length > 0 ? bridge.paths : [bridge.path])];
-    mergeBridgeRecord(existing, bridge);
-    const urls = [...(existing.sourceUrls ?? [existing.sourceUrl]), bridge.sourceUrl];
-    existing.sourceUrls = [...new Set(urls)];
-    if (bridge.sourceUrl < existing.sourceUrl) {
-      existing.sourceUrl = bridge.sourceUrl;
-      existing.id = bridge.id;
+    foldBridgeInto(existing, bridge);
+  }
+
+  // A road changes name where it crosses the bridge: Johnson Street becomes
+  // Pandora Avenue to the east and Esquimalt Road to the west, and each
+  // approach is tagged bridge=yes under its own street name. Name agreement
+  // can never fold those, so a second pass folds groups whose lines meet and
+  // which cross the same water carrying the same class of route. A footway
+  // beside the road is not folded here — its carrying class differs — and a
+  // group with no water or no carrying class is never folded this way, so
+  // the pass cannot join unrelated crossings that merely touch.
+  let folded = true;
+  while (folded) {
+    folded = false;
+    for (let i = 0; i < groups.length && !folded; i++) {
+      for (let j = i + 1; j < groups.length && !folded; j++) {
+        const a = groups[i];
+        const b = groups[j];
+        const waterA = a.properties['water crossed'];
+        const waterB = b.properties['water crossed'];
+        if (!waterA || !waterB || waterA !== waterB) continue;
+        const carryA = a.properties.highway ?? a.properties.railway;
+        const carryB = b.properties.highway ?? b.properties.railway;
+        if (!carryA || !carryB || carryA.toLowerCase() !== carryB.toLowerCase()) continue;
+        if (!pathsNear(a, b, 2)) continue;
+        foldBridgeInto(a, b, true);
+        groups.splice(j, 1);
+        folded = true;
+      }
+    }
+  }
+  // A bridge is often mapped twice: once as the structure outline
+  // (man_made=bridge, a closed ring named for the bridge) and once as the
+  // road that runs over it (named for the street). Worldwide, that pair is
+  // the two cards: one for the bridge, one for the road leading up to it.
+  // A third pass folds any group whose line runs genuinely inside an
+  // outline's ring into that outline's group, so the chart shows one card
+  // titled for the bridge. A group that merely touches the outline at an
+  // endpoint — the approach road joining the bridge — is not folded here:
+  // folding a kilometres-long approach would drag the marker off the
+  // bridge, and the connected-segments pass already handles the deck.
+  let contained = true;
+  while (contained) {
+    contained = false;
+    for (let i = 0; i < groups.length && !contained; i++) {
+      const outline = groups[i];
+      const outlineRings = outline.rings ?? [];
+      if (outlineRings.length === 0) continue;
+      for (let j = 0; j < groups.length && !contained; j++) {
+        if (i === j) continue;
+        const other = groups[j];
+        if ((other.rings ?? []).length > 0) continue;
+        const waterA = outline.properties['water crossed'];
+        const waterB = other.properties['water crossed'];
+        if (waterA && waterB && waterA !== waterB) continue;
+        const inside = outlineRings.some((ring) => {
+          const xy = ring.map(([lat, lon]) => [lon, lat]);
+          return other.paths.some((path) => path.some(([lat, lon]) => {
+            if (!pointInRing(lon, lat, xy)) return false;
+            // Genuinely inside, not a point sitting on the ring itself.
+            for (let k = 1; k < ring.length; k++) {
+              if (pointToSegmentMeters(
+                { lat, lon },
+                { lat: ring[k - 1][0], lon: ring[k - 1][1] },
+                { lat: ring[k][0], lon: ring[k][1] },
+              ) <= 2) return false;
+            }
+            return true;
+          }));
+        });
+        if (!inside) continue;
+        foldBridgeInto(outline, other);
+        groups.splice(j, 1);
+        contained = true;
+      }
     }
   }
   return groups;
+}
+
+/**
+ * Fold one bridge part into the group the chart will show: the name is kept
+ * unless the group is unnamed (or, across a name change, the incoming name is
+ * the bridge's own name rather than a street name), the paths accumulate, the
+ * centre is recomputed, and every record's tags and source links are kept.
+ */
+function foldBridgeInto(existing: ChartFeature, bridge: ChartFeature, connected = false): void {
+  const key = bridgeNameKey(bridge.name);
+  if (bridgeNameKey(existing.name) === '' && key !== '') {
+    existing.name = bridge.name;
+  } else if (connected && !/\bbridge$/i.test(existing.name) && /\bbridge$/i.test(bridge.name)) {
+    existing.name = bridge.name;
+  }
+  existing.path.push(...bridge.path);
+  const points = existing.path;
+  existing.lat = points.reduce((sum, [lat]) => sum + lat, 0) / points.length;
+  existing.lon = points.reduce((sum, [, lon]) => sum + lon, 0) / points.length;
+  existing.paths = [...existing.paths, ...(bridge.paths.length > 0 ? bridge.paths : [bridge.path])];
+  mergeBridgeRecord(existing, bridge);
+  const urls = [...(existing.sourceUrls ?? [existing.sourceUrl]), bridge.sourceUrl];
+  existing.sourceUrls = [...new Set(urls)];
+  if (bridge.sourceUrl < existing.sourceUrl) {
+    existing.sourceUrl = bridge.sourceUrl;
+    existing.id = bridge.id;
+  }
 }
 
 /**

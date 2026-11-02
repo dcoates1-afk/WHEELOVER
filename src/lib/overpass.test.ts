@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { bridgeCrossesWater, chartFeatureProperties, chartFeaturesFromElements, coalesceBridges, isTidalWater, type ChartFeature } from './overpass';
+import { describe, expect, it, vi } from 'vitest';
+import { bridgeCrossesWater, chartFeatureProperties, chartFeaturesFromElements, coalesceBridges, isTidalWater, queryChartFeaturePart, type ChartFeature } from './overpass';
 
 describe('water-crossing bridge detection', () => {
   it('does not treat a charted bridge over untidal water as a tidal bridge', () => {
@@ -176,6 +176,52 @@ describe('water-crossing bridge detection', () => {
       }],
     )).toBe(true);
   });
+
+  it('keeps Cobden Bridge over the Itchen on its real mapped geometry', () => {
+    // Real OSM geometry (Nov 2026): Cobden Bridge way 4605583 and the tidal
+    // River Itchen centreline way 311105586. The bridge segment crosses the
+    // centreline between its second and third points, so the water test must
+    // keep it — its absence from the chart is a fetch problem, not a
+    // matching problem.
+    expect(bridgeCrossesWater(
+      {
+        type: 'way',
+        tags: { bridge: 'yes', highway: 'primary', name: 'Cobden Bridge', 'bridge:name': 'Cobden Bridge' },
+        geometry: [{ lat: 50.9244172, lon: -1.3776270 }, { lat: 50.9244527, lon: -1.3793024 }],
+      },
+      [{
+        type: 'way',
+        tags: { waterway: 'river', tidal: 'yes', name: 'River Itchen' },
+        geometry: [
+          { lat: 50.9249631, lon: -1.3786785 },
+          { lat: 50.9246088, lon: -1.3784284 },
+          { lat: 50.9241774, lon: -1.3782821 },
+          { lat: 50.9237947, lon: -1.3781562 },
+        ],
+      }],
+    )).toBe(true);
+  });
+
+  it('keeps the West Coastway Line crossing over the Itchen on its real mapped geometry', () => {
+    expect(bridgeCrossesWater(
+      {
+        type: 'way',
+        tags: { bridge: 'yes', railway: 'rail', name: 'West Coastway Line' },
+        geometry: [{ lat: 50.9212482, lon: -1.3801931 }, { lat: 50.9204602, lon: -1.3793580 }],
+      },
+      [{
+        type: 'way',
+        tags: { waterway: 'river', tidal: 'yes', name: 'River Itchen' },
+        geometry: [
+          { lat: 50.9219445, lon: -1.3780507 },
+          { lat: 50.9215512, lon: -1.3782771 },
+          { lat: 50.9211970, lon: -1.3787993 },
+          { lat: 50.9209040, lon: -1.3794704 },
+          { lat: 50.9207122, lon: -1.3800984 },
+        ],
+      }],
+    )).toBe(true);
+  });
 });
 
 describe('bridge record merging', () => {
@@ -232,6 +278,44 @@ describe('bridge record merging', () => {
     expect(bridges).toHaveLength(1);
     expect(bridges[0].properties.highway).toBe('footway');
   });
+
+  it('keeps Cobden Bridge and the West Coastway crossing through the full chart pipeline', () => {
+    // Real Itchen geometry (Nov 2026): the tidal centreline way 311105586
+    // plus Cobden Bridge way 4605583 and a West Coastway span, run through
+    // the same pipeline the chart uses. If these survive here, a deployed
+    // absence is a fetch problem, not a matching problem.
+    const centreline = {
+      type: 'way',
+      id: 311105586,
+      tags: { waterway: 'river', tidal: 'yes', name: 'River Itchen' },
+      geometry: [
+        { lat: 50.9249631, lon: -1.3786785 },
+        { lat: 50.9246088, lon: -1.3784284 },
+        { lat: 50.9241774, lon: -1.3782821 },
+        { lat: 50.9237947, lon: -1.3781562 },
+        { lat: 50.9219445, lon: -1.3780507 },
+        { lat: 50.9215512, lon: -1.3782771 },
+        { lat: 50.9211970, lon: -1.3787993 },
+        { lat: 50.9209040, lon: -1.3794704 },
+        { lat: 50.9207122, lon: -1.3800984 },
+      ],
+    };
+    const cobden = {
+      type: 'way',
+      id: 4605583,
+      tags: { bridge: 'yes', highway: 'primary', name: 'Cobden Bridge', 'bridge:name': 'Cobden Bridge' },
+      geometry: [{ lat: 50.9244172, lon: -1.3776270 }, { lat: 50.9244527, lon: -1.3793024 }],
+    };
+    const coastway = {
+      type: 'way',
+      id: 24299041,
+      tags: { bridge: 'yes', railway: 'rail', name: 'West Coastway Line' },
+      geometry: [{ lat: 50.9212482, lon: -1.3801931 }, { lat: 50.9204602, lon: -1.3793580 }],
+    };
+    const { bridges } = chartFeaturesFromElements([centreline, cobden, coastway]);
+    expect(bridges.map((bridge) => bridge.name).sort()).toEqual(['Cobden Bridge', 'West Coastway Line']);
+    for (const bridge of bridges) expect(bridge.properties['water crossed']).toBe('River Itchen');
+  });
 });
 
 describe('bridge overlay coalescing', () => {
@@ -282,6 +366,193 @@ describe('bridge overlay coalescing', () => {
       sourceUrl: 'https://www.openstreetmap.org/way/2',
     });
     expect(coalesceBridges([first, second])).toHaveLength(1);
+  });
+
+  it('folds approach segments that meet across a street-name change', () => {
+    // Johnson Street Bridge: the road becomes Pandora Avenue east of the
+    // bridge and Esquimalt Road west of it, each tagged bridge=yes under its
+    // own name. The segments meet end to end, cross the same water, and carry
+    // the same road class, so they are one crossing.
+    const deck = feature({
+      id: 'osm:way/10',
+      name: 'Johnson Street',
+      lat: 48.4255,
+      lon: -123.37,
+      path: [[48.4255, -123.371], [48.4255, -123.369]] as [number, number][],
+      paths: [[[48.4255, -123.371], [48.4255, -123.369]]] as [number, number][][],
+      properties: { highway: 'secondary', 'water crossed': 'Victoria Upper Harbour' },
+      sourceUrl: 'https://www.openstreetmap.org/way/10',
+    });
+    const east = feature({
+      id: 'osm:way/11',
+      name: 'Pandora Avenue',
+      lat: 48.4255,
+      lon: -123.3685,
+      path: [[48.4255, -123.369], [48.4255, -123.368]] as [number, number][],
+      paths: [[[48.4255, -123.369], [48.4255, -123.368]]] as [number, number][][],
+      properties: { highway: 'secondary', 'water crossed': 'Victoria Upper Harbour' },
+      sourceUrl: 'https://www.openstreetmap.org/way/11',
+    });
+    const merged = coalesceBridges([deck, east]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].name).toBe('Johnson Street');
+    expect(merged[0].sourceUrls).toEqual([
+      'https://www.openstreetmap.org/way/10',
+      'https://www.openstreetmap.org/way/11',
+    ]);
+  });
+
+  it('does not fold connected segments that cross different water or carry a different class', () => {
+    const deck = feature({
+      id: 'osm:way/10',
+      name: 'Johnson Street',
+      lat: 48.4255,
+      lon: -123.37,
+      path: [[48.4255, -123.371], [48.4255, -123.369]] as [number, number][],
+      paths: [[[48.4255, -123.371], [48.4255, -123.369]]] as [number, number][][],
+      properties: { highway: 'secondary', 'water crossed': 'Victoria Upper Harbour' },
+      sourceUrl: 'https://www.openstreetmap.org/way/10',
+    });
+    const otherWater = feature({
+      id: 'osm:way/12',
+      name: 'Pandora Avenue',
+      lat: 48.4255,
+      lon: -123.3685,
+      path: [[48.4255, -123.369], [48.4255, -123.368]] as [number, number][],
+      paths: [[[48.4255, -123.369], [48.4255, -123.368]]] as [number, number][][],
+      properties: { highway: 'secondary', 'water crossed': 'Victoria Harbour' },
+      sourceUrl: 'https://www.openstreetmap.org/way/12',
+    });
+    expect(coalesceBridges([deck, otherWater])).toHaveLength(2);
+    const footway = feature({
+      id: 'osm:way/13',
+      name: 'Harbour Walk',
+      lat: 48.4255,
+      lon: -123.3685,
+      path: [[48.4255, -123.369], [48.4255, -123.368]] as [number, number][],
+      paths: [[[48.4255, -123.369], [48.4255, -123.368]]] as [number, number][][],
+      properties: { highway: 'footway', 'water crossed': 'Victoria Upper Harbour' },
+      sourceUrl: 'https://www.openstreetmap.org/way/13',
+    });
+    expect(coalesceBridges([deck, footway])).toHaveLength(2);
+  });
+
+  it('folds a road running inside a bridge outline into the outline', () => {
+    // Point Ellice Bridge: the outline is named for the bridge, the road
+    // over it is named Bay Street. The road's line runs inside the outline's
+    // ring, so the chart shows one card titled for the bridge.
+    const ring: [number, number][] = [[50.0, -1.0], [50.0, -1.002], [50.002, -1.002], [50.002, -1.0], [50.0, -1.0]];
+    const outline = feature({
+      id: 'osm:way/20',
+      name: 'Point Ellice Bridge',
+      lat: 50.001,
+      lon: -1.001,
+      path: ring,
+      paths: [ring],
+      rings: [ring],
+      properties: { 'water crossed': 'Gorge Waterway' },
+      sourceUrl: 'https://www.openstreetmap.org/way/20',
+    });
+    const road = feature({
+      id: 'osm:way/21',
+      name: 'Bay Street',
+      lat: 50.001,
+      lon: -1.001,
+      path: [[50.001, -1.0018], [50.001, -1.0002]] as [number, number][],
+      paths: [[[50.001, -1.0018], [50.001, -1.0002]]] as [number, number][][],
+      properties: { highway: 'secondary', 'water crossed': 'Gorge Waterway' },
+      sourceUrl: 'https://www.openstreetmap.org/way/21',
+    });
+    const merged = coalesceBridges([outline, road]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].name).toBe('Point Ellice Bridge');
+    expect(merged[0].sourceUrls).toEqual([
+      'https://www.openstreetmap.org/way/20',
+      'https://www.openstreetmap.org/way/21',
+    ]);
+  });
+
+  it('does not fold a road that only touches a bridge outline at its end', () => {
+    const ring: [number, number][] = [[50.0, -1.0], [50.0, -1.002], [50.002, -1.002], [50.002, -1.0], [50.0, -1.0]];
+    const outline = feature({
+      id: 'osm:way/20',
+      name: 'Point Ellice Bridge',
+      lat: 50.001,
+      lon: -1.001,
+      path: ring,
+      paths: [ring],
+      rings: [ring],
+      properties: { 'water crossed': 'Gorge Waterway' },
+      sourceUrl: 'https://www.openstreetmap.org/way/20',
+    });
+    const approach = feature({
+      id: 'osm:way/22',
+      name: 'Bay Street',
+      lat: 50.001,
+      lon: -1.003,
+      path: [[50.001, -1.002], [50.001, -1.004]] as [number, number][],
+      paths: [[[50.001, -1.002], [50.001, -1.004]]] as [number, number][][],
+      properties: { highway: 'secondary', 'water crossed': 'Gorge Waterway' },
+      sourceUrl: 'https://www.openstreetmap.org/way/22',
+    });
+    expect(coalesceBridges([outline, approach])).toHaveLength(2);
+  });
+
+  it('does not fold a road inside an outline when they cross different water', () => {
+    const ring: [number, number][] = [[50.0, -1.0], [50.0, -1.002], [50.002, -1.002], [50.002, -1.0], [50.0, -1.0]];
+    const outline = feature({
+      id: 'osm:way/20',
+      name: 'Point Ellice Bridge',
+      lat: 50.001,
+      lon: -1.001,
+      path: ring,
+      paths: [ring],
+      rings: [ring],
+      properties: { 'water crossed': 'Gorge Waterway' },
+      sourceUrl: 'https://www.openstreetmap.org/way/20',
+    });
+    const road = feature({
+      id: 'osm:way/21',
+      name: 'Bay Street',
+      lat: 50.001,
+      lon: -1.001,
+      path: [[50.001, -1.0018], [50.001, -1.0002]] as [number, number][],
+      paths: [[[50.001, -1.0018], [50.001, -1.0002]]] as [number, number][][],
+      properties: { highway: 'secondary', 'water crossed': 'Other Water' },
+      sourceUrl: 'https://www.openstreetmap.org/way/21',
+    });
+    expect(coalesceBridges([outline, road])).toHaveLength(2);
+  });
+
+  it('keeps the road name when a wide unnamed outline leaves the road standing apart', () => {
+    // A wide unnamed outline whose road sits far from its centre and its
+    // sides: too far for the name and proximity passes, so only the outline
+    // pass folds it, and the group takes the road's name.
+    const ring: [number, number][] = [[50.0, -1.0], [50.0, -1.004], [50.004, -1.004], [50.004, -1.0], [50.0, -1.0]];
+    const outline = feature({
+      id: 'osm:way/23',
+      name: 'Bridge',
+      lat: 50.002,
+      lon: -1.002,
+      path: ring,
+      paths: [ring],
+      rings: [ring],
+      properties: { 'water crossed': 'Gorge Waterway' },
+      sourceUrl: 'https://www.openstreetmap.org/way/23',
+    });
+    const road = feature({
+      id: 'osm:way/24',
+      name: 'Gorge Road East',
+      lat: 50.0035,
+      lon: -1.002,
+      path: [[50.0035, -1.0028], [50.0035, -1.0012]] as [number, number][],
+      paths: [[[50.0035, -1.0028], [50.0035, -1.0012]]] as [number, number][][],
+      properties: { highway: 'secondary', 'water crossed': 'Gorge Waterway' },
+      sourceUrl: 'https://www.openstreetmap.org/way/24',
+    });
+    const merged = coalesceBridges([outline, road]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].name).toBe('Gorge Road East');
   });
 
   it('keeps every distinct mapped value instead of letting the last part win', () => {
@@ -410,5 +681,35 @@ describe('chart feature popup data', () => {
   it('drops blank and oversized values', () => {
     const properties = chartFeatureProperties({ name: '  ', note: 'x'.repeat(500), operator: 'Agency' });
     expect(properties).toEqual({ operator: 'Agency' });
+  });
+});
+
+describe('chart feature fetching', () => {
+  it('retries a failed part fetch before giving up', async () => {
+    const fetchMock = vi.fn(async () => {
+      if (fetchMock.mock.calls.length === 1) {
+        return { ok: false, status: 502, json: async () => ({ error: 'overpass unavailable' }) };
+      }
+      return { ok: true, json: async () => ({ elements: [] }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const result = await queryChartFeaturePart([50.9, -1.4, 50.93, -1.36], 'bridges');
+      expect(result.features).toEqual([]);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('gives up after three failed attempts', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 502, json: async () => ({ error: 'overpass unavailable' }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(queryChartFeaturePart([50.8, -1.5, 50.83, -1.46], 'bridges')).rejects.toThrow('overpass unavailable');
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -1039,7 +1039,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           card.sections.map((entry) => section(entry.title, entry.rows)).join('') +
           `<footer><p>${links}</p></footer>` +
           `</article>`,
-        { className: 'reporting-system-popup bridge-popup', maxWidth: 340 },
+        { className: 'reporting-system-popup bridge-popup', maxWidth: 560 },
       );
       group.addLayer(marker);
     }

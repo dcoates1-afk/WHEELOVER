@@ -473,7 +473,9 @@ ul {
 }
 
 /* Bridge card: the chart's reference popup for a bridge, built from every
-   mapped tag the record carries. */
+   mapped tag the record carries. Facts run in two columns so the card reads
+   shorter and wider instead of one long list; on a narrow phone screen the
+   popup clamps to the map width and the columns simply get tighter. */
 .leaflet-popup.bridge-popup .leaflet-popup-content-wrapper {
   background: #0a2230;
   color: #e6f2f8;
@@ -517,14 +519,15 @@ ul {
 
 .bridge-card dl {
   display: grid;
-  gap: 3px;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 16px;
   margin: 0;
 }
 
 .bridge-card dl > div {
   display: grid;
-  grid-template-columns: minmax(0, 45%) minmax(0, 55%);
-  gap: 8px;
+  grid-template-columns: minmax(0, 42%) minmax(0, 58%);
+  gap: 6px;
 }
 
 .bridge-card dt {

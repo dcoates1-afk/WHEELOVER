@@ -171,7 +171,9 @@ describe('anchor drift', () => {
   });
 
   it('writes the swing radius in the distance unit chosen in settings', () => {
-    const alert = anchorDriftAlert(at(45), anchor, { distanceUnit: 'nm-ft' });
+    // The elapsed time is pinned: it is written as e.g. "3 h 30 m ago", and a
+    // real clock would make the metre check below fail on a round minute.
+    const alert = anchorDriftAlert(at(45), anchor, { distanceUnit: 'nm-ft', now: droppedAt + 24 * 60_000 });
     expect(alert?.detail).toContain('outside the 98 ft circle');
     expect(alert?.detail).not.toContain('30 m');
   });

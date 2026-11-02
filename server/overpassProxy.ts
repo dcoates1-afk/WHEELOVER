@@ -15,9 +15,22 @@ import { chartFeaturesFromElements, type RawChartElement } from '../src/lib/over
 
 const MIRRORS = [
   'https://overpass.openstreetmap.fr/api/interpreter',
+  // Mail.ru's mirror has been the dependable one when the busy mirrors refuse or
+  // time out, which is exactly when a bridge or area overlay went missing.
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ];
+
+/**
+ * Start delays for the mirrors above, so the fastest one wins without a burst.
+ *
+ * The stagger used to reach 7 s, so when the first mirror refused the proxy sat
+ * on a question it could already have asked elsewhere: on a cold cell the bridge
+ * and area overlays took 15 s or more, and most of that was waiting to hedge. A
+ * short stagger still keeps the first healthy mirror first without a burst.
+ */
+const MIRROR_START_DELAYS_MS = [0, 500, 1200, 2200];
 
 /**
  * A mirror's database can lag real time by days or months, and a lagging one is
@@ -68,6 +81,53 @@ export interface ChartFeatureStats {
   behind: boolean;
 }
 
+/**
+ * Bridge and marine-area counts for one part of one chart view.
+ *
+ * The overlay is fetched in two halves, so the file holds a record per half for
+ * the same cell rather than one number that the other half's arrival would
+ * overwrite.
+ */
+interface PartStats {
+  fetchedAt: number;
+  sourceTimestamp: number | null;
+  objects: number;
+  /** Features this part drew: bridges for the bridge half, areas for the area half. */
+  count: number;
+  /** Split counts, only written when both halves arrived in a single reply. */
+  bridges?: number;
+  areas?: number;
+  behind: boolean;
+}
+
+interface StoredStats {
+  cell: string;
+  parts: Record<string, PartStats>;
+}
+
+function statsFromParts(stored: StoredStats): ChartFeatureStats | null {
+  const entries = Object.entries(stored.parts ?? {}).filter(([, part]) => part && Number.isFinite(part.fetchedAt));
+  if (entries.length === 0) return null;
+  const objects = entries.reduce((sum, [, part]) => sum + (Number.isFinite(part.objects) ? part.objects : 0), 0);
+  if (objects <= 0) return null;
+  const bridges = entries.reduce((sum, [name, part]) =>
+    sum + (name === 'bridges' ? part.count ?? 0 : part.bridges ?? 0), 0);
+  const areas = entries.reduce((sum, [name, part]) =>
+    sum + (name === 'areas' ? part.count ?? 0 : part.areas ?? 0), 0);
+  const timestamps = entries
+    .map(([, part]) => part.sourceTimestamp)
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0);
+  return {
+    fetchedAt: Math.max(...entries.map(([, part]) => part.fetchedAt)),
+    // The oldest half is the oldest data the chart is showing, so it dates the view.
+    sourceTimestamp: timestamps.length > 0 ? Math.min(...timestamps) : null,
+    objects,
+    bridges,
+    areas,
+    behind: entries.some(([, part]) => part.behind === true),
+  };
+}
+
 /** Accept only a complete, positive description of a fetch. */
 export function summarizeChartFeatureStats(raw: string | null): ChartFeatureStats | null {
   if (!raw) return null;
@@ -77,8 +137,11 @@ export function summarizeChartFeatureStats(raw: string | null): ChartFeatureStat
   } catch {
     return null;
   }
-  const record = parsed as Partial<ChartFeatureStats> | null;
+  const record = parsed as Partial<ChartFeatureStats> & Partial<StoredStats> | null;
   if (!record || typeof record !== 'object') return null;
+  if (record.parts && typeof record.parts === 'object') {
+    return statsFromParts(record as StoredStats);
+  }
   const objects = Number(record.objects);
   const fetchedAt = Number(record.fetchedAt);
   if (!Number.isFinite(objects) || objects <= 0 || !Number.isFinite(fetchedAt)) return null;
@@ -106,35 +169,85 @@ interface CacheEntry {
 
 const inflight = new Map<string, Promise<CacheEntry>>();
 
-export function buildChartFeatureQuery([south, west, north, east]: Bounds): string {
+/**
+ * Which half of the bridge/area overlay a request is for.
+ *
+ * `all` is the single combined query, kept for a caller that does not name a
+ * half; the chart itself asks for each half separately so the smaller query is
+ * not held behind the slower one.
+ */
+export type ChartFeaturePart = 'bridges' | 'areas' | 'all';
+
+/**
+ * Bridge-and-water half of the chart-feature query.
+ *
+ * The overlay used to ask for bridges, water and marine areas in one request, so
+ * it waited for the slowest category: the combined query measured about twice as
+ * long as either half on the same mirror (7.8 s against 3.3–3.9 s), and bridges
+ * did not draw until the protected-area shapes had arrived too. Each half is now
+ * its own request, cached and raced on its own.
+ */
+export function buildChartBridgeQuery(bounds: Bounds): string {
+  return buildChartQuery(BRIDGE_SELECTORS, bounds);
+}
+
+/** Marine-area half: designations that restrict a boat or matter to marine life. */
+export function buildChartAreaQuery(bounds: Bounds): string {
+  return buildChartQuery(AREA_SELECTORS, bounds);
+}
+
+/** Both halves in one query, for a caller that does not ask for a part. */
+export function buildChartFeatureQuery(bounds: Bounds): string {
+  return buildChartQuery([...BRIDGE_SELECTORS, ...AREA_SELECTORS], bounds);
+}
+
+function buildChartQuery(selectors: ((box: string) => string)[], [south, west, north, east]: Bounds): string {
   const box = `${south},${west},${north},${east}`;
   return [
     '[out:json][timeout:60];(',
-    `nwr["seamark:type"="bridge"](${box});`,
-    `nwr["bridge"]["bridge"!="no"](${box});`,
-    `nwr["man_made"="bridge"](${box});`,
-    // Water the tide reaches. Most of it is not tagged tidal at all: a sea,
-    // estuary, harbour basin or dock is mapped by what it is.
-    `nwr["tidal"="yes"](${box});`,
-    `nwr["tidal:range"](${box});`,
-    `nwr["waterway"~"^(tidal_channel|dock)$"](${box});`,
-    `nwr["water"~"^(sea|tidal|estuary|lagoon|harbour|harbor|dock|basin|cove|bay)$"](${box});`,
-    `nwr["natural"~"^(bay|strait|cove|fjord)$"](${box});`,
-    `nwr["harbour"](${box});`,
-    `nwr["seamark:type"~"^(harbour|harbour_basin|bay|estuary|dock|sea_area)$"](${box});`,
-    // Marine areas that restrict a boat or matter to marine life: protected and
-    // conservation designations, reefs, banks and shoals, restricted and
-    // caution areas, and military ranges and test areas.
-    `nwr["boundary"~"^(protected_area|national_park)$"](${box});`,
-    `nwr["leisure"="nature_reserve"](${box});`,
-    `nwr["protect_class"](${box});`,
-    `nwr["natural"~"^(reef|shoal|bank)$"](${box});`,
-    `nwr["seamark:type"~"^(reef|shoal|bank|restricted_area|caution_area|anchoring_prohibited|no_anchoring|firing_danger_area)$"](${box});`,
-    `nwr["military"~"^(danger_area|training_area|naval_base|test_range|range)$"](${box});`,
-    `nwr["landuse"="military"](${box});`,
-    ');out geom tags;',
+    ...selectors.map((selector) => selector(box)),
+    // `out geom tags` drops member geometry on relations in current Overpass,
+    // which silently emptied every relation-mapped bay, strait and harbour — and
+    // with them every bridge that crosses one. `out body geom` keeps it.
+    ');out body geom;',
   ].join('');
 }
+
+const BRIDGE_SELECTORS: ((box: string) => string)[] = [
+  (box) => `nwr["seamark:type"="bridge"](${box});`,
+  (box) => `nwr["bridge"]["bridge"!="no"](${box});`,
+  (box) => `nwr["man_made"="bridge"](${box});`,
+  // Water the tide reaches. Most of it is not tagged tidal at all: a sea,
+  // estuary, harbour basin or dock is mapped by what it is, so the water
+  // classes are one scan over three keys rather than four separate scans over
+  // `water`, `natural` and `waterway`. On a Solent-sized view the separate
+  // scans took 8.1 s and the consolidated one 6.4 s for the same answer.
+  // River reaches are included for the same reason: most tidal rivers are not
+  // tagged tidal at all — the Itchen, the Gorge and hundreds like them are a
+  // plain `water=river` or a river centreline — and whether such a reach is
+  // tidal is decided from its position against water already known to be tidal
+  // (see overpass.ts), so these are fetched as candidates, not as tidal water.
+  (box) =>
+    'nwr[~"^(water|waterway|natural)$"' +
+    '~"^(sea|tidal|estuary|lagoon|harbour|harbor|dock|basin|cove|bay|river|riverbank|tidal_channel|fjord|strait)$"]' +
+    `(${box});`,
+  // `[~"…"]` with no value regex is rejected by current Overpass, so the key
+  // regex is given one; `tidal` and `tidal:range` are still one scan.
+  (box) => `nwr[~"^(tidal|tidal:range)$"~"."](${box});`,
+  (box) => `nwr["harbour"](${box});`,
+  (box) => `nwr["seamark:type"~"^(harbour|harbour_basin|bay|estuary|dock|sea_area)$"](${box});`,
+];
+
+const AREA_SELECTORS: ((box: string) => string)[] = [
+  (box) => `nwr["boundary"~"^(protected_area|national_park)$"](${box});`,
+  (box) => `nwr["leisure"="nature_reserve"](${box});`,
+  (box) => `nwr["protect_class"](${box});`,
+  (box) => `nwr["natural"~"^(reef|shoal|bank)$"](${box});`,
+  (box) => `nwr["seamark:type"~"^(reef|shoal|bank|restricted_area|caution_area|anchoring_prohibited|no_anchoring|firing_danger_area)$"](${box});`,
+  (box) => `nwr["military"~"^(danger_area|training_area|naval_base|test_range|range)$"](${box});`,
+  (box) => `nwr["landuse"="military"](${box});`,
+];
+
 
 export function buildOverpassQuery([south, west, north, east]: Bounds): string {
   const box = `${south},${west},${north},${east}`;
@@ -158,6 +271,25 @@ export function buildOverpassQuery([south, west, north, east]: Bounds): string {
     `relation["seamark:type"="communication_area"](${box});`,
     'out geom;',
   ].join('');
+}
+
+/**
+ * Cell size the live bridge/area overlay is fetched in.
+ *
+ * A chart view changes with every small pan, and each one used to be its own
+ * Overpass query, so a navigator panning across a harbour asked repeatedly and
+ * saw nothing until one answered. Rounding the request out to a fixed cell lets
+ * nearby views (and other devices over the same water) share one answer; the
+ * rounding is outward, so no cell ever omits part of the requested view.
+ */
+export const CHART_FEATURE_CELL_DEGREES = 0.05;
+
+/** The cell that fully contains the requested view. */
+export function snapChartFeatureBounds([south, west, north, east]: Bounds): Bounds {
+  const step = CHART_FEATURE_CELL_DEGREES;
+  const down = (value: number) => Math.round(Math.floor(value / step) * step * 1000) / 1000;
+  const up = (value: number) => Math.round(Math.ceil(value / step) * step * 1000) / 1000;
+  return [down(south), down(west), up(north), up(east)];
 }
 
 function parseBounds(value: string | null): Bounds | null {
@@ -187,24 +319,54 @@ async function fetchMirror(mirror: string, query: string): Promise<CacheEntry> {
 }
 
 /**
+ * How long a usable but lagging reply is held back while a current one is
+ * awaited.
+ *
+ * Mirrors are frequently days or months behind, and a mirror that has already
+ * answered with an older copy is still chart data. Without this bound the race
+ * waited for every other mirror to fail — up to the 50 s request timeout — so a
+ * bridge overlay could take a minute to draw or never arrive at all. Eight
+ * seconds is longer than a responsive mirror takes and far shorter than a
+ * navigator's patience.
+ *
+ * The bridge/area overlay uses its own, much shorter grace: it is fetched per
+ * chart cell on a first visit to an area, and a mirror that is a few months
+ * behind still answers bridges correctly. Holding that reply for the full eight
+ * seconds was the difference between an overlay that draws and one that appears
+ * to be missing.
+ */
+export const LAGGING_GRACE_MS = 8000;
+export const CHART_FEATURE_GRACE_MS = 2000;
+
+/**
  * Race the mirrors, staggering starts so the fastest current one wins. A reply
  * from a lagging mirror is held back as a fallback and the race continues, so
- * the newest data available wins instead of the quickest answer.
+ * the newest data available wins instead of the quickest answer — but only for
+ * `graceMs`, after which the best reply in hand is served.
  */
-function raceMirrors(query: string): Promise<CacheEntry> {
+function raceMirrors(query: string, graceMs = LAGGING_GRACE_MS): Promise<CacheEntry> {
   return new Promise((resolvePromise, reject) => {
     let settled = false;
     let started = 0;
     let finished = 0;
     let nextIndex = 0;
     let lagging: CacheEntry | null = null;
+    let graceTimer: ReturnType<typeof setTimeout> | null = null;
 
     const finish = (entry: CacheEntry | null) => {
       if (settled) return;
       settled = true;
+      if (graceTimer) clearTimeout(graceTimer);
       if (entry) resolvePromise(entry);
       else reject(new Error('all Overpass mirrors failed'));
     };
+
+    graceTimer = setTimeout(() => {
+      if (lagging) finish(lagging);
+    }, graceMs);
+    graceTimer.unref?.();
+
+    const raceStarted = Date.now();
 
     const launch = () => {
       if (settled || nextIndex >= MIRRORS.length) return;
@@ -221,6 +383,9 @@ function raceMirrors(query: string): Promise<CacheEntry> {
           }
           if (!lagging || (entry.sourceTimestamp ?? 0) > (lagging.sourceTimestamp ?? 0)) lagging = entry;
           if (finished >= MIRRORS.length) finish(lagging);
+          // A lagging reply that arrived after the grace period is served now
+          // rather than waiting on mirrors that may never answer.
+          if (Date.now() - raceStarted >= graceMs) finish(lagging);
         })
         .catch(() => {
           finished += 1;
@@ -229,8 +394,7 @@ function raceMirrors(query: string): Promise<CacheEntry> {
     };
 
     launch();
-    setTimeout(launch, 1500).unref?.();
-    setTimeout(launch, 4500).unref?.();
+    for (const delay of MIRROR_START_DELAYS_MS.slice(1)) setTimeout(launch, delay).unref?.();
   });
 }
 
@@ -258,39 +422,59 @@ async function writeCache(key: string, entry: CacheEntry) {
   }
 }
 
-async function writeChartFeatureStats(entry: CacheEntry) {
+async function writeChartFeatureStats(entry: CacheEntry, part: ChartFeaturePart, cell: string) {
   try {
     const elements = Array.isArray((entry.payload as { elements?: unknown[] }).elements)
       ? (entry.payload as { elements: RawChartElement[] }).elements
       : [];
     // Count with the chart's own selection rules, so the disclaimer line
     // describes what was drawn rather than every object the reply mentioned.
-    const { bridges, areas } = chartFeaturesFromElements(elements);
-    await mkdir(CACHE_DIR, { recursive: true });
-    await writeFile(
-      CHART_FEATURE_STATS_FILE,
-      JSON.stringify({
+    const drawn = chartFeaturesFromElements(elements);
+    const previous = await readFile(CHART_FEATURE_STATS_FILE, 'utf8').catch(() => null);
+    let stored: StoredStats = { cell, parts: {} };
+    try {
+      const parsed = JSON.parse(previous ?? 'null') as StoredStats | null;
+      // A new chart view starts a new description; halves of the same view merge.
+      if (parsed && parsed.cell === cell && parsed.parts) stored = parsed;
+    } catch {
+      // An unreadable file is replaced, not preserved.
+    }
+    stored.parts[part] = part === 'all'
+      ? {
         fetchedAt: entry.fetchedAt,
         sourceTimestamp: entry.sourceTimestamp ?? null,
         objects: elements.length,
-        bridges: bridges.length,
-        areas: areas.length,
+        count: drawn.bridges.length,
+        bridges: drawn.bridges.length,
+        areas: drawn.areas.length,
         behind: !mirrorDataIsCurrent(entry.sourceTimestamp ?? null, entry.fetchedAt),
-      }),
-    );
+      }
+      : {
+        fetchedAt: entry.fetchedAt,
+        sourceTimestamp: entry.sourceTimestamp ?? null,
+        objects: elements.length,
+        count: part === 'bridges' ? drawn.bridges.length : drawn.areas.length,
+        behind: !mirrorDataIsCurrent(entry.sourceTimestamp ?? null, entry.fetchedAt),
+      };
+    await mkdir(CACHE_DIR, { recursive: true });
+    await writeFile(CHART_FEATURE_STATS_FILE, JSON.stringify(stored));
   } catch {
     // The disclaimer line is optional; a stats write must never fail a query.
   }
 }
 
-function refresh(key: string, query: string, kind: QueryKind) {
-  if (inflight.has(key)) return inflight.get(key)!;
-  const promise = raceMirrors(query)
+function refresh(key: string, query: string, kind: QueryKind, part: ChartFeaturePart = 'all', cell = '') {
+  const running = inflight.get(key);
+  if (running) return running;
+  const promise = raceMirrors(
+    query,
+    kind === 'chart-features' ? CHART_FEATURE_GRACE_MS : LAGGING_GRACE_MS,
+  )
     .then(async (entry) => {
       await writeCache(key, entry);
       // Counting the drawn features is the chart's own work, not the reply's, so
       // it must not delay the answer: a large view would otherwise wait on it.
-      if (kind === 'chart-features') void writeChartFeatureStats(entry);
+      if (kind === 'chart-features') void writeChartFeatureStats(entry, part, cell);
       return entry;
     })
     .finally(() => inflight.delete(key));
@@ -326,16 +510,28 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
 
     const requestedKind = url.searchParams.get('kind');
     const kind: QueryKind = requestedKind === 'pois' || requestedKind === 'chart-features' ? requestedKind : 'navaids';
+    const requestedPart = url.searchParams.get('part');
+    const part: ChartFeaturePart =
+      requestedPart === 'bridges' || requestedPart === 'areas' ? requestedPart : 'all';
+    // Bridges and areas are fetched in fixed cells so panning reuses one answer.
+    const queryBounds = kind === 'chart-features' ? snapChartFeatureBounds(bounds) : bounds;
+    const cell = queryBounds.map((v) => v.toFixed(3)).join(',');
     // Use a new cache namespace after changing chart-feature semantics so old
     // generic road-bridge results cannot linger as if they were water crossings.
-    const cacheKind = kind === 'chart-features' ? 'chart-features-tidal-v5' : kind;
+    const cacheKind = kind === 'chart-features' ? `chart-features-cell-v9-${part}` : kind;
     const key = createHash('sha1')
-      .update(`${cacheKind}:${bounds.map((v) => v.toFixed(3)).join(',')}`)
+      .update(`${cacheKind}:${cell}`)
       .digest('hex')
       .slice(0, 16);
     const query = kind === 'pois'
       ? buildPoiQuery(bounds)
-      : kind === 'chart-features' ? buildChartFeatureQuery(bounds) : buildOverpassQuery(bounds);
+      : kind === 'chart-features'
+        ? part === 'bridges'
+          ? buildChartBridgeQuery(queryBounds)
+          : part === 'areas'
+            ? buildChartAreaQuery(queryBounds)
+            : buildChartFeatureQuery(queryBounds)
+        : buildOverpassQuery(bounds);
     const cached = await readCache(key);
     const age = cached ? Date.now() - cached.fetchedAt : Infinity;
     // An entry fetched from a lagging mirror is still old data: keep serving it,
@@ -345,15 +541,15 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
     if (cached && age < FRESH_MS && cachedCurrent) {
       // The disclaimer page describes the reply this chart view is being served,
       // whether it came from a mirror just now or from the on-disk cache.
-      if (kind === 'chart-features') void writeChartFeatureStats(cached);
+      if (kind === 'chart-features') void writeChartFeatureStats(cached, part, cell);
       sendJson(req, res, 200, { ...(cached.payload as object), meta: { cached: true, ageMs: age, source: cached.source } });
       return;
     }
 
     if (cached && age < STALE_MS) {
       // Serve stale immediately, refresh quietly.
-      refresh(key, query, kind).catch((error) => log(`overpass refresh failed: ${error.message}`));
-      if (kind === 'chart-features') void writeChartFeatureStats(cached);
+      refresh(key, query, kind, part, cell).catch((error) => log(`overpass refresh failed: ${error.message}`));
+      if (kind === 'chart-features') void writeChartFeatureStats(cached, part, cell);
       sendJson(req, res, 200, {
         ...(cached.payload as object),
         meta: { cached: true, stale: true, ageMs: age, source: cached.source },
@@ -362,14 +558,14 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
     }
 
     try {
-      const entry = await refresh(key, query, kind);
+      const entry = await refresh(key, query, kind, part, cell);
       sendJson(req, res, 200, {
         ...(entry.payload as object),
         meta: { cached: false, ageMs: 0, source: entry.source },
       });
     } catch (error) {
       if (cached) {
-        if (kind === 'chart-features') void writeChartFeatureStats(cached);
+        if (kind === 'chart-features') void writeChartFeatureStats(cached, part, cell);
         sendJson(req, res, 200, {
           ...(cached.payload as object),
           meta: { cached: true, stale: true, ageMs: age, source: cached.source },

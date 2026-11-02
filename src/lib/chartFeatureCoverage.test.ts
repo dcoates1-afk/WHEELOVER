@@ -54,6 +54,39 @@ describe('chart-feature coverage stats', () => {
       .toEqual({ fetchedAt: 1, sourceTimestamp: null, objects: 300, bridges: 0, areas: 0, behind: false });
   });
 
+  it('adds the two halves of one chart view into a single coverage line', () => {
+    const stats = summarizeChartFeatureStats(JSON.stringify({
+      cell: '50.883,-1.417,50.933,-1.367',
+      parts: {
+        bridges: { fetchedAt: 2_000, sourceTimestamp: 1_500, objects: 553, count: 92, behind: false },
+        areas: { fetchedAt: 2_400, sourceTimestamp: 1_400, objects: 40, count: 12, behind: false },
+      },
+    }));
+    expect(stats).toEqual({
+      fetchedAt: 2_400,
+      // The older half dates the view, so the line never claims fresher data than shown.
+      sourceTimestamp: 1_400,
+      objects: 593,
+      bridges: 92,
+      areas: 12,
+      behind: false,
+    });
+  });
+
+  it('reports one half that has arrived without inventing the other', () => {
+    const stats = summarizeChartFeatureStats(JSON.stringify({
+      cell: '50.883,-1.417,50.933,-1.367',
+      parts: { bridges: { fetchedAt: 2_000, sourceTimestamp: null, objects: 553, count: 92, behind: true } },
+    }));
+    expect(stats?.bridges).toBe(92);
+    expect(stats?.areas).toBe(0);
+    expect(stats?.behind).toBe(true);
+  });
+
+  it('rejects a file whose halves are empty', () => {
+    expect(summarizeChartFeatureStats(JSON.stringify({ cell: '1,2,3,4', parts: {} }))).toBeNull();
+  });
+
   it('rejects a missing, empty or malformed file', () => {
     expect(summarizeChartFeatureStats(null)).toBeNull();
     expect(summarizeChartFeatureStats('not json')).toBeNull();

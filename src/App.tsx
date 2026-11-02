@@ -43,7 +43,7 @@ import type { GpsMode } from './lib/gpsPreference';
 import { navaidDatabase, regionForPoint } from './lib/navaidDb';
 import { ialaRegion } from './lib/navaids';
 import type { NavaidManifest } from './lib/navaidDb';
-import { queryChartFeatures, queryNavaids, type ChartFeature } from './lib/overpass';
+import { queryChartFeaturePart, queryNavaids, type ChartFeature, type ChartFeaturePart } from './lib/overpass';
 import { loadMarineData, type MarineFeature } from './lib/marineDb';
 import {
   applyLightSectorIndex,
@@ -377,12 +377,22 @@ export default function App() {
 
   // Bridges and protected-area outlines are optional OSM context overlays.
   const chartFeatureRequestId = useRef(0);
+  // The view an answer arrived for, per half. A mirror dropping mid-refresh used
+  // to blank an overlay that was already drawn for this same view; keeping the
+  // matching answer means a failed re-fetch no longer removes what is on screen.
+  const chartFeatureAnswerFor = useRef('');
+  const chartFeatureHalves = useRef<{ bridges: ChartFeature[]; areas: ChartFeature[] }>({ bridges: [], areas: [] });
   useEffect(() => {
-    const wantsFeatures = preferences.overlays.bridges || preferences.overlays.protectedAreas;
+    const parts: ChartFeaturePart[] = [];
+    if (preferences.overlays.bridges) parts.push('bridges');
+    if (preferences.overlays.protectedAreas) parts.push('areas');
     const [south, west, north, east] = view.bounds;
-    if (!wantsFeatures || view.zoom < 8 || north - south > 2 || east - west > 2) {
+    const viewKey = view.bounds.map((value) => value.toFixed(3)).join(',');
+    if (parts.length === 0 || view.zoom < 8 || north - south > 2 || east - west > 2) {
       // Drop any answer still in flight, so it cannot refill a cleared overlay.
       chartFeatureRequestId.current += 1;
+      chartFeatureAnswerFor.current = '';
+      chartFeatureHalves.current = { bridges: [], areas: [] };
       setChartFeatures([]);
       return;
     }
@@ -394,13 +404,32 @@ export default function App() {
       // during the debounce otherwise superseded the reply and left the overlay
       // empty even though the request had succeeded.
       const id = ++chartFeatureRequestId.current;
-      void queryChartFeatures(view.bounds)
-        .then(({ features }) => {
-          if (id === chartFeatureRequestId.current) setChartFeatures(features);
-        })
-        .catch(() => {
-          if (id === chartFeatureRequestId.current) setChartFeatures([]);
-        });
+      // A new view starts with empty halves; the previous view's marks must not
+      // linger over water they do not belong to.
+      if (chartFeatureAnswerFor.current !== viewKey) {
+        chartFeatureHalves.current = { bridges: [], areas: [] };
+        chartFeatureAnswerFor.current = viewKey;
+      }
+      const publish = () => {
+        if (id !== chartFeatureRequestId.current) return;
+        const { bridges, areas } = chartFeatureHalves.current;
+        setChartFeatures([...areas, ...bridges]);
+      };
+      for (const part of parts) {
+        void queryChartFeaturePart(view.bounds, part)
+          .then(({ features }) => {
+            if (id !== chartFeatureRequestId.current) return;
+            // Each half draws on its own arrival: bridges no longer wait for the
+            // larger protected-area reply.
+            chartFeatureHalves.current = { ...chartFeatureHalves.current, [part]: features };
+            publish();
+          })
+          .catch(() => {
+            if (id !== chartFeatureRequestId.current) return;
+            // A dead mirror says nothing about this view, so a half already
+            // drawn for the same view stays put.
+          });
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [preferences.overlays.bridges, preferences.overlays.protectedAreas, view]);

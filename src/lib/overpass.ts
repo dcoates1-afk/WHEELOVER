@@ -166,6 +166,53 @@ export function isTidalWater(tags: Record<string, string> | undefined): boolean 
   return false;
 }
 
+/**
+ * How far up a river the tide is taken to reach, when nothing in the map says.
+ *
+ * A tidal river is usually mapped as nothing more than `water=river` or a river
+ * centreline: the Itchen above Cobden Bridge, the Gorge, the reaches behind half
+ * the world's harbours. Their tidal limit is not tagged, so a reach is treated
+ * as tidal when it lies within this distance of water that is unambiguously
+ * tidal — the sea, an estuary, a harbour basin or a bay. Twelve kilometres
+ * covers the mapped tidal reach of rivers like the Itchen and the Gorge while
+ * leaving genuinely inland rivers, lakes and canals alone.
+ */
+export const TIDAL_REACH_DEGREES = 0.11;
+
+/**
+ * River water, whose tidal reach has to be inferred from position.
+ *
+ * Canals are deliberately absent: they are cut off from the tide by their locks,
+ * and every canal basin near a harbour would otherwise make a city's canal
+ * bridges read as tidal crossings.
+ */
+const RIVER_WATER_VALUES: Record<string, Set<string>> = {
+  water: new Set(['river']),
+  waterway: new Set(['river', 'riverbank']),
+};
+
+export function isRiverWater(tags: Record<string, string> | undefined): boolean {
+  if (!tags) return false;
+  for (const [key, values] of Object.entries(RIVER_WATER_VALUES)) {
+    const value = tags[key]?.toLowerCase();
+    if (value && values.has(value)) return true;
+  }
+  return false;
+}
+
+/**
+ * Water that can make a nearby river reach tidal.
+ *
+ * A marina basin is tagged as harbour water but says nothing about the tide: a
+ * mooring pool on the Thames at Henley is not evidence that Henley Bridge sits
+ * in tidal water. Only open water — sea, bay, strait, estuary, harbour basin,
+ * dock, or a body tagged tidal — is allowed to carry the inference upstream.
+ */
+function isTidalSeed(tags: Record<string, string>): boolean {
+  if (tags.leisure?.toLowerCase() === 'marina') return false;
+  return isTidalWater(tags);
+}
+
 type Point = { lat: number; lon: number };
 
 /** Roads, outlines and multipolygons all arrive as one or more lines. */
@@ -219,17 +266,30 @@ interface PreparedWater {
   /** A mapped water surface rather than a centreline. */
   surface: boolean;
   bounds: Area;
+  /** Tidal by its own tags, so it can make a nearby river reach tidal too. */
+  seed: boolean;
+  /** The water body's name, for the bridge card. */
+  name: string | null;
 }
 
 function prepareWater(water: RawChartElement): PreparedWater | null {
   const tags = water.tags ?? {};
-  if (!isTidalWater(tags)) return null;
+  const tidal = isTidalWater(tags);
+  const seed = isTidalSeed(tags);
+  // A marina is water a bridge can cross, but it cannot make the river it sits
+  // on tidal. River reaches are kept as candidates: `bridgeMeetsWater` only
+  // accepts the ones within tidal reach of a seed, which is how a tidal river
+  // that carries no tidal tag at all still shows its bridges.
+  if (!tidal && !isRiverWater(tags)) return null;
   const paths = stitchPaths(elementPaths(water));
   if (paths.length === 0) return null;
+  const name = tags['seamark:name'] ?? tags.name;
   return {
     paths,
     surface: tags.natural === 'water' || tags.waterway?.toLowerCase() === 'riverbank',
     bounds: boundsOfPaths(paths),
+    seed,
+    name: typeof name === 'string' && name.trim() !== '' ? name.trim() : null,
   };
 }
 
@@ -240,12 +300,40 @@ function prepareWater(water: RawChartElement): PreparedWater | null {
  * bodies and individual water segments, and the padding is generous against the
  * 100 m tolerance so a crossing near the bridge's edge is still found.
  */
-function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area, waters: PreparedWater[]): boolean {
+function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area, waters: PreparedWater[]): string | null {
   const reach = padArea(bridgeBounds, WATER_CROSSING_TOLERANCE_DEGREES);
+  // Bounds of water that is tidal on its own terms, padded by the tidal reach,
+  // so each river reach can be accepted or skipped without walking every water
+  // body's geometry.
+  const tidalReach = waters
+    .filter((water) => water.seed)
+    .map((water) => padArea(water.bounds, TIDAL_REACH_DEGREES));
+  // A bridge can meet several bodies at once — the river, an unnamed dock beside
+  // it, and a marina basin alongside. The card should say "River Itchen", so an
+  // unnamed match is only a fallback and open tidal water beats a marina.
+  let unnamedMatch: string | null = null;
+  let namedMatch: string | null = null;
+  // Settles a match: open tidal water ends the search at once, a named marina or
+  // river is remembered in case nothing better is found.
+  const recordMatch = (water: PreparedWater): string | null => {
+    if (!water.name) {
+      if (unnamedMatch === null) unnamedMatch = '';
+      return null;
+    }
+    if (water.seed) return water.name;
+    namedMatch ??= water.name;
+    return null;
+  };
   for (const water of waters) {
     if (!areasOverlap(reach, water.bounds)) continue;
+    if (!water.seed && !tidalReach.some((area) => areasOverlap(water.bounds, area))) continue;
+    // Once a named body has matched, only open tidal water can improve on it.
+    if (namedMatch !== null && !water.seed) continue;
+    // Once any crossing is found, an unnamed body can add nothing.
+    if (unnamedMatch !== null && !water.name) continue;
     for (const rawLine of water.paths) {
       if (rawLine.length < 2) continue;
+      let lineMatched = false;
       const first = rawLine[0];
       const last = rawLine[rawLine.length - 1];
       const closedRing = rawLine.length >= 4 && Math.abs(first[0] - last[0]) < 1e-9 && Math.abs(first[1] - last[1]) < 1e-9;
@@ -253,17 +341,31 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
       const line: Point[] = waterPoint(rawLine.map(([lat, lon]) => ({ lat, lon })));
       if (waterArea && line.length >= 3) {
         const ring = line.map(({ lat, lon }) => [lon, lat]);
+        let crossesArea = false;
         for (const path of bridgePaths) {
-          if (path.some(([lat, lon]) => pointInRing(lon, lat, ring))) return true;
-          for (let index = 1; index < path.length; index += 1) {
+          if (path.some(([lat, lon]) => pointInRing(lon, lat, ring))) {
+            crossesArea = true;
+            break;
+          }
+          for (let index = 1; index < path.length && !crossesArea; index += 1) {
             const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
             const end = { lat: path[index][0], lon: path[index][1] };
             for (let waterIndex = 1; waterIndex < line.length; waterIndex += 1) {
-              if (segmentsIntersect(start, end, line[waterIndex - 1], line[waterIndex])) return true;
+              if (segmentsIntersect(start, end, line[waterIndex - 1], line[waterIndex])) {
+                crossesArea = true;
+                break;
+              }
             }
           }
+          if (crossesArea) break;
+        }
+        if (crossesArea) {
+          lineMatched = true;
+          const settled = recordMatch(water);
+          if (settled) return settled;
         }
       }
+      if (lineMatched) continue;
       for (const path of bridgePaths) {
         for (let index = 1; index < path.length; index += 1) {
           const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
@@ -276,13 +378,20 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
               Math.min(from.lat, to.lat) > reach[2] || Math.max(from.lat, to.lat) < reach[0] ||
               Math.min(from.lon, to.lon) > reach[3] || Math.max(from.lon, to.lon) < reach[1]
             ) continue;
-            if (segmentsWithinTolerance(start, end, from, to)) return true;
+            if (!segmentsWithinTolerance(start, end, from, to)) continue;
+            lineMatched = true;
           }
+          if (lineMatched) break;
         }
+        if (lineMatched) break;
       }
+      if (!lineMatched) continue;
+      const settled = recordMatch(water);
+      if (settled) return settled;
+      break;
     }
   }
-  return false;
+  return namedMatch ?? unnamedMatch;
 }
 
 /**
@@ -298,7 +407,7 @@ export function bridgeCrossesWater(bridge: RawChartElement, waters: RawChartElem
   const bridgePaths = bridgeLines(bridge);
   if (bridgePaths.length === 0) return false;
   const prepared = waters.map(prepareWater).filter((water): water is PreparedWater => water !== null);
-  return bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), prepared);
+  return bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), prepared) !== null;
 }
 
 function keyFor(bounds: Bounds): string {
@@ -346,18 +455,28 @@ export async function queryNavaids(
   return { navaids, cached: Boolean(payload.meta?.cached), fetchedAt: Date.now() };
 }
 
-export async function queryChartFeatures(
+/**
+ * Which half of the bridge/area overlay a request fetches.
+ *
+ * The two halves are asked for separately because they are different sizes: a
+ * combined query waited for both, so a bridge did not draw until the protected
+ * area shapes had arrived (measured 7.8 s against 3.3–3.9 s for either half).
+ */
+export type ChartFeaturePart = 'bridges' | 'areas';
+
+export async function queryChartFeaturePart(
   bounds: Bounds,
+  part: ChartFeaturePart,
   options: { signal?: AbortSignal; force?: boolean } = {},
 ): Promise<LiveChartFeaturesResult> {
-  const key = keyFor(bounds);
+  const key = `${part}:${keyFor(bounds)}`;
   const cached = chartFeatureMemory.get(key);
   if (!options.force && cached && Date.now() - cached.at < CHART_FEATURE_CACHE_MS) {
     return { features: cached.features, cached: true, fetchedAt: cached.at };
   }
   const [south, west, north, east] = bounds;
   const response = await fetch(
-    `/api/overpass?kind=chart-features&bbox=${south},${west},${north},${east}`,
+    `/api/overpass?kind=chart-features&part=${part}&bbox=${south},${west},${north},${east}`,
     { signal: options.signal },
   );
   if (!response.ok) {
@@ -370,6 +489,7 @@ export async function queryChartFeatures(
   };
   const elements = payload.elements ?? [];
   const { bridges, areas } = chartFeaturesFromElements(elements);
+  // Each half only produces its own kind, and the callers merge the two lists.
   const features: ChartFeature[] = [...areas, ...bridges];
   const fetchedAt = Date.now();
   chartFeatureMemory.set(key, { features, at: fetchedAt });
@@ -397,8 +517,10 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
       (tags['seamark:type'] === 'bridge' || Boolean(tags.bridge && tags.bridge !== 'no') || tags['man_made'] === 'bridge')
       ? bridgeLines(element)
       : [];
-    const bridge = bridgePaths.length > 0 &&
-      bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), waterWays);
+    const crossedWater = bridgePaths.length > 0
+      ? bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), waterWays)
+      : null;
+    const bridge = crossedWater !== null;
     const area = classifyMarineArea(tags);
     if (!bridge && !area) continue;
     const paths = elementPaths(element);
@@ -417,6 +539,9 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
     // Every mapped tag the object carries, so the popup can show the designation,
     // operator, access, dates and any restriction wording the source records.
     const properties = chartFeatureProperties(tags);
+    // The body of water the crossing was matched against, so the card can say
+    // what the bridge crosses rather than only what carries it.
+    if (bridge && crossedWater) properties['water crossed'] = crossedWater;
     const { rings, lines } = ringsAndLines(paths);
     const feature: ChartFeature = {
       id,
@@ -465,13 +590,47 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
     existing.lat = points.reduce((sum, [lat]) => sum + lat, 0) / points.length;
     existing.lon = points.reduce((sum, [, lon]) => sum + lon, 0) / points.length;
     existing.paths = [existing.path];
-    existing.properties = { ...existing.properties, ...bridge.properties };
+    mergeBridgeRecord(existing, bridge);
     if (bridge.sourceUrl < existing.sourceUrl) {
       existing.sourceUrl = bridge.sourceUrl;
       existing.id = bridge.id;
     }
   }
   return { bridges: bridgeGroups, areas };
+}
+
+/**
+ * Carrying classes a parallel footway or cycle path is mapped with.
+ *
+ * A footpath beside a road bridge is a separate OSM way with the same name, and
+ * it is the least informative record of the crossing.
+ */
+const MINOR_CARRYING = new Set([
+  'footway', 'cycleway', 'steps', 'path', 'pedestrian', 'corridor', 'bridleway', 'service',
+]);
+
+/**
+ * Fold one mapped part of a bridge into the record the chart will show.
+ *
+ * OSM often maps a road bridge and its footway as separate ways sharing a name,
+ * and the parts are not equally informative: the footway part of Northam Bridge
+ * says `highway=cycleway` and names no water, while the road part says
+ * `highway=primary` and crosses the Itchen. Merging in arrival order let the
+ * lesser part relabel the crossing as a cycle bridge and drop the water it
+ * crosses, so the card described the footpath instead of the bridge.
+ */
+function mergeBridgeRecord(existing: ChartFeature, part: ChartFeature): void {
+  const merged = existing.properties;
+  for (const [key, value] of Object.entries(part.properties)) {
+    if (typeof value !== 'string' || value.trim() === '') continue;
+    const current = merged[key];
+    // The water a crossing spans is the reason the feature is here; another part
+    // meeting a marina basin must not rename it.
+    if (key === 'water crossed' && current) continue;
+    if ((key === 'highway' || key === 'railway') && current &&
+      MINOR_CARRYING.has(value.toLowerCase()) && !MINOR_CARRYING.has(current.toLowerCase())) continue;
+    merged[key] = value;
+  }
 }
 
 export function clearOverpassMemory(): void {

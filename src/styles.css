@@ -472,6 +472,109 @@ ul {
   color: #e6f2f8;
 }
 
+/* Bridge card: the chart's reference popup for a bridge, built from every
+   mapped tag the record carries. */
+.leaflet-popup.bridge-popup .leaflet-popup-content-wrapper {
+  background: #0a2230;
+  color: #e6f2f8;
+  border: 1px solid rgba(120, 190, 220, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+.leaflet-popup.bridge-popup .leaflet-popup-tip {
+  background: #0a2230;
+}
+
+.leaflet-popup.bridge-popup .leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.leaflet-popup.bridge-popup .leaflet-popup-content p {
+  margin: 0;
+}
+
+.leaflet-popup.bridge-popup .leaflet-popup-close-button {
+  color: #8fb2c4;
+  font-size: 20px;
+  padding: 2px 4px 0 0;
+}
+
+.bridge-card header h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+}
+
+.bridge-card header p {
+  margin: 0 0 8px;
+  color: #9fc0cf;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.bridge-card dl {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+}
+
+.bridge-card dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 45%) minmax(0, 55%);
+  gap: 8px;
+}
+
+.bridge-card dt {
+  color: #8fb2c4;
+}
+
+.bridge-card dd {
+  margin: 0;
+  text-align: right;
+  color: #eaf6fb;
+  overflow-wrap: anywhere;
+}
+
+.bridge-card section {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(120, 190, 220, 0.18);
+}
+
+.bridge-card h4 {
+  margin: 0 0 4px;
+  color: #7fb0c4;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bridge-card footer {
+  margin-top: 10px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(120, 190, 220, 0.18);
+}
+
+.bridge-card footer small {
+  display: block;
+  color: #8fb2c4;
+  line-height: 1.35;
+}
+
+.bridge-card footer p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.bridge-card a {
+  color: #7ad9ff;
+}
+
 .poi-popup strong {
   display: block;
   font-size: 14px;

@@ -3,6 +3,7 @@ import L from 'leaflet';
 import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
+import { describeBridge, type BridgeRow } from '../lib/bridges';
 import type { ChartFeature } from '../lib/overpass';
 import { MARINE_AREA_GROUP_META } from '../lib/marineAreas';
 import { markDetailLabel } from '../../shared/mark-detail-core.mjs';
@@ -1020,14 +1021,27 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
         pane: 'lanes',
       });
       marker.bindTooltip(feature.name, { sticky: true, className: 'marnav-tip' });
-      const clearance = details['seamark:bridge:clearance_height']
-        ? `${details['seamark:bridge:clearance_height']} m (mapped report; datum not established)`
-        : 'Not supplied in this mapped record';
-      const bridgeDetails = Object.entries(details)
-        .filter(([key]) => !key.startsWith('seamark:bridge:clearance_height'))
-        .map(([key, value]) => `<div><strong>${escapePopupText(key.replace(/^seamark:bridge:/, '').replace(/[_:]/g, ' '))}:</strong> ${escapePopupText(value)}</div>`)
+      const card = describeBridge(
+        { name: feature.name, properties: details, sourceUrl: feature.sourceUrl },
+        { depth: props.depthUnit ?? 'm', distance: props.distanceUnit ?? 'm-nm' },
+      );
+      const section = (title: string, rows: BridgeRow[]) => rows.length === 0
+        ? ''
+        : `<section><h4>${escapePopupText(title)}</h4><dl>${rows
+          .map((row) => `<div><dt>${escapePopupText(row.label)}</dt><dd>${escapePopupText(row.value)}</dd></div>`)
+          .join('')}</dl></section>`;
+      const links = card.links
+        .map((link) => `<a href="${escapePopupText(link.url)}" target="_blank" rel="noopener noreferrer">${escapePopupText(link.label)} ↗</a>`)
         .join('');
-      marker.bindPopup(`<strong>${escapePopupText(feature.name)}</strong><div><strong>Reported vertical clearance:</strong> ${escapePopupText(clearance)}</div>${bridgeDetails ? `<hr>${bridgeDetails}` : ''}<hr><small>OpenStreetMap (community-mapped). Opening schedule/status is not established by this record; clearance may be incomplete, stale, or datum-dependent. Consult current official charts, Coast Pilot, notices, and the bridge authority. <a href="${escapePopupText(feature.sourceUrl)}" target="_blank" rel="noopener noreferrer">Source feature ↗</a></small>`, { className: 'reporting-system-popup', maxWidth: 340 });
+      marker.bindPopup(
+        `<article class="bridge-card">` +
+          `<header><h3>${escapePopupText(card.title)}</h3><p>${escapePopupText(card.subtitle)}</p></header>` +
+          section('', card.facts) +
+          card.sections.map((entry) => section(entry.title, entry.rows)).join('') +
+          `<footer><small>OpenStreetMap (community-mapped). Clearance and opening arrangements may be incomplete, stale or datum-dependent, and opening status is not established by this record. Consult current official charts, notices and the bridge authority.</small><p>${links}</p></footer>` +
+          `</article>`,
+        { className: 'reporting-system-popup bridge-popup', maxWidth: 340 },
+      );
       group.addLayer(marker);
     }
     if (bridges.length > 0) group.addTo(map);

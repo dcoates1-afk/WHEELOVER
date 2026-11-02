@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bridgeCrossesWater, chartFeatureProperties, isTidalWater } from './overpass';
+import { bridgeCrossesWater, chartFeatureProperties, chartFeaturesFromElements, isTidalWater } from './overpass';
 
 describe('water-crossing bridge detection', () => {
   it('does not treat a charted bridge over untidal water as a tidal bridge', () => {
@@ -112,6 +112,46 @@ describe('water-crossing bridge detection', () => {
     )).toBe(false);
   });
 
+  /** A tidal harbour polygon centred on `lat`, `lon`. */
+  const harbour = (lat: number, lon: number, name = 'Harbour basin') => ({
+    type: 'way' as const,
+    tags: { 'seamark:type': 'harbour_basin', name },
+    geometry: [
+      { lat: lat - 0.01, lon: lon - 0.01 }, { lat: lat - 0.01, lon: lon + 0.01 },
+      { lat: lat + 0.01, lon: lon + 0.01 }, { lat: lat + 0.01, lon: lon - 0.01 },
+      { lat: lat - 0.01, lon: lon - 0.01 },
+    ],
+  });
+
+  const riverReach = (lat: number) => ({
+    type: 'way' as const,
+    tags: { water: 'river', natural: 'water' },
+    geometry: [{ lat, lon: -1.0003 }, { lat: lat + 0.001, lon: -1.0003 }],
+  });
+
+  const bridgeAt = (lat: number) => ({
+    type: 'way' as const,
+    tags: { bridge: 'yes' },
+    geometry: [{ lat, lon: -1 }, { lat: lat + 0.001, lon: -1 }],
+  });
+
+  it('keeps a tidal river reach that carries no tidal tag but sits near open tidal water', () => {
+    expect(bridgeCrossesWater(bridgeAt(51), [riverReach(51), harbour(51.06, -1)])).toBe(true);
+  });
+
+  it('does not treat a river far from any tidal water as tidal', () => {
+    expect(bridgeCrossesWater(bridgeAt(51), [riverReach(51), harbour(51.3, -1)])).toBe(false);
+  });
+
+  it('does not let a river marina make the water it sits on tidal', () => {
+    const marina = {
+      type: 'way' as const,
+      tags: { leisure: 'marina', natural: 'water', water: 'harbour', name: 'Riverside marina' },
+      geometry: harbour(51.03, -1).geometry,
+    };
+    expect(bridgeCrossesWater(bridgeAt(51), [riverReach(51), marina])).toBe(false);
+  });
+
   it('keeps a bridge crossing a long channel whose segments run well past it', () => {
     expect(bridgeCrossesWater(
       { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 51, lon: -0.9 }, { lat: 51, lon: -1.1 }] },
@@ -121,6 +161,62 @@ describe('water-crossing bridge detection', () => {
         geometry: [{ lat: 49, lon: -1 }, { lat: 53, lon: -1 }],
       }],
     )).toBe(true);
+  });
+});
+
+describe('bridge record merging', () => {
+  // A tidal river crossing with a road bridge part and a parallel cycleway part,
+  // which is how OSM maps Northam Bridge over the Itchen.
+  const river = {
+    type: 'way',
+    id: 1,
+    tags: { waterway: 'river', tidal: 'yes', name: 'River Itchen' },
+    geometry: [{ lat: 50.9, lon: -1.39 }, { lat: 50.93, lon: -1.39 }],
+  };
+  const road = {
+    type: 'way',
+    id: 10,
+    tags: { bridge: 'yes', name: 'Northam Bridge', highway: 'primary', 'seamark:bridge:clearance_height': '5.2' },
+    geometry: [{ lat: 50.914, lon: -1.4 }, { lat: 50.914, lon: -1.38 }],
+  };
+  const cycleway = {
+    type: 'way',
+    id: 11,
+    tags: { bridge: 'yes', name: 'Northam Bridge', highway: 'cycleway' },
+    geometry: [{ lat: 50.9141, lon: -1.4 }, { lat: 50.9141, lon: -1.38 }],
+  };
+
+  it('keeps the road class and the water crossed when a footway part joins the bridge', () => {
+    const { bridges } = chartFeaturesFromElements([river, road, cycleway]);
+    expect(bridges).toHaveLength(1);
+    expect(bridges[0].properties.highway).toBe('primary');
+    expect(bridges[0].properties['water crossed']).toBe('River Itchen');
+    expect(bridges[0].properties['seamark:bridge:clearance_height']).toBe('5.2');
+  });
+
+  it('does not let a cycleway part rename a bridge that crosses river water', () => {
+    const { bridges } = chartFeaturesFromElements([river, cycleway, road]);
+    expect(bridges).toHaveLength(1);
+    expect(bridges[0].properties['water crossed']).toBe('River Itchen');
+    expect(bridges[0].properties.highway).toBe('primary');
+  });
+
+  it('still merges two parts of the same footbridge into one chart mark', () => {
+    const first = {
+      type: 'way',
+      id: 20,
+      tags: { bridge: 'yes', name: 'Chantry Footbridge', highway: 'footway' },
+      geometry: [{ lat: 50.900, lon: -1.4 }, { lat: 50.900, lon: -1.39 }],
+    };
+    const second = {
+      type: 'way',
+      id: 21,
+      tags: { bridge: 'yes', name: 'Chantry Footbridge', highway: 'footway' },
+      geometry: [{ lat: 50.900, lon: -1.39 }, { lat: 50.900, lon: -1.38 }],
+    };
+    const { bridges } = chartFeaturesFromElements([river, first, second]);
+    expect(bridges).toHaveLength(1);
+    expect(bridges[0].properties.highway).toBe('footway');
   });
 });
 

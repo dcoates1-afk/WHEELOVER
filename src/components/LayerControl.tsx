@@ -612,7 +612,7 @@ export function LayerControl({
           <section className="menu-panel" role="dialog" aria-modal="true" aria-label="Menu">
             <header className="menu-head">
               <div>
-                <p className="eyebrow">WHEELOVER</p>
+                <p className="eyebrow">@ Wheel-over</p>
                 <h2>Menu</h2>
                 <p className="menu-tagline">Charts, navigation &amp; conditions</p>
               </div>

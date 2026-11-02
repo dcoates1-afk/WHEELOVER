@@ -69,3 +69,74 @@ body:has(.site-home) { background: var(--home-bg); color: var(--home-ink); font-
 @media (max-width: 850px) { .home-support { width: min(100% - 52px, 680px); align-items: flex-start; flex-direction: column; gap: 22px; margin-bottom: 74px; padding: 29px; } }
 @media (max-width: 560px) { .home-support { width: calc(100% - 38px); margin-bottom: 58px; padding: 23px 20px; }.home-support .section-kicker { font-size: 7px; }.home-support h2 { font-size: 31px; }.support-copy > p { font-size: 11px; }.support-button { width: 100%; min-height: 48px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+
+/* Hero artwork framed like the app itself: top bar, chart scene, status bar. */
+.appview { display: flex; flex-direction: column; }
+.appview-topbar { position: relative; z-index: 3; display: flex; align-items: center; gap: 14px; padding: 11px 16px; border-bottom: 1px solid rgba(61, 214, 255, .22); background: rgba(6, 26, 33, .92); font: 500 9px var(--home-mono); letter-spacing: .12em; }
+.appview-title { color: var(--home-ink); font: 800 11px var(--home-display); letter-spacing: .14em; }
+.appview-place { color: #8fb0c0; }
+.appview-live { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; color: #7ad9ff; }
+.appview-live i { width: 6px; height: 6px; border-radius: 50%; background: #3dd6ff; box-shadow: 0 0 8px #3dd6ff; }
+.appview .chart-grid { top: 38px; }
+.appview-mark { position: absolute; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 3px; transform: translate(-50%, -50%); }
+.appview-mark i { display: block; width: 13px; height: 13px; }
+.appview-mark b { color: #cfe3ea; font: 500 7px var(--home-mono); letter-spacing: .1em; }
+.mark-port i { background: #e5484d; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.mark-starboard i { background: #30a46c; border-radius: 2px; }
+.mark-beacon i { background: #e8d985; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.appview-vessel { position: absolute; z-index: 2; color: #f3e8a6; font-size: 14px; text-shadow: 0 0 8px rgba(243, 232, 166, .5); }
+.appview-vessel span { display: block; margin-top: 2px; color: #e8f4fa; font: 500 7px var(--home-mono); letter-spacing: .1em; text-shadow: none; }
+.appview-vessel.vessel-one { top: 40%; left: 56%; transform: rotate(38deg); }
+.appview-vessel.vessel-two { right: 22%; bottom: 26%; transform: rotate(-21deg); }
+.appview-bridge { position: absolute; z-index: 2; left: 50%; top: 47%; transform: translate(-50%, -50%) rotate(-24deg); padding: 4px 8px; border-radius: 2px; background: #fff4bb; color: #152c3a; font: 700 7px var(--home-mono); letter-spacing: .1em; white-space: nowrap; }
+.appview-status { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding: 11px 16px; border-top: 1px solid rgba(224, 240, 231, .18); background: rgba(6, 26, 33, .92); color: #c5d8d3; font: 8px var(--home-mono); }
+.appview-status .status-dot { display: inline-block; width: 5px; height: 5px; margin-right: 6px; border-radius: 50%; background: var(--home-cyan); box-shadow: 0 0 8px var(--home-cyan); vertical-align: middle; }
+
+/* Secondary pages (Features, Support, Future projects) share the site theme. */
+.site-page .page-hero { width: min(1260px, calc(100% - 96px)); margin: auto; padding: 72px 0 56px; }
+.site-page .page-hero h1 { margin: 25px 0 18px; font: 500 clamp(42px, 5.1vw, 68px)/1.1 var(--home-display); letter-spacing: -.055em; }
+.site-page .page-hero h1 em { color: var(--home-cyan); font-style: normal; }
+.page-lead { max-width: 620px; color: #a8b8bd; font-size: 15px; line-height: 1.85; }
+.site-page .page-sections { width: min(1260px, calc(100% - 96px)); margin: auto; padding: 20px 0 70px; border-top: 1px solid var(--home-line); }
+.page-section-title { margin: 0 0 28px; font: 500 30px var(--home-display); letter-spacing: -.04em; }
+.detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; border: 1px solid var(--home-line); background: var(--home-line); }
+.detail-card { padding: 28px 26px; background: linear-gradient(145deg, rgba(19, 52, 62, .42), transparent), var(--home-bg); }
+.detail-card h2 { margin: 20px 0 10px; font: 600 20px var(--home-display); letter-spacing: -.02em; }
+.detail-card p { color: #94aab0; font-size: 12px; line-height: 1.8; }
+.detail-card ul { margin: 16px 0 0; padding-left: 18px; color: #a9c1cd; font-size: 12px; line-height: 1.9; }
+.detail-card ul li::marker { color: var(--home-cyan); }
+.future-status { color: var(--home-cyan); font: 500 9px var(--home-mono); letter-spacing: .12em; }
+.page-note { max-width: 760px; margin-top: 26px; color: #81989f; font-size: 12px; line-height: 1.8; }
+.page-safety { width: min(1260px, calc(100% - 96px)); margin: auto auto 70px; padding: 23px 26px; border: 1px solid rgba(225, 200, 124, .19); background: rgba(105, 84, 39, .08); }
+.page-safety p { margin-top: 7px; color: #a9aa98; font-size: 12px; line-height: 1.8; }
+.page-safety a { color: var(--home-cyan); }
+.page-cta { width: min(1260px, calc(100% - 96px)); margin: auto auto 90px; padding: 44px 40px; border: 1px solid rgba(61, 214, 255, .32); background: linear-gradient(115deg, rgba(15, 159, 201, .14), rgba(8, 32, 46, .78) 55%, rgba(12, 42, 60, .65)); }
+.page-cta h2 { font: 600 clamp(27px, 3.2vw, 40px)/1.14 var(--home-display); letter-spacing: -.045em; }
+.page-cta p { margin: 12px 0 24px; color: #a9c1cd; font-size: 12px; line-height: 1.8; }
+
+/* Donation options: PayPal beside Interac e-Transfer. */
+.donate-row { display: flex; align-items: stretch; gap: 18px; }
+.etransfer-card { min-width: 300px; padding: 18px 20px; border: 1px solid rgba(61, 214, 255, .32); background: rgba(6, 26, 33, .72); }
+.etransfer-card > strong { display: block; font: 700 12px var(--home-display); }
+.etransfer-card > p { margin-top: 6px; color: #8fa6ab; font-size: 11px; line-height: 1.6; }
+.etransfer-address { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.etransfer-address > span { color: var(--home-cyan); font: 500 12px var(--home-mono); overflow-wrap: anywhere; }
+.copy-email { flex: none; padding: 8px 11px; border: 1px solid rgba(61, 214, 255, .4); border-radius: 3px; background: transparent; color: var(--home-ink); font: 500 10px var(--home-mono); cursor: pointer; }
+.copy-email:hover { border-color: var(--home-cyan); color: var(--home-cyan); }
+.platforms-future { margin-top: 22px; color: #98acb1; font-size: 12px; line-height: 1.85; }
+.platforms-future a { color: var(--home-cyan); }
+
+@media (max-width: 850px) {
+  .site-page .page-hero, .site-page .page-sections, .page-safety, .page-cta { width: min(100% - 52px, 680px); }
+  .detail-grid { grid-template-columns: 1fr; }
+  .donate-row { flex-direction: column; }
+  .donate-row .support-button { width: 100%; justify-content: center; }
+  .etransfer-card { min-width: 0; }
+}
+@media (max-width: 560px) {
+  .site-page .page-hero, .site-page .page-sections, .page-safety, .page-cta { width: calc(100% - 38px); }
+  .site-page .page-hero { padding: 56px 0 44px; }
+  .page-cta { padding: 30px 22px; }
+  .appview-place { display: none; }
+  .appview-bridge { font-size: 6px; }
+}

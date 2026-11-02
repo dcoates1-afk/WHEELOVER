@@ -141,16 +141,16 @@ export default function DisclaimerPage() {
   return (
     <main className="disclaimer-page">
       <header className="disclaimer-header">
-        <a className="home-brand" href="/"><img className="home-logo" src="/images/wheelover-icon.webp" alt="" /><span>WHEELOVER</span></a>
+        <a className="home-brand" href="/"><img className="home-logo" src="/images/wheelover-icon.webp" alt="" /><span>@ Wheel-over</span></a>
         <a className="home-nav-cta" href="/app">Back to chart <span aria-hidden="true">↗</span></a>
       </header>
       <article className="disclaimer-content">
         <div className="section-kicker">DATA, LIMITS &amp; SOURCES <span>—</span> IMPORTANT</div>
         <h1>Data sources &amp; disclaimer</h1>
-        <p className="disclaimer-lead">WHEELOVER combines open, community-mapped, modelled, converted, and other third-party information for exploration and situational awareness. It can be incomplete, inaccurate, generalized, displaced, stale, or unavailable; boundaries and symbols may not reflect current legal or operational conditions.</p>
+        <p className="disclaimer-lead">@ Wheel-over combines open, community-mapped, modelled, converted, and other third-party information for exploration and situational awareness. It can be incomplete, inaccurate, generalized, displaced, stale, or unavailable; boundaries and symbols may not reflect current legal or operational conditions.</p>
         <section>
           <h2>Not for navigation or compliance</h2>
-          <p>WHEELOVER is not an official or certified navigation system. Do not use it alone to plan or conduct a passage, determine safe water or bridge clearance, interpret a traffic scheme, or decide whether an area may be entered. It does not replace current official nautical charts, Notices to Mariners, publications, local regulations, or guidance from responsible authorities.</p>
+          <p>@ Wheel-over is not an official or certified navigation system. Do not use it alone to plan or conduct a passage, determine safe water or bridge clearance, interpret a traffic scheme, or decide whether an area may be entered. It does not replace current official nautical charts, Notices to Mariners, publications, local regulations, or guidance from responsible authorities.</p>
           <p>Maintain a proper navigational watch and verify hazards, positions, depths, bridge clearance and opening status, routeing measures, protected-area rules, weather, tides, and currents against current authoritative information. A missing feature or value does not establish that a hazard, restriction, route, or clearance is absent.</p>
         </section>
         <section>
@@ -221,7 +221,7 @@ export default function DisclaimerPage() {
           </ul>
           <p>Regional datasets retain their own licences. Basemap, imagery, seamark, contour, sounding and ship-reporting credits are listed on this page rather than drawn over the chart; each provider&apos;s terms continue to apply. The listed sources are not an endorsement by those providers.</p>
         </section>
-        <footer><a href="/app">Return to the chart</a><span>WHEELOVER · Data notice</span></footer>
+        <footer><a href="/app">Return to the chart</a><span>@ Wheel-over · Data notice</span></footer>
       </article>
     </main>
   );

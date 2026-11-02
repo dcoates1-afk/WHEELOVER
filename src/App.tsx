@@ -690,8 +690,8 @@ export default function App() {
 
       {preferences.theme === 'red' && <div className="red-tint" aria-hidden="true" />}
 
-      <h1 className="chart-brand" aria-label="WHEELOVER — Maritime Navigation and Planning">
-        WHEELOVER
+      <h1 className="chart-brand" aria-label="@ Wheel-over — Maritime Navigation and Planning">
+        @ Wheel-over
       </h1>
 
       <Suspense fallback={null}>

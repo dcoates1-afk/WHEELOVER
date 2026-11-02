@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bridgeCrossesWater, chartFeatureProperties, chartFeaturesFromElements, isTidalWater } from './overpass';
+import { bridgeCrossesWater, chartFeatureProperties, chartFeaturesFromElements, coalesceBridges, isTidalWater, type ChartFeature } from './overpass';
 
 describe('water-crossing bridge detection', () => {
   it('does not treat a charted bridge over untidal water as a tidal bridge', () => {
@@ -11,15 +11,29 @@ describe('water-crossing bridge detection', () => {
 
   it('keeps bridges crossing explicitly tidal water', () => {
     expect(bridgeCrossesWater(
-      { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 51, lon: -1 }, { lat: 51.001, lon: -1 }] },
+      { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 51, lon: -1.001 }, { lat: 51.001, lon: -0.999 }] },
       [{ type: 'way', tags: { waterway: 'river', tidal: 'yes' }, geometry: [{ lat: 51, lon: -1.0003 }, { lat: 51.001, lon: -1.0003 }] }],
     )).toBe(true);
   });
 
   it('keeps bridges crossing a mapped tidal channel', () => {
     expect(bridgeCrossesWater(
-      { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 51, lon: -1 }, { lat: 51.001, lon: -1 }] },
+      { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 51, lon: -1.001 }, { lat: 51.001, lon: -0.999 }] },
       [{ type: 'way', tags: { waterway: 'tidal_channel' }, geometry: [{ lat: 51.0003, lon: -1.0003 }, { lat: 51.0007, lon: -1.0003 }] }],
+    )).toBe(true);
+  });
+
+  it('does not count a bridge 50 m from tidal water as a water crossing', () => {
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 51, lon: -1 }, { lat: 51.001, lon: -1 }] },
+      [{ type: 'way', tags: { waterway: 'river', tidal: 'yes' }, geometry: [{ lat: 51, lon: -1.00072 }, { lat: 51.001, lon: -1.00072 }] }],
+    )).toBe(false);
+  });
+
+  it('still counts a bridge mapped 5 m short of tidal water', () => {
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 51, lon: -1 }, { lat: 51.001, lon: -1 }] },
+      [{ type: 'way', tags: { waterway: 'river', tidal: 'yes' }, geometry: [{ lat: 51, lon: -1.00007 }, { lat: 51.001, lon: -1.00007 }] }],
     )).toBe(true);
   });
 
@@ -97,8 +111,8 @@ describe('water-crossing bridge detection', () => {
         type: 'relation',
         tags: { bridge: 'yes' },
         members: [
-          { geometry: [{ lat: 51, lon: -1 }, { lat: 51.0005, lon: -1 }] },
-          { geometry: [{ lat: 51.0005, lon: -1 }, { lat: 51.001, lon: -1 }] },
+          { geometry: [{ lat: 51, lon: -1.001 }, { lat: 51.0005, lon: -0.9995 }] },
+          { geometry: [{ lat: 51.0005, lon: -0.9995 }, { lat: 51.001, lon: -1.001 }] },
         ],
       },
       [{ type: 'way', tags: { water: 'estuary' }, geometry: [{ lat: 51, lon: -1.0003 }, { lat: 51.001, lon: -1.0003 }] }],
@@ -132,7 +146,7 @@ describe('water-crossing bridge detection', () => {
   const bridgeAt = (lat: number) => ({
     type: 'way' as const,
     tags: { bridge: 'yes' },
-    geometry: [{ lat, lon: -1 }, { lat: lat + 0.001, lon: -1 }],
+    geometry: [{ lat, lon: -1.001 }, { lat: lat + 0.001, lon: -0.999 }],
   });
 
   it('keeps a tidal river reach that carries no tidal tag but sits near open tidal water', () => {
@@ -217,6 +231,105 @@ describe('bridge record merging', () => {
     const { bridges } = chartFeaturesFromElements([river, first, second]);
     expect(bridges).toHaveLength(1);
     expect(bridges[0].properties.highway).toBe('footway');
+  });
+});
+
+describe('bridge overlay coalescing', () => {
+  const feature = (overrides: Partial<ChartFeature>): ChartFeature => ({
+    id: 'osm:way/1',
+    type: 'bridge',
+    waterCrossing: true,
+    name: 'Test Bridge',
+    lat: 50.914,
+    lon: -1.39,
+    path: [[50.914, -1.4], [50.914, -1.38]],
+    paths: [[[50.914, -1.4], [50.914, -1.38]]],
+    properties: {},
+    sourceUrl: 'https://www.openstreetmap.org/way/1',
+    ...overrides,
+  });
+
+  it('merges a named part with an unnamed part of the same crossing', () => {
+    const named = feature({ id: 'osm:way/1', name: 'Test Bridge', properties: { highway: 'primary' } });
+    const unnamed = feature({
+      id: 'osm:way/2',
+      name: 'Bridge',
+      lat: 50.9141,
+      lon: -1.39,
+      path: [[50.9141, -1.4], [50.9141, -1.38]] as [number, number][],
+      properties: { 'seamark:bridge:clearance_height': '5.2' },
+      sourceUrl: 'https://www.openstreetmap.org/way/2',
+    });
+    const merged = coalesceBridges([named, unnamed]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].name).toBe('Test Bridge');
+    expect(merged[0].properties.highway).toBe('primary');
+    expect(merged[0].properties['seamark:bridge:clearance_height']).toBe('5.2');
+    expect(merged[0].sourceUrls).toEqual([
+      'https://www.openstreetmap.org/way/1',
+      'https://www.openstreetmap.org/way/2',
+    ]);
+  });
+
+  it('merges parts whose names differ only by case and a trailing generic word', () => {
+    const first = feature({ id: 'osm:way/1', name: 'Test Bridge' });
+    const second = feature({
+      id: 'osm:way/2',
+      name: 'TEST BRIDGE',
+      lat: 50.9142,
+      lon: -1.39,
+      path: [[50.9142, -1.4], [50.9142, -1.38]] as [number, number][],
+      sourceUrl: 'https://www.openstreetmap.org/way/2',
+    });
+    expect(coalesceBridges([first, second])).toHaveLength(1);
+  });
+
+  it('keeps every distinct mapped value instead of letting the last part win', () => {
+    const first = feature({
+      id: 'osm:way/1',
+      properties: { 'seamark:bridge:clearance_height': '5.2', operator: 'City' },
+    });
+    const second = feature({
+      id: 'osm:way/2',
+      lat: 50.9141,
+      lon: -1.39,
+      path: [[50.9141, -1.4], [50.9141, -1.38]] as [number, number][],
+      properties: { 'seamark:bridge:clearance_height': '4.8', operator: 'City' },
+      sourceUrl: 'https://www.openstreetmap.org/way/2',
+    });
+    const merged = coalesceBridges([first, second]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].properties['seamark:bridge:clearance_height']).toBe('5.2 / 4.8');
+    expect(merged[0].properties.operator).toBe('City');
+  });
+
+  it('does not merge two different bridges that share a name but sit apart', () => {
+    const first = feature({ id: 'osm:way/1', name: 'Railway Bridge' });
+    const second = feature({
+      id: 'osm:way/2',
+      name: 'Railway Bridge',
+      lat: 50.924,
+      lon: -1.39,
+      path: [[50.924, -1.4], [50.924, -1.38]] as [number, number][],
+      sourceUrl: 'https://www.openstreetmap.org/way/2',
+    });
+    expect(coalesceBridges([first, second])).toHaveLength(2);
+  });
+
+  it('does not rewrite the features handed in', () => {
+    const first = feature({ id: 'osm:way/1', properties: { highway: 'primary' } });
+    const second = feature({
+      id: 'osm:way/2',
+      lat: 50.9141,
+      lon: -1.39,
+      path: [[50.9141, -1.4], [50.9141, -1.38]] as [number, number][],
+      properties: { 'seamark:bridge:clearance_height': '5.2' },
+      sourceUrl: 'https://www.openstreetmap.org/way/2',
+    });
+    coalesceBridges([first, second]);
+    expect(first.path).toHaveLength(2);
+    expect(first.properties).toEqual({ highway: 'primary' });
+    expect(first.sourceUrls).toBeUndefined();
   });
 });
 

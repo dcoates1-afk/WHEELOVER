@@ -31,6 +31,8 @@ export interface BridgeFeatureLike {
   name: string;
   properties?: Record<string, string> | null;
   sourceUrl?: string;
+  /** Every mapped record folded into this crossing. */
+  sourceUrls?: string[];
 }
 
 export interface BridgeUnits {
@@ -86,6 +88,25 @@ const CARRYING: Record<string, string> = {
   narrow_gauge: 'Narrow gauge railway bridge',
   miniature: 'Miniature railway bridge',
 };
+
+/**
+ * Every parseable measurement in a value, formatted in the chosen units.
+ * Merged records join distinct values with " / ", so each one is shown
+ * rather than only the first. Returns null when nothing in the value parses.
+ */
+function formatMetresList(value: string, format: (metres: number) => string): string | null {
+  const formatted = value
+    .split(' / ')
+    .map((part) => part.trim())
+    .filter((part) => part !== '')
+    .map((part) => {
+      const metres = measuredMetres(part);
+      return metres === null ? null : format(metres);
+    })
+    .filter((part): part is string => part !== null);
+  if (formatted.length === 0) return null;
+  return [...new Set(formatted)].join(' / ');
+}
 
 /** A mapped measurement, in metres, honouring the few imperial spellings OSM uses. */
 export function measuredMetres(value: string | null | undefined): number | null {
@@ -186,15 +207,21 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     facts.push({ label: 'Crosses', value: water });
   }
 
-  const clearanceHeight = measuredMetres(value(tags, 'seamark:bridge:clearance_height'));
+  const clearanceHeightRaw = value(tags, 'seamark:bridge:clearance_height');
+  const clearanceHeight = clearanceHeightRaw === null
+    ? null
+    : formatMetresList(clearanceHeightRaw, (metres) => formatDepthWithUnit(metres, units.depth));
   if (clearanceHeight !== null) {
     shownKeys.push('seamark:bridge:clearance_height');
-    facts.push({ label: 'Vertical clearance', value: formatDepthWithUnit(clearanceHeight, units.depth) });
+    facts.push({ label: 'Vertical clearance', value: clearanceHeight });
   }
-  const clearanceWidth = measuredMetres(value(tags, 'seamark:bridge:clearance_width'));
+  const clearanceWidthRaw = value(tags, 'seamark:bridge:clearance_width');
+  const clearanceWidth = clearanceWidthRaw === null
+    ? null
+    : formatMetresList(clearanceWidthRaw, (metres) => formatDistance(metres, units.distance));
   if (clearanceWidth !== null) {
     shownKeys.push('seamark:bridge:clearance_width');
-    facts.push({ label: 'Horizontal clearance', value: formatDistance(clearanceWidth, units.distance) });
+    facts.push({ label: 'Horizontal clearance', value: clearanceWidth });
   }
 
   const kind = bridgeKind(tags);
@@ -211,22 +238,28 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     ['Open clearance', 'seamark:bridge:clearance_height_open'],
   ];
   for (const [rowLabel, key] of clearanceRows) {
-    const metres = measuredMetres(tags[key]);
-    if (metres === null) continue;
+    const raw = tags[key];
+    if (!raw) continue;
+    const formatted = formatMetresList(raw, (metres) => formatDepthWithUnit(metres, units.depth));
+    if (formatted === null) continue;
     shownKeys.push(key);
-    clearance.push({ label: rowLabel, value: formatDepthWithUnit(metres, units.depth) });
+    clearance.push({ label: rowLabel, value: formatted });
   }
   const maxHeight = tags.maxheight;
   if (maxHeight) {
-    const metres = measuredMetres(maxHeight);
     shownKeys.push('maxheight');
-    clearance.push({ label: 'Maximum height', value: metres === null ? maxHeight : formatDepthWithUnit(metres, units.depth) });
+    clearance.push({
+      label: 'Maximum height',
+      value: formatMetresList(maxHeight, (metres) => formatDepthWithUnit(metres, units.depth)) ?? maxHeight,
+    });
   }
   const width = value(tags, 'seamark:bridge:clearance_width_open');
   if (width) {
-    const metres = measuredMetres(width);
     shownKeys.push('seamark:bridge:clearance_width_open');
-    clearance.push({ label: 'Open width', value: metres === null ? width : formatDistance(metres, units.distance) });
+    clearance.push({
+      label: 'Open width',
+      value: formatMetresList(width, (metres) => formatDistance(metres, units.distance)) ?? width,
+    });
   }
 
   const structure: BridgeRow[] = [];
@@ -247,11 +280,13 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     const found = value(tags, key);
     if (!found) continue;
     shownKeys.push(key);
-    const metres = ['width', 'bridge:span', 'length', 'height'].includes(key) ? measuredMetres(found) : null;
-    structure.push({
-      label: rowLabel,
-      value: metres === null ? found : key === 'height' ? formatDepthWithUnit(metres, units.depth) : formatDistance(metres, units.distance),
-    });
+    const isMeasurement = ['width', 'bridge:span', 'length', 'height'].includes(key);
+    const formatted = isMeasurement
+      ? formatMetresList(found, (metres) => key === 'height'
+        ? formatDepthWithUnit(metres, units.depth)
+        : formatDistance(metres, units.distance))
+      : null;
+    structure.push({ label: rowLabel, value: formatted ?? found });
   }
 
   const carryingRows: BridgeRow[] = [];
@@ -327,7 +362,10 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
   const subtitle = kind ?? carries ?? 'Bridge';
 
   const links = referenceLinks(tags);
-  if (feature.sourceUrl) links.unshift({ label: 'OSM feature', url: feature.sourceUrl });
+  const sourceUrls = feature.sourceUrls ?? (feature.sourceUrl ? [feature.sourceUrl] : []);
+  for (const url of [...new Set(sourceUrls)].reverse()) {
+    links.unshift({ label: 'OSM feature', url });
+  }
 
   return { title, subtitle, facts, sections, links, shownKeys };
 }

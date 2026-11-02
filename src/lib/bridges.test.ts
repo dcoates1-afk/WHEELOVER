@@ -59,6 +59,33 @@ describe('bridge card', () => {
     ]);
   });
 
+  it('links every mapped record folded into one card', () => {
+    const card = describeBridge(
+      {
+        name: 'Test Bridge',
+        sourceUrl: 'https://www.openstreetmap.org/way/1',
+        sourceUrls: ['https://www.openstreetmap.org/way/1', 'https://www.openstreetmap.org/way/2'],
+        properties: {},
+      },
+      { depth: 'm', distance: 'm-nm' },
+    );
+    expect(card.links.map((link) => link.url)).toEqual([
+      'https://www.openstreetmap.org/way/1',
+      'https://www.openstreetmap.org/way/2',
+    ]);
+  });
+
+  it('shows every distinct clearance when records disagree', () => {
+    const card = describeBridge(
+      {
+        name: 'Test Bridge',
+        properties: { 'seamark:bridge:clearance_height': '5.2 / 4.8' },
+      },
+      { depth: 'm', distance: 'm-nm' },
+    );
+    expect(card.facts).toContainEqual({ label: 'Vertical clearance', value: '5.2 m / 4.8 m' });
+  });
+
   it('keeps a bridge with no extra tags readable', () => {
     const card = describeBridge({ name: 'Bridge', properties: {} }, { depth: 'm', distance: 'm-nm' });
     expect(card.title).toBe('Bridge');

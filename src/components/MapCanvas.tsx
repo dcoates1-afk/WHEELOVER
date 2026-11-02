@@ -4,7 +4,7 @@ import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import { describeBridge, type BridgeRow } from '../lib/bridges';
-import type { ChartFeature } from '../lib/overpass';
+import { coalesceBridges, type ChartFeature } from '../lib/overpass';
 import { MARINE_AREA_GROUP_META } from '../lib/marineAreas';
 import { markDetailLabel } from '../../shared/mark-detail-core.mjs';
 import { distanceMeters, lightSectorArc, lightSectorDisplayRadius, lightSectorDrawLimits, mirrorLightSectorBearings } from '../../shared/navaid-core.mjs';
@@ -1005,11 +1005,10 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
         sourceUrl: feature.sourceUrl ?? '',
       };
     });
-    const bridgeById = new Map<string, ChartFeature>();
-    for (const feature of [...props.chartFeatures.filter((entry) => entry.type === 'bridge'), ...archiveBridges]) {
-      bridgeById.set(feature.id, feature);
-    }
-    const bridges = [...bridgeById.values()];
+    // One overlay and one card per physical crossing: records of the same
+    // bridge from the live query and the archive fold together here, so a
+    // bridge mapped as several ways is drawn once with all its information.
+    const bridges = coalesceBridges([...props.chartFeatures.filter((entry) => entry.type === 'bridge'), ...archiveBridges]);
     for (const feature of bridges) {
       const details = feature.properties;
       const marker = L.circleMarker([feature.lat, feature.lon], {
@@ -1022,7 +1021,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       });
       marker.bindTooltip(feature.name, { sticky: true, className: 'marnav-tip' });
       const card = describeBridge(
-        { name: feature.name, properties: details, sourceUrl: feature.sourceUrl },
+        { name: feature.name, properties: details, sourceUrl: feature.sourceUrl, sourceUrls: feature.sourceUrls },
         { depth: props.depthUnit ?? 'm', distance: props.distanceUnit ?? 'm-nm' },
       );
       const section = (title: string, rows: BridgeRow[]) => rows.length === 0
@@ -1038,7 +1037,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           `<header><h3>${escapePopupText(card.title)}</h3><p>${escapePopupText(card.subtitle)}</p></header>` +
           section('', card.facts) +
           card.sections.map((entry) => section(entry.title, entry.rows)).join('') +
-          `<footer><small>OpenStreetMap (community-mapped). Clearance and opening arrangements may be incomplete, stale or datum-dependent, and opening status is not established by this record. Consult current official charts, notices and the bridge authority.</small><p>${links}</p></footer>` +
+          `<footer><p>${links}</p></footer>` +
           `</article>`,
         { className: 'reporting-system-popup bridge-popup', maxWidth: 340 },
       );

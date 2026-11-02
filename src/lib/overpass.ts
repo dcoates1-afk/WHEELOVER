@@ -30,6 +30,8 @@ export interface ChartFeature {
   areaLabel?: string;
   properties: Record<string, string>;
   sourceUrl: string;
+  /** Every mapped record folded into this crossing, so the card can link them all. */
+  sourceUrls?: string[];
 }
 
 export interface LiveChartFeaturesResult {
@@ -65,7 +67,13 @@ function pointInRing(lon: number, lat: number, ring: number[][]): boolean {
   return inside;
 }
 
-const WATER_CROSSING_TOLERANCE_METERS = 100;
+/**
+ * How far a bridge may sit from mapped water and still count as crossing it.
+ * Ten metres covers mapping imprecision; anything further is a bridge over
+ * land, not over water, and must not be drawn. (It used to be 100 m, which
+ * let road bridges beside a river read as water crossings.)
+ */
+const WATER_CROSSING_TOLERANCE_METERS = 10;
 /** The tolerance in degrees, padded so a pruned pair is never a real crossing. */
 const WATER_CROSSING_TOLERANCE_DEGREES = 0.01;
 
@@ -533,7 +541,7 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
       : { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lon: (Math.min(...lons) + Math.max(...lons)) / 2 });
     if (!Number.isFinite(point.lat) || !Number.isFinite(point.lon)) continue;
     const sourceKind = element.type === 'relation' ? 'relation' : 'way';
-    const baseName = tags.name ?? tags['seamark:name'] ??
+    const baseName = tags.name ?? tags['bridge:name'] ?? tags['seamark:name'] ??
       (bridge ? 'Bridge' : area?.label ?? 'Marine area');
     const id = `osm:${element.type ?? 'node'}/${element.id ?? `${point.lat}/${point.lon}`}`;
     // Every mapped tag the object carries, so the popup can show the designation,
@@ -564,39 +572,85 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
 
   // OSM may split a named bridge into multiple ways and/or map both generic
   // bridge and seamark records. Coalesce nearby parts so the chart shows one
-  // clickable label for that physical crossing.
-  const bridgeGroups: ChartFeature[] = [];
-  for (const bridge of bridges) {
-    const nameKey = bridge.name.trim().toLocaleLowerCase();
-    const existing = bridgeGroups.find((candidate) => {
-      const candidateName = candidate.name.trim().toLocaleLowerCase();
-      const sameNamedBridge = nameKey !== 'bridge' && candidateName === nameKey;
-      const sameUnnamedCrossing = nameKey === 'bridge' && candidateName === 'bridge';
-      if (!sameNamedBridge && !sameUnnamedCrossing) return false;
+  // overlay and one card for that physical crossing.
+  return { bridges: coalesceBridges(bridges), areas };
+}
+
+/**
+ * The name a bridge is grouped under: case, punctuation and a trailing
+ * generic word do not make a different bridge, so "Northam Bridge" and
+ * "northam bridge" group together. An empty key means the record is unnamed.
+ */
+export function bridgeNameKey(name: string): string {
+  const words = name.trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter((word) => word !== '');
+  while (words.length > 0 && words[words.length - 1] === 'bridge') words.pop();
+  return words.join(' ');
+}
+
+/**
+ * Fold every record of one physical crossing into a single chart feature, so
+ * the chart draws one overlay and one card per bridge. Records group when
+ * their names agree (or one side is unnamed) and their geometry is near:
+ * centres within 300 m or path points within 35 m for a named crossing,
+ * tighter (100 m / 8 m) when neither side is named, and segments within
+ * 35 m or centres within 100 m when only one side is named. A named part
+ * gives the group its name, and every distinct mapped value is kept, so no
+ * part's information is silently dropped.
+ */
+export function coalesceBridges(bridges: ChartFeature[]): ChartFeature[] {
+  // Work on copies: callers pass chart features straight out of props, and
+  // grouping concatenates paths and folds tags, which must not rewrite the
+  // caller's records on every redraw.
+  const copies = bridges.map((bridge) => ({
+    ...bridge,
+    path: [...bridge.path],
+    paths: [...(bridge.paths ?? [])],
+    properties: { ...bridge.properties },
+  }));
+  const groups: ChartFeature[] = [];
+  for (const bridge of copies) {
+    const key = bridgeNameKey(bridge.name);
+    const existing = groups.find((candidate) => {
+      const candidateKey = bridgeNameKey(candidate.name);
+      const bothNamed = key !== '' && candidateKey !== '';
+      const oneNamed = (key === '') !== (candidateKey === '');
+      if (!bothNamed && !oneNamed && !(key === '' && candidateKey === '')) return false;
+      const namesAgree = bothNamed && (key === candidateKey || key.startsWith(`${candidateKey} `) || candidateKey.startsWith(`${key} `));
+      if (bothNamed && !namesAgree) return false;
       const centreDistance = distanceMeters(candidate.lat, candidate.lon, bridge.lat, bridge.lon);
-      if (sameUnnamedCrossing && centreDistance > 100) return false;
-      const nearCentres = centreDistance <= (sameNamedBridge ? 300 : 100);
-      const nearSegments = candidate.path.some(([lat, lon]) => bridge.path.some(([otherLat, otherLon]) =>
-        distanceMeters(lat, lon, otherLat, otherLon) <= (sameNamedBridge ? 35 : 8),
+      if (key === '' && candidateKey === '') {
+        return centreDistance <= 100 || candidate.path.some(([lat, lon]) => bridge.path.some(([otherLat, otherLon]) =>
+          distanceMeters(lat, lon, otherLat, otherLon) <= 8,
+        ));
+      }
+      if (oneNamed) {
+        return centreDistance <= 100 || candidate.path.some(([lat, lon]) => bridge.path.some(([otherLat, otherLon]) =>
+          distanceMeters(lat, lon, otherLat, otherLon) <= 35,
+        ));
+      }
+      return centreDistance <= 300 || candidate.path.some(([lat, lon]) => bridge.path.some(([otherLat, otherLon]) =>
+        distanceMeters(lat, lon, otherLat, otherLon) <= 35,
       ));
-      return nearCentres || nearSegments;
     });
     if (!existing) {
-      bridgeGroups.push(bridge);
+      groups.push(bridge);
       continue;
     }
+    if (bridgeNameKey(existing.name) === '' && key !== '') existing.name = bridge.name;
     existing.path.push(...bridge.path);
     const points = existing.path;
     existing.lat = points.reduce((sum, [lat]) => sum + lat, 0) / points.length;
     existing.lon = points.reduce((sum, [, lon]) => sum + lon, 0) / points.length;
     existing.paths = [existing.path];
     mergeBridgeRecord(existing, bridge);
+    const urls = [...(existing.sourceUrls ?? [existing.sourceUrl]), bridge.sourceUrl];
+    existing.sourceUrls = [...new Set(urls)];
     if (bridge.sourceUrl < existing.sourceUrl) {
       existing.sourceUrl = bridge.sourceUrl;
       existing.id = bridge.id;
     }
   }
-  return { bridges: bridgeGroups, areas };
+  return groups;
 }
 
 /**
@@ -627,8 +681,27 @@ function mergeBridgeRecord(existing: ChartFeature, part: ChartFeature): void {
     // The water a crossing spans is the reason the feature is here; another part
     // meeting a marina basin must not rename it.
     if (key === 'water crossed' && current) continue;
-    if ((key === 'highway' || key === 'railway') && current &&
-      MINOR_CARRYING.has(value.toLowerCase()) && !MINOR_CARRYING.has(current.toLowerCase())) continue;
+    if (key === 'highway' || key === 'railway') {
+      if (!current) {
+        merged[key] = value;
+        continue;
+      }
+      const valueMinor = MINOR_CARRYING.has(value.toLowerCase());
+      const currentMinor = MINOR_CARRYING.has(current.toLowerCase());
+      // A footway or cycleway part must not relabel the crossing, but the
+      // road or rail class it runs beside does replace a lesser one.
+      if (valueMinor && !currentMinor) continue;
+      if (!valueMinor && currentMinor) {
+        merged[key] = value;
+        continue;
+      }
+    }
+    // Every distinct value is kept, so folding parts together loses nothing
+    // one part mapped: the card shows each value the records disagree on.
+    if (current && current !== value && !current.split(' / ').includes(value)) {
+      merged[key] = `${current} / ${value}`;
+      continue;
+    }
     merged[key] = value;
   }
 }

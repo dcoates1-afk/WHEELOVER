@@ -334,9 +334,11 @@ function tidalBridgeCrosses(paths, bounds, waterCellIndex) {
     if (!intersectsBounds(paddedBounds, water.bounds)) return false;
     for (const bridgePath of paths) for (const waterPath of water.paths) {
       for (const [a, b] of lineSegments(bridgePath)) for (const [c, d] of lineSegments(waterPath)) {
-        if (segmentsIntersect(a, b, c, d) || pointSegmentDistanceMeters(a, c, d) <= 100 ||
-          pointSegmentDistanceMeters(b, c, d) <= 100 || pointSegmentDistanceMeters(c, a, b) <= 100 ||
-          pointSegmentDistanceMeters(d, a, b) <= 100) return true;
+        // Ten metres covers mapping imprecision; anything further is a bridge
+        // over land, not over water, and must not enter the built files.
+        if (segmentsIntersect(a, b, c, d) || pointSegmentDistanceMeters(a, c, d) <= 10 ||
+          pointSegmentDistanceMeters(b, c, d) <= 10 || pointSegmentDistanceMeters(c, a, b) <= 10 ||
+          pointSegmentDistanceMeters(d, a, b) <= 10) return true;
       }
       if (water.area && waterPath.length >= 4) {
         const pointInside = ([lat, lon]) => {

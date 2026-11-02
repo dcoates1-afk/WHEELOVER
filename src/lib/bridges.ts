@@ -158,6 +158,26 @@ function bridgeKind(tags: Record<string, string>): string | null {
   return null;
 }
 
+/**
+ * Fixed, raising or rotating: the three operations a boater plans around.
+ * A swing bridge rotates out of the way; bascule, lifting, drawbridge and
+ * tilting bridges raise; other mapped movable kinds (transporter,
+ * submersible, retractable, or a seamark "opening" bridge) read as Movable;
+ * anything else mapped — a viaduct, a plain road bridge — is Fixed.
+ */
+function bridgeOperation(tags: Record<string, string>): string {
+  const movable = (
+    tags['bridge:movable'] ??
+    (tags.bridge !== 'yes' && tags.bridge !== 'no' ? tags.bridge : undefined) ??
+    tags['seamark:bridge:category'] ??
+    ''
+  ).toLowerCase();
+  if (movable === 'swing') return 'Rotating';
+  if (movable === 'bascule' || movable === 'lift' || movable === 'drawbridge' || movable === 'tilt') return 'Raising';
+  if (movable === 'opening' || movable in MOVABLE_KINDS) return 'Movable';
+  return 'Fixed';
+}
+
 function carrying(tags: Record<string, string>): string | null {
   const highway = tags.highway?.toLowerCase();
   if (highway && CARRYING[highway]) return CARRYING[highway];
@@ -229,6 +249,7 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     shownKeys.push('bridge:movable', 'bridge:structure', 'bridge:type', 'seamark:bridge:category');
     facts.push({ label: 'Type', value: kind });
   }
+  facts.push({ label: 'Operation', value: bridgeOperation(tags) });
   const carries = carrying(tags);
   if (carries) facts.push({ label: 'Carrying', value: carries });
 

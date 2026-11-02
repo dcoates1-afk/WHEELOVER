@@ -588,13 +588,63 @@ export function bridgeNameKey(name: string): string {
 }
 
 /**
+ * The smallest gap between two mapped polylines, measured point-to-segment.
+ * Node-to-node distance lies about parallel ways: two carriageways of one
+ * bridge can have nodes offset along the bridge by far more than the gap
+ * between the carriageways themselves, so comparing nodes only split one
+ * bridge into one overlay per direction, plus one per footway. Comparing
+ * each line against the other's segments measures the gap that matters.
+ */
+function polylineGapMeters(a: [number, number][][], b: [number, number][][]): number {
+  let best = Number.POSITIVE_INFINITY;
+  const measure = (points: [number, number][][], segments: [number, number][][]) => {
+    for (const line of points) {
+      for (const [lat, lon] of line) {
+        for (const segment of segments) {
+          for (let i = 0; i + 1 < segment.length; i++) {
+            best = Math.min(best, pointToSegmentMeters(
+              { lat, lon },
+              { lat: segment[i][0], lon: segment[i][1] },
+              { lat: segment[i + 1][0], lon: segment[i + 1][1] },
+            ));
+          }
+        }
+      }
+    }
+  };
+  measure(a, b);
+  measure(b, a);
+  if (best === Number.POSITIVE_INFINITY) {
+    // Degenerate lines with no segments at all: fall back to point-to-point.
+    for (const lineA of a) {
+      for (const [latA, lonA] of lineA) {
+        for (const lineB of b) {
+          for (const [latB, lonB] of lineB) {
+            best = Math.min(best, distanceMeters(latA, lonA, latB, lonB));
+          }
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function pathsNear(a: ChartFeature, b: ChartFeature, toleranceMeters: number): boolean {
+  const linesA = a.paths.length > 0 ? a.paths : [a.path];
+  const linesB = b.paths.length > 0 ? b.paths : [b.path];
+  return polylineGapMeters(linesA, linesB) <= toleranceMeters;
+}
+
+/**
  * Fold every record of one physical crossing into a single chart feature, so
  * the chart draws one overlay and one card per bridge. Records group when
  * their names agree (or one side is unnamed) and their geometry is near:
- * centres within 300 m or path points within 35 m for a named crossing,
- * tighter (100 m / 8 m) when neither side is named, and segments within
- * 35 m or centres within 100 m when only one side is named. A named part
- * gives the group its name, and every distinct mapped value is kept, so no
+ * centres within 300 m or lines within 35 m for a named crossing,
+ * tighter (100 m / 8 m) when neither side is named, and lines within
+ * 35 m or centres within 100 m when only one side is named. Near is measured
+ * line-to-line, not node-to-node, so parallel carriageways and their
+ * footways fold together even when their mapped nodes do not line up. A named
+ * part gives the group its name, and every distinct mapped value is kept, so no
  * part's information is silently dropped.
  */
 export function coalesceBridges(bridges: ChartFeature[]): ChartFeature[] {
@@ -619,18 +669,12 @@ export function coalesceBridges(bridges: ChartFeature[]): ChartFeature[] {
       if (bothNamed && !namesAgree) return false;
       const centreDistance = distanceMeters(candidate.lat, candidate.lon, bridge.lat, bridge.lon);
       if (key === '' && candidateKey === '') {
-        return centreDistance <= 100 || candidate.path.some(([lat, lon]) => bridge.path.some(([otherLat, otherLon]) =>
-          distanceMeters(lat, lon, otherLat, otherLon) <= 8,
-        ));
+        return centreDistance <= 100 || pathsNear(candidate, bridge, 8);
       }
       if (oneNamed) {
-        return centreDistance <= 100 || candidate.path.some(([lat, lon]) => bridge.path.some(([otherLat, otherLon]) =>
-          distanceMeters(lat, lon, otherLat, otherLon) <= 35,
-        ));
+        return centreDistance <= 100 || pathsNear(candidate, bridge, 35);
       }
-      return centreDistance <= 300 || candidate.path.some(([lat, lon]) => bridge.path.some(([otherLat, otherLon]) =>
-        distanceMeters(lat, lon, otherLat, otherLon) <= 35,
-      ));
+      return centreDistance <= 300 || pathsNear(candidate, bridge, 35);
     });
     if (!existing) {
       groups.push(bridge);
@@ -641,7 +685,7 @@ export function coalesceBridges(bridges: ChartFeature[]): ChartFeature[] {
     const points = existing.path;
     existing.lat = points.reduce((sum, [lat]) => sum + lat, 0) / points.length;
     existing.lon = points.reduce((sum, [, lon]) => sum + lon, 0) / points.length;
-    existing.paths = [existing.path];
+    existing.paths = [...existing.paths, ...(bridge.paths.length > 0 ? bridge.paths : [bridge.path])];
     mergeBridgeRecord(existing, bridge);
     const urls = [...(existing.sourceUrls ?? [existing.sourceUrl]), bridge.sourceUrl];
     existing.sourceUrls = [...new Set(urls)];

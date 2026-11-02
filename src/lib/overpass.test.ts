@@ -311,9 +311,68 @@ describe('bridge overlay coalescing', () => {
       lat: 50.924,
       lon: -1.39,
       path: [[50.924, -1.4], [50.924, -1.38]] as [number, number][],
+      paths: [[[50.924, -1.4], [50.924, -1.38]]] as [number, number][][],
       sourceUrl: 'https://www.openstreetmap.org/way/2',
     });
     expect(coalesceBridges([first, second])).toHaveLength(2);
+  });
+
+  it('merges parallel directions whose mapped nodes do not line up', () => {
+    // One direction runs the bridge span only; the other runs on past it,
+    // so their centres sit ~350 m apart and no node of one falls within
+    // 35 m of a node of the other — yet the lines themselves run ~11 m
+    // apart over the shared span. Node distance split this into one
+    // overlay per direction; line distance folds it into one.
+    const eastbound = feature({
+      id: 'osm:way/1',
+      name: 'Test Bridge',
+      lat: 50.914,
+      lon: -1.39,
+      path: [[50.914, -1.4], [50.914, -1.39], [50.914, -1.38]] as [number, number][],
+      paths: [[[50.914, -1.4], [50.914, -1.39], [50.914, -1.38]]] as [number, number][][],
+      properties: { highway: 'primary' },
+    });
+    const westbound = feature({
+      id: 'osm:way/2',
+      name: 'Test Bridge',
+      lat: 50.9141,
+      lon: -1.385,
+      path: [[50.9141, -1.405], [50.9141, -1.385], [50.9141, -1.365]] as [number, number][],
+      paths: [[[50.9141, -1.405], [50.9141, -1.385], [50.9141, -1.365]]] as [number, number][][],
+      properties: { highway: 'primary' },
+      sourceUrl: 'https://www.openstreetmap.org/way/2',
+    });
+    expect(coalesceBridges([eastbound, westbound])).toHaveLength(1);
+  });
+
+  it('folds a parallel footway and cycleway into the road bridge card', () => {
+    const road = feature({ id: 'osm:way/1', name: 'Test Bridge', properties: { highway: 'primary' } });
+    // Unnamed, offset nodes, and a longer extent that shifts the centre
+    // ~350 m along the crossing, so neither centre nor node distance
+    // connects these to the road — only the lines themselves run together.
+    const footway = feature({
+      id: 'osm:way/2',
+      name: '',
+      lat: 50.9139,
+      lon: -1.385,
+      path: [[50.9139, -1.405], [50.9139, -1.385], [50.9139, -1.365]] as [number, number][],
+      paths: [[[50.9139, -1.405], [50.9139, -1.385], [50.9139, -1.365]]] as [number, number][][],
+      properties: { highway: 'footway' },
+      sourceUrl: 'https://www.openstreetmap.org/way/2',
+    });
+    const cycleway = feature({
+      id: 'osm:way/3',
+      name: '',
+      lat: 50.9142,
+      lon: -1.395,
+      path: [[50.9142, -1.405], [50.9142, -1.395], [50.9142, -1.385]] as [number, number][],
+      paths: [[[50.9142, -1.405], [50.9142, -1.395], [50.9142, -1.385]]] as [number, number][][],
+      properties: { highway: 'cycleway' },
+      sourceUrl: 'https://www.openstreetmap.org/way/3',
+    });
+    const merged = coalesceBridges([road, footway, cycleway]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].properties.highway).toBe('primary');
   });
 
   it('does not rewrite the features handed in', () => {

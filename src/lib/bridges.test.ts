@@ -26,6 +26,20 @@ describe('bridge card', () => {
     expect(card.title).toBe('Johnson Street Bridge');
     expect(card.subtitle).toBe('Bascule bridge');
     expect(card.facts).toContainEqual({ label: 'Crosses', value: 'Gorge Waterway' });
+    expect(card.facts).toContainEqual({ label: 'Operation', value: 'Raising' });
+  });
+
+  it('reads the operation as Fixed, Raising, Rotating or Movable', () => {
+    const operation = (properties: Record<string, string>) =>
+      describeBridge({ name: 'Bridge', properties }, { depth: 'm', distance: 'm-nm' }).facts.find(
+        (row) => row.label === 'Operation',
+      )?.value;
+    expect(operation({ 'bridge:movable': 'bascule' })).toBe('Raising');
+    expect(operation({ 'bridge:movable': 'lift' })).toBe('Raising');
+    expect(operation({ 'bridge:movable': 'swing' })).toBe('Rotating');
+    expect(operation({ 'bridge:movable': 'transporter' })).toBe('Movable');
+    expect(operation({ bridge: 'viaduct' })).toBe('Fixed');
+    expect(operation({})).toBe('Fixed');
   });
 
   it('puts the clearances in the units chosen in Settings', () => {
@@ -90,7 +104,7 @@ describe('bridge card', () => {
     const card = describeBridge({ name: 'Bridge', properties: {} }, { depth: 'm', distance: 'm-nm' });
     expect(card.title).toBe('Bridge');
     expect(card.subtitle).toBe('Bridge');
-    expect(card.facts).toEqual([]);
+    expect(card.facts).toEqual([{ label: 'Operation', value: 'Fixed' }]);
     expect(card.sections).toEqual([]);
   });
 

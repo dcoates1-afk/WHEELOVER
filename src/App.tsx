@@ -139,10 +139,8 @@ export default function App() {
   }, [deepLink, cachedFix]);
 
   const [view, setView] = useState<ViewState>(initialView);
-  const [weatherAt, setWeatherAt] = useState<[number, number]>(() => [
-    initialView.center[0],
-    initialView.center[1],
-  ]);
+  /** Where the weather forecast point comes from: the GPS fix, or the centre of the screen. */
+  const [weatherMode, setWeatherMode] = useState<'gps' | 'center'>('gps');
   const [noaaCovered, setNoaaCovered] = useState(false);
   const [marks, setMarks] = useState<Navaid[]>([]);
   const [worldwideNavaids, setWorldwideNavaids] = useState<Navaid[] | null>(null);
@@ -646,6 +644,12 @@ export default function App() {
     [],
   );
 
+  // The weather forecast point follows the toggle: the live GPS fix when one
+  // exists, otherwise the centre of the screen (which only updates once the
+  // user stops panning, so the forecast refetches once per settled view).
+  const weatherAt: [number, number] =
+    weatherMode === 'gps' && geo.fix ? [geo.fix.lat, geo.fix.lon] : view.center;
+
   return (
     <div className={`app theme-${preferences.theme}`}>
       <Suspense fallback={<div className="app-loading" role="status">Loading chart tools…</div>}>
@@ -674,8 +678,7 @@ export default function App() {
           userMoved.current = true;
         }}
         onNoaaCoverageChange={setNoaaCovered}
-        onMapClick={(lat, lon) => {
-          setWeatherAt([lat, lon]);
+        onMapClick={(_lat, _lon) => {
           // Tapping open water puts the picked target down again.
           setHighlightedVessel(null);
         }}
@@ -700,6 +703,9 @@ export default function App() {
           onOpen={setWeatherOpen}
           lat={weatherAt[0]}
           lon={weatherAt[1]}
+          mode={weatherMode}
+          onModeChange={setWeatherMode}
+          hasFix={Boolean(geo.fix)}
           units={settings.units}
           hidden={Boolean(station || selectedMark || selectedVessel)}
         />

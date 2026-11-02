@@ -10,6 +10,11 @@ interface WeatherMenuProps {
   onOpen: (open: boolean) => void;
   lat: number;
   lon: number;
+  /** Where the forecast point comes from: the GPS fix, or the centre of the screen. */
+  mode: 'gps' | 'center';
+  onModeChange: (mode: 'gps' | 'center') => void;
+  /** False when no GPS fix is available, so GPS mode falls back to the screen centre. */
+  hasFix: boolean;
   units: UnitSettings;
   hidden?: boolean;
 }
@@ -18,7 +23,7 @@ interface WeatherMenuProps {
  * The conditions drawer lives in the top-left corner as its own menu, so the
  * main menu stays about the chart itself.
  */
-export function WeatherMenu({ open, onOpen, lat, lon, units, hidden = false }: WeatherMenuProps) {
+export function WeatherMenu({ open, onOpen, lat, lon, mode, onModeChange, hasFix, units, hidden = false }: WeatherMenuProps) {
   return (
     <>
       <button
@@ -54,7 +59,11 @@ export function WeatherMenu({ open, onOpen, lat, lon, units, hidden = false }: W
             <div>
               <p className="eyebrow">Conditions</p>
               <h2>Weather conditions</h2>
-              <p className="menu-tagline">Forecast, tides and tidal current at the chart position</p>
+              <p className="menu-tagline">
+                {mode === 'gps'
+                  ? 'Forecast, tides and tidal current at your GPS position'
+                  : 'Forecast, tides and tidal current at the centre of the screen'}
+              </p>
             </div>
             <button
               type="button"
@@ -68,10 +77,25 @@ export function WeatherMenu({ open, onOpen, lat, lon, units, hidden = false }: W
             </button>
           </header>
           <div className="weather-body">
+            <div className="weather-source-toggle" role="group" aria-label="Forecast location">
+              <button type="button" aria-pressed={mode === 'gps'} onClick={() => onModeChange('gps')}>
+                My GPS location
+              </button>
+              <button type="button" aria-pressed={mode === 'center'} onClick={() => onModeChange('center')}>
+                Screen centre
+              </button>
+            </div>
+            {mode === 'gps' && !hasFix && (
+              <p className="menu-note">No GPS fix yet — showing the centre of the screen instead.</p>
+            )}
             <Suspense fallback={<p className="menu-note">Loading conditions…</p>}>
               <WeatherPanel lat={lat} lon={lon} units={units} />
             </Suspense>
-            <p className="menu-note weather-hint">Tap the chart to move the forecast point.</p>
+            <p className="menu-note weather-hint">
+              {mode === 'gps'
+                ? 'Following your GPS position as it updates.'
+                : 'Following the centre of the screen — pan the chart and the forecast follows once you stop.'}
+            </p>
           </div>
         </section>
       )}

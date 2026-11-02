@@ -142,8 +142,15 @@ async function readChart(page) {
     // Marine areas are drawn in the default overlay pane, one colour per group;
     // the calling-in lines share their dash pattern, so they are matched out.
     const AREA_STROKES = ['#8a54c7', '#1f7a6a', '#c2603f', '#a87c36', '#c22b2b', '#8a2b2b'];
+    const TSS_STROKES = ['#ff7ad1', '#ffd24a', '#f4faff', '#e2f2fb', '#9ef27a', '#7ad9ff'];
     const drawn = {
-      tss: strokes.filter((stroke) => ['#ff7ad1', '#ffd24a', '#f4faff', '#e2f2fb'].includes(stroke)).length,
+      tss: strokes.filter((stroke) => TSS_STROKES.includes(stroke)).length,
+      // TSS geometry is outlined, never filled: a filled path here is the pink
+      // box that tinted whichever schemes are mapped as areas rather than lines.
+      filledTss: paths.filter((path) =>
+        TSS_STROKES.includes((path.getAttribute('stroke') ?? '').toLowerCase()) &&
+        (path.getAttribute('fill') ?? 'none') !== 'none',
+      ).length,
       ferries: strokes.filter((stroke) => stroke === '#8ff0ff').length,
       marks: document.querySelectorAll('.marnav-mark-wrap').length,
       bridges: strokes.filter((stroke) => stroke === '#152c3a').length,
@@ -206,7 +213,12 @@ async function run() {
       `${drawn.marks} drawn of ${expected.navaids} charted`,
     );
     if (expected.tss > 0) {
-      check(`${view.label}: TSS lanes draw`, drawn.tss > 0, `${drawn.tss} paths for ${expected.tss} features`);
+      check(
+        `${view.label}: TSS lanes draw`,
+        drawn.tss >= expected.tss,
+        `${drawn.tss} paths for ${expected.tss} features`,
+      );
+      check(`${view.label}: TSS drawn as outlines`, drawn.filledTss === 0, `${drawn.filledTss} filled paths`);
     } else if (view.tss) {
       check(`${view.label}: TSS present in archive`, false, 'archive holds no TSS for this view');
     }

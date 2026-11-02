@@ -304,8 +304,10 @@ function createExportChart(options: ExportChartOptions): L.GridLayer {
  * the chart and its depth layers but below the marks.
  *
  * These are thin, dashed lines over busy water, so the ink follows paper-chart
- * practice: ferries in a bright dashed cyan, TSS lanes in magenta with a tinted
- * fill, separation zones in amber. The pane carries a dark halo (see
+ * practice: ferries in a bright dashed cyan, TSS lanes in magenta, separation
+ * zones in amber. TSS geometry is drawn as outlines only — the same scheme is
+ * mapped as lanes in one place and as areas in another, so any fill tinted
+ * some schemes and left others plain. The pane carries a dark halo (see
  * styles.css) because the same stroke has to read over pale NOAA paper, green
  * OSM land and dark satellite water.
  */
@@ -328,16 +330,18 @@ function ferryStyle(): L.PolylineOptions {
   };
 }
 
+/** TSS is drawn as ink: every scheme type is an outline, never a filled area. */
 function tssStyle(type: string): L.PolylineOptions {
+  return { ...tssStroke(type), fill: false, pane: 'lanes' };
+}
+
+function tssStroke(type: string): L.PolylineOptions {
   switch (type) {
     case 'separation_lane':
       return {
         color: '#ff7ad1',
         weight: 2.2,
         opacity: 0.95,
-        fillColor: '#ff2fa8',
-        fillOpacity: 0.24,
-        pane: 'lanes',
       };
     case 'separation_zone':
       return {
@@ -345,14 +349,11 @@ function tssStyle(type: string): L.PolylineOptions {
         weight: 1.9,
         opacity: 0.9,
         dashArray: '4 5',
-        fillColor: '#ffd24a',
-        fillOpacity: 0.16,
-        pane: 'lanes',
       };
     case 'separation_boundary':
-      return { color: '#f4faff', weight: 1.8, opacity: 0.9, dashArray: '12 7', pane: 'lanes' };
+      return { color: '#f4faff', weight: 1.8, opacity: 0.9, dashArray: '12 7' };
     case 'separation_line':
-      return { color: '#ff7ad1', weight: 1.9, opacity: 0.9, dashArray: '10 6', pane: 'lanes' };
+      return { color: '#ff7ad1', weight: 1.9, opacity: 0.9, dashArray: '10 6' };
     // Crossing and roundabout features used to fall through to the pale default
     // below, which is all but invisible over a light chart, so these mapped
     // schemes read as missing lanes.
@@ -362,9 +363,6 @@ function tssStyle(type: string): L.PolylineOptions {
         weight: 2,
         opacity: 0.95,
         dashArray: '6 4',
-        fillColor: '#9ef27a',
-        fillOpacity: 0.14,
-        pane: 'lanes',
       };
     case 'separation_roundabout':
       return {
@@ -372,12 +370,9 @@ function tssStyle(type: string): L.PolylineOptions {
         weight: 2,
         opacity: 0.95,
         dashArray: '8 5',
-        fillColor: '#7ad9ff',
-        fillOpacity: 0.16,
-        pane: 'lanes',
       };
     default:
-      return { color: '#e2f2fb', weight: 1.5, opacity: 0.8, dashArray: '2 6', pane: 'lanes' };
+      return { color: '#e2f2fb', weight: 1.5, opacity: 0.8, dashArray: '2 6' };
   }
 }
 

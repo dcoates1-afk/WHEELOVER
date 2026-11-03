@@ -1021,6 +1021,18 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     const map = mapRef.current;
     const group = groupsRef.current.bridges;
     if (!map || !group) return;
+    // A rebuild must not eat a card the user is reading. A card that opens
+    // near an edge autopans the chart, the pan re-fetches, and the refetch
+    // rebuilds these markers — without this, the card closes about a second
+    // after it opens. Remember which bridge was open and put its card back.
+    let openBridgeId: string | null = null;
+    for (const layer of group.getLayers()) {
+      const popup = (layer as L.CircleMarker).getPopup?.();
+      if (popup?.isOpen()) {
+        openBridgeId = (layer as L.CircleMarker & { bridgeFeatureId?: string }).bridgeFeatureId ?? null;
+        break;
+      }
+    }
     group.clearLayers();
     if (!props.preferences.overlays.bridges) {
       if (map.hasLayer(group)) map.removeLayer(group);
@@ -1057,7 +1069,8 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
         fillColor: '#fff4bb',
         fillOpacity: 1,
         pane: 'lanes',
-      });
+      }) as L.CircleMarker & { bridgeFeatureId: string };
+      marker.bridgeFeatureId = feature.id;
       marker.bindTooltip(feature.name, { sticky: true, className: 'marnav-tip' });
       const card = describeBridge(
         {
@@ -1090,6 +1103,22 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     }
     if (bridges.length > 0) group.addTo(map);
     else if (map.hasLayer(group)) map.removeLayer(group);
+    if (openBridgeId !== null && bridges.length > 0) {
+      for (const layer of group.getLayers()) {
+        const candidate = layer as L.CircleMarker & { bridgeFeatureId?: string };
+        if (candidate.bridgeFeatureId !== openBridgeId) continue;
+        const popup = candidate.getPopup();
+        if (!popup) break;
+        // Restoring must not pan again: the chart already moved for this
+        // card, and another pan would re-fetch, rebuild, and loop the
+        // restore. The flag is put back at once, so a later tap on this
+        // marker still pans normally.
+        popup.options.autoPan = false;
+        candidate.openPopup();
+        popup.options.autoPan = true;
+        break;
+      }
+    }
   }, [props.chartFeatures, props.marineFeatures?.bridges, props.preferences.overlays.bridges, clearanceDatasets]);
 
   useEffect(() => {

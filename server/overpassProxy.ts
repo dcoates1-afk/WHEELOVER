@@ -11,7 +11,7 @@ import { resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { buildPoiQuery as RAW_BUILD_POI_QUERY } from '../shared/poi-core.mjs';
-import { chartFeaturesFromElements, type RawChartElement } from '../src/lib/overpass';
+import { chartFeaturesFromElements, type ChartFeature, type RawChartElement } from '../src/lib/overpass';
 
 const MIRRORS = [
   'https://overpass.openstreetmap.fr/api/interpreter',
@@ -165,6 +165,13 @@ interface CacheEntry {
   /** Data timestamp the mirror itself reported, when it reports one. */
   sourceTimestamp?: number | null;
   payload: unknown;
+  /**
+   * Features drawn from the payload, computed once when the entry is written.
+   * The water-crossing geometry math on a large reply takes seconds, so a
+   * cache hit must not redo it: without this, a "warm" bridges reply still
+   * took over twenty seconds while it recomputed what it already knew.
+   */
+  features?: { bridges: ChartFeature[]; areas: ChartFeature[] };
 }
 
 const inflight = new Map<string, Promise<CacheEntry>>();
@@ -429,7 +436,7 @@ async function writeChartFeatureStats(entry: CacheEntry, part: ChartFeaturePart,
       : [];
     // Count with the chart's own selection rules, so the disclaimer line
     // describes what was drawn rather than every object the reply mentioned.
-    const drawn = chartFeaturesFromElements(elements);
+    const drawn = entry.features ?? chartFeaturesFromElements(elements);
     const previous = await readFile(CHART_FEATURE_STATS_FILE, 'utf8').catch(() => null);
     let stored: StoredStats = { cell, parts: {} };
     try {
@@ -471,6 +478,12 @@ function refresh(key: string, query: string, kind: QueryKind, part: ChartFeature
     kind === 'chart-features' ? CHART_FEATURE_GRACE_MS : LAGGING_GRACE_MS,
   )
     .then(async (entry) => {
+      if (kind === 'chart-features') {
+        const elements = (entry.payload as { elements?: unknown[] } | null)?.elements;
+        if (Array.isArray(elements)) {
+          entry.features = chartFeaturesFromElements(elements as RawChartElement[]);
+        }
+      }
       await writeCache(key, entry);
       // Counting the drawn features is the chart's own work, not the reply's, so
       // it must not delay the answer: a large view would otherwise wait on it.
@@ -501,13 +514,22 @@ function sendJson(req: IncomingMessage, res: ServerResponse, status: number, bod
  * of it. Sending the drawn features instead of the raw elements cuts the
  * transfer and the chart's own water processing, which was a large share of
  * the wait on a cold cell. Other query kinds still send the raw reply.
+ *
+ * The drawn features are computed once when the entry is written and served
+ * from the entry afterwards. An entry written before that change has no
+ * features field: it is computed on first re-read and written back, so only
+ * that one request pays the geometry math.
  */
-function responseBody(payload: unknown, meta: Record<string, unknown>, kind: QueryKind): unknown {
-  if (kind !== 'chart-features') return { ...(payload as object), meta };
-  const elements = (payload as { elements?: unknown[] } | null)?.elements;
-  if (!Array.isArray(elements)) return { ...(payload as object), meta };
-  const { bridges, areas } = chartFeaturesFromElements(elements as RawChartElement[]);
-  return { features: [...areas, ...bridges], meta };
+function responseBody(entry: CacheEntry, key: string, meta: Record<string, unknown>, kind: QueryKind): unknown {
+  if (kind !== 'chart-features') return { ...(entry.payload as object), meta };
+  if (entry.features) {
+    return { features: [...entry.features.areas, ...entry.features.bridges], meta };
+  }
+  const elements = (entry.payload as { elements?: unknown[] } | null)?.elements;
+  if (!Array.isArray(elements)) return { ...(entry.payload as object), meta };
+  const features = chartFeaturesFromElements(elements as RawChartElement[]);
+  void writeCache(key, { ...entry, features });
+  return { features: [...features.areas, ...features.bridges], meta };
 }
 
 export function createOverpassHandler(log: (message: string) => void = () => {}) {
@@ -559,7 +581,7 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
       // The disclaimer page describes the reply this chart view is being served,
       // whether it came from a mirror just now or from the on-disk cache.
       if (kind === 'chart-features') void writeChartFeatureStats(cached, part, cell);
-      sendJson(req, res, 200, responseBody(cached.payload, { cached: true, ageMs: age, source: cached.source }, kind));
+      sendJson(req, res, 200, responseBody(cached, key, { cached: true, ageMs: age, source: cached.source }, kind));
       return;
     }
 
@@ -567,17 +589,17 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
       // Serve stale immediately, refresh quietly.
       refresh(key, query, kind, part, cell).catch((error) => log(`overpass refresh failed: ${error.message}`));
       if (kind === 'chart-features') void writeChartFeatureStats(cached, part, cell);
-      sendJson(req, res, 200, responseBody(cached.payload, { cached: true, stale: true, ageMs: age, source: cached.source }, kind));
+      sendJson(req, res, 200, responseBody(cached, key, { cached: true, stale: true, ageMs: age, source: cached.source }, kind));
       return;
     }
 
     try {
       const entry = await refresh(key, query, kind, part, cell);
-      sendJson(req, res, 200, responseBody(entry.payload, { cached: false, ageMs: 0, source: entry.source }, kind));
+      sendJson(req, res, 200, responseBody(entry, key, { cached: false, ageMs: 0, source: entry.source }, kind));
     } catch (error) {
       if (cached) {
         if (kind === 'chart-features') void writeChartFeatureStats(cached, part, cell);
-        sendJson(req, res, 200, responseBody(cached.payload, { cached: true, stale: true, ageMs: age, source: cached.source }, kind));
+        sendJson(req, res, 200, responseBody(cached, key, { cached: true, stale: true, ageMs: age, source: cached.source }, kind));
         return;
       }
       sendJson(req, res, 502, { error: error instanceof Error ? error.message : 'overpass unavailable' });

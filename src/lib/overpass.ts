@@ -4,6 +4,7 @@ import { classifyMarineArea, type MarineAreaGroup } from './marineAreas';
 import type { Navaid } from './navaidTypes';
 import { markDetailsFromTags, type MarkDetailEntry } from './markDetails';
 import type { Bounds } from './navaidDb';
+import { readChartFeatureCell, storedCellStatus, writeChartFeatureCell } from './chartFeatureStore';
 
 export interface LiveQueryResult {
   navaids: Navaid[];
@@ -496,6 +497,25 @@ export async function queryChartFeaturePart(
   if (!options.force && cached && Date.now() - cached.at < CHART_FEATURE_CACHE_MS) {
     return { features: cached.features, cached: true, fetchedAt: cached.at };
   }
+  if (!options.force) {
+    // The device cache outlives the server's: a redeploy wipes the proxy's
+    // disk cache, but a view already visited still loads from this browser.
+    const stored = await readChartFeatureCell(key);
+    if (stored) {
+      const status = storedCellStatus(stored.at);
+      if (status === 'fresh') {
+        chartFeatureMemory.set(key, { features: stored.features, at: stored.at });
+        return { features: stored.features, cached: true, fetchedAt: stored.at };
+      }
+      if (status === 'stale') {
+        chartFeatureMemory.set(key, { features: stored.features, at: stored.at });
+        // Serve the stale answer now and refresh quietly: the next view
+        // change picks up the fresh answer from the memory cache.
+        void queryChartFeaturePart(bounds, part, { signal: options.signal, force: true }).catch(() => {});
+        return { features: stored.features, cached: true, fetchedAt: stored.at };
+      }
+    }
+  }
   const [south, west, north, east] = bounds;
   // The Overpass mirrors are flaky: a single failed fetch used to leave the
   // view with no bridges at all and no retry, which reads as bridges missing
@@ -545,6 +565,7 @@ export async function queryChartFeaturePart(
     })();
   const fetchedAt = Date.now();
   chartFeatureMemory.set(key, { features, at: fetchedAt });
+  void writeChartFeatureCell(key, features, fetchedAt);
   return { features, cached: Boolean(payload.meta?.cached), fetchedAt };
 }
 

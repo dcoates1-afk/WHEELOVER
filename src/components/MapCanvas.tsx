@@ -4,6 +4,7 @@ import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import { describeBridge, type BridgeRow } from '../lib/bridges';
+import { clearancesForFeature, loadClearanceDatasets, type ClearanceDatasets } from '../lib/clearances';
 import { coalesceBridges, type ChartFeature } from '../lib/overpass';
 import { MARINE_AREA_GROUP_META } from '../lib/marineAreas';
 import { markDetailLabel } from '../../shared/mark-detail-core.mjs';
@@ -409,6 +410,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   // control used to hold reads out the scale and the cursor instead.
   const [cursor, setCursor] = useState<{ lat: number; lon: number } | null>(null);
   const [liveZoom, setLiveZoom] = useState(props.initialZoom ?? 11);
+  const [clearanceDatasets, setClearanceDatasets] = useState<ClearanceDatasets | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -977,6 +979,21 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     }
   }, [props.marineFeatures, props.preferences.overlays.ferries, props.preferences.overlays.tss]);
 
+  // The clearance dataset is fetched once, the first time a bridge is drawn,
+  // and cached in the module — cards then rebuild with authority figures.
+  useEffect(() => {
+    const hasBridges = props.chartFeatures.some((entry) => entry.type === 'bridge')
+      || (props.marineFeatures?.bridges?.length ?? 0) > 0;
+    if (!hasBridges || clearanceDatasets) return;
+    let cancelled = false;
+    void loadClearanceDatasets().then((data) => {
+      if (!cancelled) setClearanceDatasets(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [props.chartFeatures, props.marineFeatures?.bridges, clearanceDatasets]);
+
   useEffect(() => {
     const map = mapRef.current;
     const group = groupsRef.current.bridges;
@@ -1020,7 +1037,13 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       });
       marker.bindTooltip(feature.name, { sticky: true, className: 'marnav-tip' });
       const card = describeBridge(
-        { name: feature.name, properties: details, sourceUrl: feature.sourceUrl, sourceUrls: feature.sourceUrls },
+        {
+          name: feature.name,
+          properties: details,
+          sourceUrl: feature.sourceUrl,
+          sourceUrls: feature.sourceUrls,
+          clearances: clearanceDatasets ? clearancesForFeature(feature, clearanceDatasets) : [],
+        },
         { depth: props.depthUnit ?? 'm', distance: props.distanceUnit ?? 'm-nm' },
       );
       const section = (title: string, rows: BridgeRow[]) => rows.length === 0
@@ -1044,7 +1067,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     }
     if (bridges.length > 0) group.addTo(map);
     else if (map.hasLayer(group)) map.removeLayer(group);
-  }, [props.chartFeatures, props.marineFeatures?.bridges, props.preferences.overlays.bridges]);
+  }, [props.chartFeatures, props.marineFeatures?.bridges, props.preferences.overlays.bridges, clearanceDatasets]);
 
   useEffect(() => {
     const map = mapRef.current;

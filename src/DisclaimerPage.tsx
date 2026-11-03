@@ -25,6 +25,13 @@ interface SectorCoverage {
   sourceTimestamp: string | null;
 }
 
+/** Size and retrieval date of the bridge-clearance dataset. */
+interface ClearanceManifest {
+  generatedAt: string;
+  sources: Record<string, { label: string; datum: string | null; count: number }>;
+  incomplete: string[];
+}
+
 /** What the live bridge and marine-area overlays last drew, and from which snapshot. */
 interface ChartFeatureCoverage {
   bridges: number;
@@ -56,6 +63,9 @@ const sources = [
   { name: 'EMODnet Human Activities — heritage shipwrecks (CC BY 4.0)', detail: 'Heritage inventory records reproduced under CC BY 4.0, originator AND-International, source provider Historic England. Used to describe charted wrecks, not to position them; see “Heritage wreck records” below.', href: 'https://emodnet.ec.europa.eu/geonetwork/srv/api/records/e965088b-a265-4517-84df-c49b156af8a7' },
   { name: 'European Environment Agency — Natura 2000', detail: 'Protected-site boundaries and attributes returned by the Natura 2000 service, merged with EMODnet\u2019s marine-protected-area layer, which still lists the UK and OSPAR sites the Natura layer no longer covers. Designations do not, by themselves, state current boating restrictions.', href: 'https://www.eea.europa.eu/en/datahub/datahubitem-view/6fc8ad2d-195d-40f4-bdec-576e7d1268e4' },
   { name: 'NOAA ENC / ENC Direct to GIS / Maritime Chart Service', detail: 'Official U.S. chart-service content is shown only as a display aid: converted ENC Direct GIS features, the NOAA Maritime Chart Service raster chart display, and the ENC depth-contour and charted-sounding layers. Converted GIS data are not an official NOAA navigation product; use current official ENCs and notices.', href: 'https://nauticalcharts.noaa.gov/learn/encdirect/' },
+  { name: 'USACE Inland ENC', detail: 'Bridge clearance figures from the U.S. Army Corps of Engineers Inland ENC bridge layer, converted to GIS features. The GIS feed carries no vertical datum for these figures, so they are shown datum-not-stated and must not be used to judge passage at a given tide.', href: 'https://ienccloud.us/' },
+  { name: 'EuRIS', detail: 'Bridge heights from the European River Information Services portal, covering 13 waterway authorities, via its open Bridge API. Figures are closed and open heights in centimetres, converted to metres. The API carries no coordinates and no datum, so bridges are matched by name and waterway and figures are shown datum-not-stated.', href: 'https://www.eurisportal.eu/' },
+  { name: 'viadonau — Danube bridge list', detail: 'Vertical clearances above HNWL (highest navigable water level) with the reference gauge per bridge, from the Danube bridge list compiled with eight riparian states. Bridges are matched by name to crossings of the Danube.', href: 'https://www.viadonau.org/en/economy/services-transport-planning/infrastructure' },
   { name: 'NOAA CO-OPS', detail: 'Tide and current predictions are station-based and datum-dependent. Station distance and local conditions affect how representative they are.', href: 'https://tidesandcurrents.noaa.gov/' },
   { name: 'Open-Meteo / Météo-France SMOC', detail: 'Weather and ocean-current model output is guidance rather than a local observation or guaranteed forecast. Modelled surface drift is not a harmonic tidal-current prediction.', href: 'https://open-meteo.com/en/docs/marine-weather-api' },
   { name: 'OpenSeaMap', detail: 'Seamark raster overlay (© OpenSeaMap, CC-BY-SA) and related community resources. Its credit is carried here rather than on the chart.', href: 'https://www.openseamap.org/' },
@@ -69,6 +79,7 @@ export default function DisclaimerPage() {
   const [sectors, setSectors] = useState<SectorCoverage | null>(null);
   const [details, setDetails] = useState<MarkDetailCoverage | null>(null);
   const [chartFeatures, setChartFeatures] = useState<ChartFeatureCoverage | null>(null);
+  const [clearanceManifest, setClearanceManifest] = useState<ClearanceManifest | null>(null);
   useEffect(() => {
     let cancelled = false;
     const readManifest = (path: string) =>
@@ -130,6 +141,20 @@ export default function DisclaimerPage() {
         sourceTimestamp: typeof manifest.sourceTimestamp === 'string' ? manifest.sourceTimestamp : null,
       });
     });
+    // The clearance dataset is a static file, not a marine-db extract.
+    void fetch('/bridge-clearances/manifest.json', { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : null))
+      .catch(() => null)
+      .then((raw: unknown) => {
+        if (cancelled || !raw || typeof raw !== 'object') return;
+        const manifest = raw as Partial<ClearanceManifest>;
+        if (typeof manifest.generatedAt !== 'string') return;
+        setClearanceManifest({
+          generatedAt: manifest.generatedAt,
+          sources: (manifest.sources ?? {}) as ClearanceManifest['sources'],
+          incomplete: Array.isArray(manifest.incomplete) ? manifest.incomplete.filter((entry): entry is string => typeof entry === 'string') : [],
+        });
+      });
     return () => {
       cancelled = true;
     };
@@ -180,6 +205,16 @@ export default function DisclaimerPage() {
             ? <>Most recent chart view drawn: {number(chartFeatures.bridges)} {chartFeatures.bridges === 1 ? 'bridge' : 'bridges'} over tidal water and {number(chartFeatures.areas)} marine-area outlines{chartFeatureSnapshot ? <> — from the OpenStreetMap snapshot of {chartFeatureSnapshot}</> : null}{chartFeatures.behind ? <>, and the mirror that answered was behind current data, so that view may include superseded features</> : null}.</>
             : <>The most recent view&apos;s counts and snapshot date are read from the chart server when this page loads.</>} That date is the age of the mapped data, not of this page, and it describes the last view fetched rather than worldwide coverage.</p>
           <p>A view that has not been fetched yet, or a query the OpenStreetMap mirrors could not answer, draws nothing: an empty overlay means the data is missing, not that a crossing or a designated area is absent.</p>
+        </section>
+        <section>
+          <h2>Bridge clearances</h2>
+          <p>A charted clearance is the distance from the water surface, at the figure&apos;s stated reference level, to the lowest part of the bridge over the navigable span. It is not the height of the structure, not a road clearance, and not today&apos;s clearance.</p>
+          <p>Adjust it for the water level at passage time: actual clearance = charted clearance − (current water level − reference level), in the same units. Water above the reference eats the clearance metre for metre; water below it gives it back. Tide predictions are heights above chart datum, not above Mean High Water or HNWL, so convert before subtracting. A vessel passes only if its air draft — waterline to its highest fixed point, aerials included — plus a safety margin is under the actual clearance.</p>
+          <p>Figures marked &ldquo;datum not stated&rdquo; — community-mapped clearances, USACE river figures and EuRIS heights — carry no usable reference level. They are shown as charted figures only and must not be used to judge passage at high water. Where sources disagree, the card shows each figure; use the lowest for any judgement and treat the disagreement as a warning. For a movable bridge the standing figure is the closed clearance unless the card states an open figure. A &ldquo;safe&rdquo; clearance is a navigation limit, not the surveyed steel, and arches are lower toward the channel edges than at the centre.</p>
+          <p>No figure on a card means no figure was found — not unlimited clearance. Small and private bridges that appear on no chart carry no figure anywhere. Gauges on the bridge, current official charts, Notices to Mariners and the bridge authority override this app, and the skipper remains responsible.</p>
+          <p>{clearanceManifest
+            ? <>Current clearance dataset: {number(Number(clearanceManifest.sources.noaa?.count ?? 0))} NOAA ENC records, {number(Number(clearanceManifest.sources.usace?.count ?? 0))} USACE Inland ENC records, {number(Number(clearanceManifest.sources.euris?.count ?? 0))} EuRIS bridges and {number(Number(clearanceManifest.sources.danube?.count ?? 0))} Danube list bridges — retrieved {formatSnapshot(clearanceManifest.generatedAt) ?? clearanceManifest.generatedAt}.{clearanceManifest.incomplete.length > 0 ? <> Some sources were unavailable when the dataset was built ({clearanceManifest.incomplete.join(', ')}), so their coverage is partial until the dataset is rebuilt.</> : null}</>
+            : <>The clearance dataset&apos;s size and retrieval date are read from its manifest when this page loads.</>}</p>
         </section>
         <section>
           <h2>Other data limitations</h2>

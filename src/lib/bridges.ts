@@ -4,6 +4,7 @@ import {
   type DepthUnit,
   type DistanceUnit,
 } from './settings';
+import type { BridgeClearance } from './clearances';
 
 /** One labelled value in the bridge card. */
 export interface BridgeRow {
@@ -33,6 +34,8 @@ export interface BridgeFeatureLike {
   sourceUrl?: string;
   /** Every mapped record folded into this crossing. */
   sourceUrls?: string[];
+  /** Authority clearances joined to this crossing, if the dataset has loaded. */
+  clearances?: BridgeClearance[];
 }
 
 export interface BridgeUnits {
@@ -233,7 +236,9 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     : formatMetresList(clearanceHeightRaw, (metres) => formatDepthWithUnit(metres, units.depth));
   if (clearanceHeight !== null) {
     shownKeys.push('seamark:bridge:clearance_height');
-    facts.push({ label: 'Vertical clearance', value: clearanceHeight });
+    // Community-mapped clearances carry no datum in the record, so the card
+    // says so rather than letting the figure read as tide-adjustable.
+    facts.push({ label: 'Vertical clearance', value: `${clearanceHeight} (datum not stated)` });
   }
   const clearanceWidthRaw = value(tags, 'seamark:bridge:clearance_width');
   const clearanceWidth = clearanceWidthRaw === null
@@ -264,7 +269,7 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     const formatted = formatMetresList(raw, (metres) => formatDepthWithUnit(metres, units.depth));
     if (formatted === null) continue;
     shownKeys.push(key);
-    clearance.push({ label: rowLabel, value: formatted });
+    clearance.push({ label: rowLabel, value: `${formatted} (datum not stated)` });
   }
   const maxHeight = tags.maxheight;
   if (maxHeight) {
@@ -363,7 +368,35 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     dates.push({ label: rowLabel, value: found });
   }
 
+  // Authority clearances joined from the dataset: never a bare number — each
+  // row carries its datum (or says it has none), so a boater can tell which
+  // figures can be adjusted for tide and which cannot.
+  const charted: BridgeRow[] = [];
+  for (const authority of feature.clearances ?? []) {
+    const standing = authority.values
+      .map((metres) => formatDepthWithUnit(metres, units.depth))
+      .join(' / ');
+    if (standing === '') continue;
+    let value = authority.datum ? `${standing} above ${authority.datum}` : `${standing} (datum not stated)`;
+    if (authority.closed) value += authority.datum ? ' (closed)' : ', closed';
+    if (authority.openValues.length > 0) {
+      value += ` · open ${authority.openValues.map((metres) => formatDepthWithUnit(metres, units.depth)).join(' / ')}`;
+    }
+    if (authority.horizontal !== null) {
+      value += ` · width ${formatDistance(authority.horizontal, units.distance)}`;
+    }
+    if (authority.datumNote) value += ` · ${authority.datumNote}`;
+    charted.push({ label: authority.source, value });
+  }
+
   const sections: BridgeSection[] = [];
+  if (charted.length > 0) {
+    const retrieved = feature.clearances?.[0]?.retrieved;
+    sections.push({
+      title: 'Charted clearances',
+      rows: retrieved ? [...charted, { label: 'Dataset', value: `Retrieved ${retrieved}` }] : charted,
+    });
+  }
   if (clearance.length > 0) sections.push({ title: 'Air and water draught', rows: clearance });
   if (structure.length > 0) sections.push({ title: 'Structure and operator', rows: structure });
   if (carryingRows.length > 0) sections.push({ title: 'Carrying', rows: carryingRows });
@@ -387,6 +420,7 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
   for (const url of [...new Set(sourceUrls)].reverse()) {
     links.unshift({ label: 'OSM feature', url });
   }
+  if (charted.length > 0) links.push({ label: 'Clearance disclaimer', url: '/disclaimer' });
 
   return { title, subtitle, facts, sections, links, shownKeys };
 }

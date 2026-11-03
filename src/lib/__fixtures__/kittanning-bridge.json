@@ -1,0 +1,31 @@
+{
+ "name": "Kittanning Citizens Bridge",
+ "path": [
+  [
+   40.8117086,
+   -79.5240406
+  ],
+  [
+   40.8133259,
+   -79.5212604
+  ]
+ ],
+ "properties": {
+  "name": "Kittanning Citizens Bridge",
+  "wikidata": "Q6418394",
+  "wikipedia": "en:Kittanning Citizens Bridge",
+  "bridge": "yes",
+  "hgv": "designated",
+  "highway": "primary",
+  "lanes": "2",
+  "layer": "1",
+  "old_ref_legislative": "251",
+  "ref": "US 422 Business",
+  "source:hgv": "https://www.dot.state.pa.us/public/pubsforms/Publications/TruckersMap.pdf",
+  "tiger:cfcc": "A31",
+  "tiger:name_base": "Benjamin Franklin",
+  "tiger:name_base_1": "United States Highway 422 Business",
+  "tiger:name_type": "Hwy",
+  "water crossed": "Allegheny River"
+ }
+}

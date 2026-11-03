@@ -44,7 +44,7 @@ describe('bridge card', () => {
 
   it('puts the clearances in the units chosen in Settings', () => {
     const card = describeBridge(johnsonStreet, { depth: 'ft', distance: 'nm-ft' });
-    expect(card.facts).toContainEqual({ label: 'Vertical clearance', value: '15 ft' });
+    expect(card.facts).toContainEqual({ label: 'Vertical clearance', value: '15 ft (datum not stated)' });
     expect(card.facts).toContainEqual({ label: 'Horizontal clearance', value: '98 ft' });
   });
 
@@ -97,7 +97,28 @@ describe('bridge card', () => {
       },
       { depth: 'm', distance: 'm-nm' },
     );
-    expect(card.facts).toContainEqual({ label: 'Vertical clearance', value: '5.2 m / 4.8 m' });
+    expect(card.facts).toContainEqual({ label: 'Vertical clearance', value: '5.2 m / 4.8 m (datum not stated)' });
+  });
+
+  it('shows authority clearances with their datum first', () => {
+    const card = describeBridge(
+      {
+        name: 'Test Bridge',
+        properties: {},
+        clearances: [
+          { source: 'NOAA ENC', values: [62.1, 67.0], closed: false, openValues: [], horizontal: null, datum: 'MHW', datumNote: null, retrieved: '2026-11-02' },
+          { source: 'USACE Inland ENC', values: [13.9], closed: false, openValues: [], horizontal: 120.3, datum: null, datumNote: null, retrieved: '2026-11-02' },
+          { source: 'EuRIS', values: [9], closed: true, openValues: [], horizontal: null, datum: null, datumNote: null, retrieved: '2026-11-02' },
+        ],
+      },
+      { depth: 'm', distance: 'm-nm' },
+    );
+    const charted = card.sections.find((section) => section.title === 'Charted clearances');
+    expect(charted?.rows).toContainEqual({ label: 'NOAA ENC', value: '62 m / 67 m above MHW' });
+    expect(charted?.rows).toContainEqual({ label: 'USACE Inland ENC', value: '14 m (datum not stated) · width 120 m' });
+    expect(charted?.rows).toContainEqual({ label: 'EuRIS', value: '9.0 m (datum not stated), closed' });
+    expect(charted?.rows).toContainEqual({ label: 'Dataset', value: 'Retrieved 2026-11-02' });
+    expect(card.links.map((link) => link.label)).toContain('Clearance disclaimer');
   });
 
   it('keeps a bridge with no extra tags readable', () => {

@@ -26,6 +26,12 @@
       "datum": "MHW (CP6: LWD)",
       "count": 512,
       "retrieved": "2026-11-03"
+    },
+    "eaheadway": {
+      "label": "Environment Agency",
+      "datum": "standard water level (approximate)",
+      "count": 206,
+      "retrieved": "2026-11-03"
     }
   },
   "incomplete": []

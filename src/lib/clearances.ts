@@ -116,6 +116,16 @@ export interface CoastPilotClearanceRecord {
   ch: string;
 }
 
+export interface EaHeadwayRecord {
+  n: string;
+  w: string | null;
+  v: number[];
+  c: boolean;
+  d: string | null;
+  note: string | null;
+  pg: string;
+}
+
 export interface ClearanceManifest {
   generatedAt: string;
   sources: Record<string, { label: string; datum: string | null; count: number; retrieved?: string }>;
@@ -130,6 +140,8 @@ export interface ClearanceDatasets {
   danube: DanubeClearanceRecord[];
   /** Optional: the file does not exist until the Coast Pilot build runs. */
   coastpilot?: CoastPilotClearanceRecord[];
+  /** Optional: the file does not exist until the EA headway build runs. */
+  eaheadway?: EaHeadwayRecord[];
 }
 
 const EMPTY_DATASETS: ClearanceDatasets = {
@@ -139,6 +151,7 @@ const EMPTY_DATASETS: ClearanceDatasets = {
   euris: [],
   danube: [],
   coastpilot: [],
+  eaheadway: [],
 };
 
 let datasetsPromise: Promise<ClearanceDatasets> | null = null;
@@ -153,16 +166,17 @@ async function fetchDataset<T>(path: string): Promise<T | null> {
   }
 }
 
-/** Fetch the six clearance files once; a missing file just means no rows. */
+/** Fetch the seven clearance files once; a missing file just means no rows. */
 export function loadClearanceDatasets(): Promise<ClearanceDatasets> {
   datasetsPromise ??= (async () => {
-    const [manifest, noaa, usace, euris, danube, coastpilot] = await Promise.all([
+    const [manifest, noaa, usace, euris, danube, coastpilot, eaheadway] = await Promise.all([
       fetchDataset<ClearanceManifest>('/bridge-clearances/manifest.json'),
       fetchDataset<NoaaClearanceRecord[]>('/bridge-clearances/noaa.json'),
       fetchDataset<UsaceClearanceRecord[]>('/bridge-clearances/usace.json'),
       fetchDataset<EurisClearanceRecord[]>('/bridge-clearances/euris.json'),
       fetchDataset<DanubeClearanceRecord[]>('/bridge-clearances/danube.json'),
       fetchDataset<CoastPilotClearanceRecord[]>('/bridge-clearances/coastpilot.json'),
+      fetchDataset<EaHeadwayRecord[]>('/bridge-clearances/ea-headway.json'),
     ]);
     if (!manifest) return EMPTY_DATASETS;
     return {
@@ -172,6 +186,7 @@ export function loadClearanceDatasets(): Promise<ClearanceDatasets> {
       euris: euris ?? [],
       danube: danube ?? [],
       coastpilot: coastpilot ?? [],
+      eaheadway: eaheadway ?? [],
     };
   })();
   return datasetsPromise;
@@ -301,6 +316,74 @@ function isSpecificBridgeName(name: string): boolean {
     .split(' ')
     .filter((word) => word !== '')
     .some((word) => !NAME_FILLER_WORDS.has(word));
+}
+
+/**
+ * Environment Agency headway matching is deliberately stricter than the
+ * Coast Pilot matcher: EA rows carry no coordinates, so the name is the
+ * only identifier. Parentheticals are kept as words (unlike
+ * normalizeBridgeName), so 'Road Bridge (GT Barford)' cannot land on any
+ * plain 'Road Bridge'; dual names ('X / Y') match on either side; a
+ * trailing ', Place' is a location note with a guarded fallback (the
+ * pre-comma part must name a bridge on its own); and a single-word side
+ * never subset-matches, so 'Footbridge' cannot join every footbridge on
+ * the river.
+ */
+const EA_STOPWORDS = new Set(['and', 'of', 'the', 'at', 'near', 'd', 's', 'u']);
+
+export function eaNormalize(name: string): string {
+  const words = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter((word) => word !== '' && !EA_STOPWORDS.has(word))
+    .map((word) => {
+      for (const generic of GENERIC_WORDS) {
+        if (word.length > generic.length && word.endsWith(generic)) return word.slice(0, -generic.length);
+      }
+      return word;
+    })
+    .filter((word) => word !== '' && !GENERIC_WORDS.has(word));
+  return words.join(' ');
+}
+
+const EA_FILLER_WORDS = new Set([...NAME_FILLER_WORDS, 'foot', 'rail']);
+
+/**
+ * A row is joinable only when its name carries a proper noun. 'Road
+ * Bridge', 'Footbridge' and 'Railway Bridge' name no bridge in
+ * particular and, with no coordinates to anchor them, must never join.
+ * They still ship in the dataset, refused here, so the gap stays visible.
+ */
+export function isEaJoinableName(name: string): boolean {
+  return eaNormalize(name).split(' ').some((word) => !EA_FILLER_WORDS.has(word));
+}
+
+export function eaNamesMatch(rowName: string, featureName: string): boolean {
+  const nf = eaNormalize(featureName);
+  if (nf === '') return false;
+  const fw = nf.split(' ');
+  const matchPart = (part: string): boolean => {
+    const nr = eaNormalize(part);
+    if (nr === '') return false;
+    if (nr === nf) return true;
+    const rw = nr.split(' ');
+    return rw.length >= 2 && rw.every((word) => fw.includes(word));
+  };
+  for (const alt of rowName.split('/')) {
+    if (matchPart(alt)) return true;
+    // A trailing ', Place' is a location note, not part of the name:
+    // 'Halfpenny Bridge, Lechlade' is the Halfpenny Bridge. The fallback
+    // runs only when the pre-comma part names a bridge on its own, so
+    // 'Railway Bridge, Prickwillow' still cannot join a plain
+    // 'Railway Bridge' -- the qualifier is what makes it attributable.
+    const preComma = alt.split(',')[0].trim();
+    if (preComma !== alt.trim() && isEaJoinableName(preComma) && matchPart(preComma)) return true;
+  }
+  return false;
 }
 
 function waterwayMatches(crossed: string, waterway: string): boolean {
@@ -558,6 +641,35 @@ export function clearancesForFeature(feature: JoinableBridgeFeature, datasets: C
       datumNote: null,
       least: false,
       bridgeType: record.t,
+      retrieved,
+    });
+  }
+
+  // Environment Agency headways: name + waterway only, because the EA
+  // tables carry no coordinates. The strict matcher above is the whole
+  // safety case: a generic name can never join, and a qualified name
+  // joins only a feature carrying every word of it. The figure is the
+  // standing headway above standard water level as published, stated
+  // approximate -- it carries no tidal datum and must never be
+  // tide-adjusted, which the disclaimer states in full.
+  const seenEa = new Set<string>();
+  for (const record of datasets.eaheadway ?? []) {
+    if (!isEaJoinableName(record.n)) continue;
+    if (!record.w || !waterwayMatches(crossed, record.w)) continue;
+    if (!names.some((name) => eaNamesMatch(record.n, name))) continue;
+    const values = unionSorted(record.v);
+    if (values.length === 0) continue;
+    const key = JSON.stringify([record.n, values, record.w]);
+    if (seenEa.has(key)) continue;
+    seenEa.add(key);
+    out.push({
+      source: 'Environment Agency',
+      values,
+      closed: record.c,
+      openValues: [],
+      horizontal: null,
+      datum: record.d,
+      datumNote: record.note,
       retrieved,
     });
   }

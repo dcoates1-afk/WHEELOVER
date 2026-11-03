@@ -3,6 +3,7 @@ import L from 'leaflet';
 import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import type { Pin } from '../lib/pins';
+import type { Track } from '../lib/tracks';
 import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import { describeBridge, type BridgeRow } from '../lib/bridges';
 import { clearancesForFeature, loadClearanceDatasets, type ClearanceDatasets } from '../lib/clearances';
@@ -187,6 +188,10 @@ export interface MapCanvasProps {
   selectedPinId?: string | null;
   /** A pin was tapped on the chart. */
   onSelectPin?: (pin: Pin) => void;
+  /** The track currently being recorded, drawn in orange. */
+  activeTrack?: Track | null;
+  /** A saved track the user chose to show, drawn in cyan. */
+  shownTrack?: Track | null;
   /** Anchor circle and course to steer, set from the menu. */
   watch: VoyageWatch;
   /** Grid the cursor readout is written in. */
@@ -1548,6 +1553,29 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       marker.addTo(group);
     }
   }, [props.pins, props.selectedPinId, props.onSelectPin]);
+
+  // Recorded tracks: the live recording in orange, a saved track the user
+  // chose to show in cyan. Both are device-only, like pins.
+  const tracksGroupRef = useRef<L.LayerGroup | null>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!tracksGroupRef.current) {
+      tracksGroupRef.current = L.layerGroup().addTo(map);
+    }
+    const group = tracksGroupRef.current;
+    group.clearLayers();
+    const draw = (track: Track | null, color: string) => {
+      if (!track || track.points.length < 2) return;
+      L.polyline(
+        track.points.map((point) => [point.lat, point.lon] as [number, number]),
+        { color, weight: 3, opacity: 0.9 },
+      ).addTo(group);
+    };
+    draw(props.activeTrack ?? null, '#f2a65a');
+    draw(props.shownTrack ?? null, '#3dd6ff');
+  }, [props.activeTrack, props.shownTrack]);
 
   // Anchor swing circle and course to steer. Both are set by the navigator on
   // this device, so they are drawn whatever the overlay switches are doing. The

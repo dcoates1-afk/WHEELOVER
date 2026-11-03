@@ -1046,6 +1046,29 @@ ul {
   display: none;
 }
 
+.boat-recording-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f2a65a;
+  flex: none;
+}
+
+.track-recording {
+  margin-bottom: 14px;
+}
+
+.track-recording p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.track-recording .boat-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .boat-panel {
   position: fixed;
   z-index: 1250;

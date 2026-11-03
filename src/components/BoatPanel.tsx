@@ -10,8 +10,14 @@ import {
   type LogEntry,
   type MaintenanceTask,
 } from '../lib/boatLog';
+import {
+  formatTrackDate,
+  formatTrackDuration,
+  trackDistanceKm,
+  type Track,
+} from '../lib/tracks';
 
-type Tab = 'log' | 'checklist' | 'maintenance' | 'fuel';
+type Tab = 'log' | 'checklist' | 'maintenance' | 'fuel' | 'tracks';
 
 interface BoatPanelProps {
   logbook: LogEntry[];
@@ -27,6 +33,14 @@ interface BoatPanelProps {
   fuel: FuelFill[];
   onAddFuel: (fill: FuelFill) => void;
   onDeleteFuel: (id: string) => void;
+  tracks: Track[];
+  recording: Track | null;
+  hasFix: boolean;
+  shownTrackId: string | null;
+  onStartRecording: () => void;
+  onStopRecording: () => void;
+  onShowTrack: (id: string | null) => void;
+  onDeleteTrack: (id: string) => void;
   onClose: () => void;
 }
 
@@ -41,6 +55,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'checklist', label: 'Checklist' },
   { id: 'maintenance', label: 'Maintenance' },
   { id: 'fuel', label: 'Fuel' },
+  { id: 'tracks', label: 'Tracks' },
 ];
 
 /**
@@ -346,6 +361,77 @@ export function BoatPanel(props: BoatPanelProps) {
                   <button type="button" className="boat-delete" onClick={() => props.onDeleteFuel(fill.id)}>
                     Delete
                   </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {tab === 'tracks' && (
+        <div className="boat-section">
+          <p className="boat-note">
+            Your own track, recorded from GPS and saved on this device only. A point is added
+            once you have moved 25 m, so sitting at anchor does not fill the track with jitter.
+          </p>
+          {props.recording ? (
+            <div className="track-recording">
+              <p>
+                <strong>Recording</strong> · {props.recording.points.length} points ·{' '}
+                {trackDistanceKm(props.recording).toFixed(1)} km ·{' '}
+                {formatTrackDuration(props.recording)}
+              </p>
+              <button type="button" className="boat-submit" onClick={props.onStopRecording}>
+                Stop and save track
+              </button>
+            </div>
+          ) : (
+            <div className="track-recording">
+              {!props.hasFix && (
+                <p className="boat-note">
+                  No GPS fix yet — turn GPS on and wait for a fix before recording.
+                </p>
+              )}
+              <button
+                type="button"
+                className="boat-submit"
+                disabled={!props.hasFix}
+                onClick={props.onStartRecording}
+              >
+                Start recording
+              </button>
+            </div>
+          )}
+          {props.tracks.length === 0 ? (
+            <p className="boat-empty">No saved tracks yet.</p>
+          ) : (
+            <ul className="boat-list">
+              {props.tracks.map((track) => (
+                <li key={track.id}>
+                  <div>
+                    <strong>{formatTrackDate(track)}</strong>
+                    <span>
+                      {track.points.length} points · {trackDistanceKm(track).toFixed(1)} km ·{' '}
+                      {formatTrackDuration(track)}
+                    </span>
+                  </div>
+                  <div className="boat-row-actions">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        props.onShowTrack(props.shownTrackId === track.id ? null : track.id)
+                      }
+                    >
+                      {props.shownTrackId === track.id ? 'Hide' : 'Show'}
+                    </button>
+                    <button
+                      type="button"
+                      className="boat-delete"
+                      onClick={() => props.onDeleteTrack(track.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>

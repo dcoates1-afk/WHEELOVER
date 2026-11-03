@@ -25,6 +25,13 @@ import {
   type LogEntry,
   type MaintenanceTask,
 } from './lib/boatLog';
+import {
+  appendPoint,
+  createTrack,
+  loadTracks,
+  writeTracks,
+  type Track,
+} from './lib/tracks';
 import { ZoomControls } from './components/ZoomControls';
 
 const MapCanvas = lazy(() => import('./components/MapCanvas').then((module) => ({ default: module.MapCanvas })));
@@ -138,6 +145,10 @@ export default function App() {
   const [maintenance, setMaintenance] = useState<MaintenanceTask[]>(() => loadMaintenance(safeStorage()));
   const [fuel, setFuel] = useState<FuelFill[]>(() => loadFuel(safeStorage()));
   const [boatOpen, setBoatOpen] = useState(false);
+  // Own track recording, sampled from the GPS fix and kept on this device.
+  const [tracks, setTracks] = useState<Track[]>(() => loadTracks(safeStorage()));
+  const [recording, setRecording] = useState<Track | null>(null);
+  const [shownTrackId, setShownTrackId] = useState<string | null>(null);
   // Tracking info keeps the target it was given and follows the live snapshot,
   // so a page left open keeps reading as the transponder reports again.
   const [trackingVessel, setTrackingVessel] = useState<AisVessel | null>(null);
@@ -317,6 +328,18 @@ export default function App() {
   useEffect(() => {
     writeFuel(storage, fuel);
   }, [fuel, storage]);
+
+  useEffect(() => {
+    writeTracks(storage, tracks);
+  }, [tracks, storage]);
+
+  // Sample the GPS fix into the live track. appendPoint drops fixes within
+  // 25 m of the last point, so the effect is quiet while at anchor.
+  useEffect(() => {
+    const fix = geo.fix;
+    if (!recording || !fix) return;
+    setRecording((current) => (current ? appendPoint(current, fix) : current));
+  }, [geo.fix, recording]);
 
   // Manifest + weekly revalidation, once per session.
   useEffect(() => {
@@ -758,6 +781,8 @@ export default function App() {
         pins={pins}
         selectedPinId={selectedPinId}
         onSelectPin={selectPin}
+        activeTrack={recording}
+        shownTrack={tracks.find((track) => track.id === shownTrackId) ?? null}
         fix={geo.fix}
         aisVessels={ais.vessels}
         selectedVesselMmsi={highlightedVessel}
@@ -845,6 +870,7 @@ export default function App() {
           <line x1="8" y1="16" x2="13" y2="16" stroke="currentColor" strokeWidth="1.8" />
         </svg>
         <span>Boat log</span>
+        {recording && <span className="boat-recording-dot" aria-label="Recording track" />}
       </button>
 
       {pinsOpen && (
@@ -902,6 +928,29 @@ export default function App() {
             setFuel((current) => [...current, fill].sort((a, b) => (a.date < b.date ? 1 : -1)))
           }
           onDeleteFuel={(id) => setFuel((current) => current.filter((fill) => fill.id !== id))}
+          tracks={tracks}
+          recording={recording}
+          hasFix={Boolean(geo.fix)}
+          shownTrackId={shownTrackId}
+          onStartRecording={() => setRecording(createTrack())}
+          onStopRecording={() => {
+            if (!recording) return;
+            const finished: Track = { ...recording, endedAt: Date.now() };
+            setTracks((current) => [finished, ...current]);
+            setRecording(null);
+          }}
+          onShowTrack={(id) => {
+            setShownTrackId(id);
+            if (id) {
+              const track = tracks.find((candidate) => candidate.id === id);
+              const middle = track?.points[Math.floor(track.points.length / 2)];
+              if (middle) centreOn(middle.lat, middle.lon, 12);
+            }
+          }}
+          onDeleteTrack={(id) => {
+            setTracks((current) => current.filter((track) => track.id !== id));
+            setShownTrackId((current) => (current === id ? null : current));
+          }}
           onClose={() => setBoatOpen(false)}
         />
       )}

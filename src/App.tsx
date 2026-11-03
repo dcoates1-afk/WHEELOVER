@@ -10,8 +10,16 @@ import { LocateButton } from './components/LocateButton';
 import { DestinationSearch } from './components/DestinationSearch';
 import { PinsPanel } from './components/PinsPanel';
 import { BoatPanel } from './components/BoatPanel';
+import RoutePanel from './components/RoutePanel';
 import type { DestinationResult } from './lib/destinationSearch';
 import { createPin, loadPins, removePin, updatePin, writePins, type Pin } from './lib/pins';
+import {
+  loadRoute,
+  loadRouteSpeed,
+  writeRoute,
+  writeRouteSpeed,
+  type RouteWaypoint,
+} from './lib/routes';
 import {
   loadChecklist,
   loadFuel,
@@ -153,6 +161,12 @@ export default function App() {
   const [tracks, setTracks] = useState<Track[]>(() => loadTracks(safeStorage()));
   const [recording, setRecording] = useState<Track | null>(null);
   const [shownTrackId, setShownTrackId] = useState<string | null>(null);
+  // Manual route, kept on this device only. Adding stays armed across taps
+  // so a route can be tapped out in one go; Done or closing the panel disarms.
+  const [routeWaypoints, setRouteWaypoints] = useState<RouteWaypoint[]>(() => loadRoute(safeStorage()));
+  const [routeOpen, setRouteOpen] = useState(false);
+  const [routeAdding, setRouteAdding] = useState(false);
+  const [speedKnots, setSpeedKnots] = useState<number>(() => loadRouteSpeed(safeStorage()));
   // In-force NGA broadcast warnings, fetched through the app's own relay
   // (the NGA API sends no CORS headers). Kept after first load so toggling
   // the layer back on is instant; toggle off/on refetches on next mount.
@@ -275,7 +289,7 @@ export default function App() {
     preferences.showPosition;
   // The pins and boat panels cover the bottom-left corner, so the other
   // chart controls step aside while either is open; the panel buttons stay.
-  const chartControlsHiddenWithPanels = chartControlsHidden || pinsOpen || boatOpen;
+  const chartControlsHiddenWithPanels = chartControlsHidden || pinsOpen || boatOpen || routeOpen;
 
   const locateMe = useCallback(() => {
     if (gpsMode === 'off') {
@@ -341,6 +355,14 @@ export default function App() {
   useEffect(() => {
     writeTracks(storage, tracks);
   }, [tracks, storage]);
+
+  useEffect(() => {
+    writeRoute(storage, routeWaypoints);
+  }, [routeWaypoints, storage]);
+
+  useEffect(() => {
+    writeRouteSpeed(storage, speedKnots);
+  }, [speedKnots, storage]);
 
   // Sample the GPS fix into the live track. appendPoint drops fixes within
   // 25 m of the last point, so the effect is quiet while at anchor.
@@ -805,6 +827,12 @@ export default function App() {
             setPinsOpen(true);
             return;
           }
+          if (routeAdding) {
+            // Route adding stays armed across taps so a route can be tapped
+            // out in one go; Done or closing the panel disarms it.
+            setRouteWaypoints((current) => [...current, { lat: _lat, lon: _lon }]);
+            return;
+          }
           // Tapping open water puts the picked target down again.
           setHighlightedVessel(null);
           setSearchPin(null);
@@ -816,6 +844,10 @@ export default function App() {
         onSelectPin={selectPin}
         activeTrack={recording}
         shownTrack={tracks.find((track) => track.id === shownTrackId) ?? null}
+        routeWaypoints={routeWaypoints}
+        onRouteWaypointMove={(index, lat, lon) =>
+          setRouteWaypoints((current) => current.map((point, i) => (i === index ? { lat, lon } : point)))
+        }
         warnings={preferences.overlays.warnings ? warnings : null}
         fix={geo.fix}
         aisVessels={ais.vessels}
@@ -873,6 +905,7 @@ export default function App() {
         onClick={() => {
           setPinsOpen((open) => !open);
           setBoatOpen(false);
+          setRouteOpen(false);
         }}
         aria-label="Place pins"
       >
@@ -894,6 +927,7 @@ export default function App() {
         onClick={() => {
           setBoatOpen((open) => !open);
           setPinsOpen(false);
+          setRouteOpen(false);
         }}
         aria-label="Boat log"
       >
@@ -905,6 +939,30 @@ export default function App() {
         </svg>
         <span>Boat log</span>
         {recording && <span className="boat-recording-dot" aria-label="Recording track" />}
+      </button>
+
+      <button
+        type="button"
+        className={`route-button ${chartControlsHidden ? 'is-hidden' : ''}`}
+        onClick={() => {
+          setRouteOpen((open) => !open);
+          setPinsOpen(false);
+          setBoatOpen(false);
+        }}
+        aria-label="Route builder"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path
+            d="M4 20 L9 14 L13 17 L20 4"
+            fill="none"
+            stroke="#3dd6ff"
+            strokeWidth="1.8"
+            strokeDasharray="3 2"
+          />
+          <circle cx="4" cy="20" r="2.5" fill="#3dd6ff" />
+          <circle cx="20" cy="4" r="2.5" fill="#3dd6ff" />
+        </svg>
+        <span>Route{routeWaypoints.length > 0 ? ` (${routeWaypoints.length})` : ''}</span>
       </button>
 
       {pinsOpen && (
@@ -993,6 +1051,27 @@ export default function App() {
             )
           }
           onClose={() => setBoatOpen(false)}
+        />
+      )}
+
+      {routeOpen && (
+        <RoutePanel
+          waypoints={routeWaypoints}
+          speedKnots={speedKnots}
+          adding={routeAdding}
+          onClose={() => {
+            setRouteOpen(false);
+            setRouteAdding(false);
+          }}
+          onAdd={() => setRouteAdding(true)}
+          onCancelAdding={() => setRouteAdding(false)}
+          onSpeedChange={setSpeedKnots}
+          onClear={() => setRouteWaypoints([])}
+          onRemoveWaypoint={(index) =>
+            setRouteWaypoints((current) => current.filter((_, i) => i !== index))
+          }
+          onCentreWaypoint={(waypoint) => centreOn(waypoint.lat, waypoint.lon, 14)}
+          onAddTyped={(lat, lon) => setRouteWaypoints((current) => [...current, { lat, lon }])}
         />
       )}
 

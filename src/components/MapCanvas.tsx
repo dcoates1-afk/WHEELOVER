@@ -4,6 +4,7 @@ import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import type { Pin } from '../lib/pins';
 import type { Track } from '../lib/tracks';
+import type { RouteWaypoint } from '../lib/routes';
 import type { NotmarWarning } from '../lib/notmars';
 import { notmarAreaName } from '../lib/notmars';
 import { escapeXml } from '../lib/gpx';
@@ -195,6 +196,10 @@ export interface MapCanvasProps {
   activeTrack?: Track | null;
   /** A saved track the user chose to show, drawn in cyan. */
   shownTrack?: Track | null;
+  /** Manual route waypoints, drawn as a dashed line with numbered dots. */
+  routeWaypoints?: RouteWaypoint[];
+  /** A route waypoint was dragged to a new position. */
+  onRouteWaypointMove?: (index: number, lat: number, lon: number) => void;
   /** In-force NGA broadcast warnings; one marker per parsed position. */
   warnings?: NotmarWarning[] | null;
   /** Anchor circle and course to steer, set from the menu. */
@@ -579,6 +584,13 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       handlers.current.onMapClick(event.latlng.lat, event.latlng.lng);
     });
     emitView();
+
+    // If the stylesheets were still loading when the map was created, the
+    // container can read as zero-sized and Leaflet never recovers on its
+    // own. One sizing pass on the next frame covers slow first loads.
+    requestAnimationFrame(() => {
+      map.invalidateSize();
+    });
 
     return () => {
       map.off();
@@ -1610,6 +1622,43 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     draw(props.activeTrack ?? null, '#f2a65a');
     draw(props.shownTrack ?? null, '#3dd6ff');
   }, [props.activeTrack, props.shownTrack]);
+
+  // Manual route: a dashed line through the waypoints, each with a numbered,
+  // draggable dot. Dragging a dot moves that waypoint; the panel's leg list
+  // and totals recompute from the same waypoint array.
+  const routeGroupRef = useRef<L.LayerGroup | null>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!routeGroupRef.current) {
+      routeGroupRef.current = L.layerGroup().addTo(map);
+    }
+    const group = routeGroupRef.current;
+    group.clearLayers();
+    const points = props.routeWaypoints ?? [];
+    if (points.length >= 2) {
+      L.polyline(
+        points.map((point) => [point.lat, point.lon] as [number, number]),
+        { color: '#3dd6ff', weight: 3, opacity: 0.9, dashArray: '8 6' },
+      ).addTo(group);
+    }
+    points.forEach((point, index) => {
+      const icon = L.divIcon({
+        className: 'marnav-route-wrap',
+        html: `<div class="marnav-route-dot">${index + 1}</div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      });
+      const marker = L.marker([point.lat, point.lon], { icon, draggable: true });
+      marker.bindTooltip(`Waypoint ${index + 1}`, { sticky: true, className: 'marnav-tip', direction: 'top' });
+      marker.on('dragend', () => {
+        const moved = marker.getLatLng();
+        props.onRouteWaypointMove?.(index, moved.lat, moved.lng);
+      });
+      marker.addTo(group);
+    });
+  }, [props.routeWaypoints, props.onRouteWaypointMove]);
 
   // NAVAREA warnings: one marker per parsed position, all markers of a
   // warning opening the same full text. Position-less warnings have no

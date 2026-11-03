@@ -18,64 +18,94 @@ const details = [
     number: '03',
     title: 'Navigation aids, by type',
     copy: 'A worldwide database of navigation aids, drawn from OpenSeaMap seamarks and listed by type, each with its own toggle: lateral marks, cardinal marks, isolated danger marks, safe water marks, special marks, and lights and beacons. Tap any mark for its detail card.',
-    points: ['Red and green lateral marks with light characteristics', 'Fog signals and racons where mapped', 'Beacon towers and named marks, not just dots'],
+    points: ['Red and green lateral marks with light characteristics', 'Fog signals and racons where mapped', 'Beacon towers and named marks, not just dots', 'Marine areas and restrictions as individual toggles in the same filters'],
   },
   {
     number: '04',
     title: 'AIS live traffic',
     copy: 'Watch real vessel traffic on the chart, receive-only. Bring your own free AISStream key and it stays on your device; without one, demo vessels keep the traffic view working for practice.',
-    points: ['Vessel icons coloured by ship type, with name labels', 'Tracking info and track history, with full detail cards for every vessel', 'Filter traffic by ship type; master on/off toggle'],
+    points: ['Boat-shaped vessel icons, twice as long as wide, coloured by ship type, with name labels', 'Tracking info and track history, with full detail cards for every vessel', 'Filter traffic by ship type; master on/off toggle'],
   },
   {
     number: '05',
-    title: 'Bridges and clearances — one card per bridge',
-    copy: 'Bridges are drawn worldwide as a single overlay and a single card per bridge, however many ways the map splits them into. The card combines every mapped record for that crossing.',
-    points: ['Operation on every card: Fixed, Raising or Rotating', 'Clearances and heights where the record carries them', 'Bridges over land are not drawn'],
+    title: 'Bridges and Clearances',
+    copy: 'Bridges are drawn worldwide as a single overlay and a single card per bridge, however many ways the map splits them into. The card combines every mapped record for that crossing, and adds charted clearances from six open sources where they exist.',
+    points: ['Operation on every card: Fixed, Raising or Rotating', 'Charted clearances from NOAA ENC, USACE Inland ENC, EuRIS, the viadonau Danube list, US Coast Pilot and Environment Agency headways', 'Every figure carries its datum, source and retrieval date — and a figure with no datum is labelled, never tide-adjusted', 'Bridges over land are not drawn'],
   },
   {
     number: '06',
-    title: 'Routes & voyage planning',
-    copy: 'Build a route by tapping the chart or typing coordinates, then drag any waypoint to reshape it. Distances, bearings and arrival times update live as you edit.',
-    points: ['Per-leg distance in nautical miles and bearing', 'Total distance and ETA from your editable cruising speed', 'Waypoints by tap or by typed coordinates'],
+    title: 'Destination search',
+    copy: 'Search any place on Earth by name and fly straight to it. Type three or more characters, pick a result, and the chart centres on it with an orange pin marking the spot.',
+    points: ['Place search powered by OpenStreetMap', 'The chart flies to the result and drops a pin', 'Tap the pin or the chart to clear it'],
   },
   {
     number: '07',
-    title: 'Conditions: wind, tides & currents',
-    copy: 'Check what the water is doing before you go: wind and waves, tide heights, and tidal currents, with local station information where available and model guidance elsewhere.',
-    points: ['Wind, waves and sea conditions at a glance', 'Tide heights and tidal current vectors', 'Station readings where a station is nearby'],
+    title: 'Saved pins',
+    copy: 'Drop your own pins on the chart — anchorages, hazards, favourite spots — and keep them on this device. No account, no server: your pins live in your browser, with a name and notes on each.',
+    points: ['Tap the chart to place a pin, rename it and add notes', 'Orange pins on the chart, cyan when selected', 'Saved on this device only — shared pins need accounts, coming later'],
   },
   {
     number: '08',
+    title: 'Boat log',
+    copy: 'A logbook, pre-departure checklist, maintenance tracker and fuel log in one panel, all saved on this device.',
+    points: ['Logbook entries with date, title and notes', '21-item checklist: before leaving, under way, after return', 'Date-based maintenance with overdue and due-soon reminders, plus fuel fills and totals'],
+  },
+  {
+    number: '09',
+    title: 'Track recording',
+    copy: 'Record your own GPS track as you sail and play it back on the chart. Recording starts and stops from the Boat log, and the button shows an orange dot while a track is live.',
+    points: ['Points join only after moving 25 metres, so sitting at anchor does not fill the track with jitter', 'Saved tracks draw in cyan, live recording in orange', 'Date, points, distance and duration for every track'],
+  },
+  {
+    number: '10',
+    title: 'GPX export & import',
+    copy: 'Take your pins and tracks with you, or bring some in. Export writes one GPX file — pins as waypoints, tracks as tracks — and import adds new records from any GPX file.',
+    points: ['Export pins and tracks to a single wheel-over-<date>.gpx file', 'Import waypoints and tracks; bad rows are skipped and counted', 'Planned routes are counted but not imported — the route builder is still to come'],
+  },
+  {
+    number: '11',
+    title: 'NAVAREA warnings',
+    copy: 'Live broadcast warnings from the US National Geospatial-Intelligence Agency, as an opt-in layer. Warnings with a position in their text get a marker on the chart; warnings without one still appear in the menu list, never as a guessed point.',
+    points: ['In-force warnings only, refreshed through the app', 'Tap a marker for the full warning text', 'Off by default — the feed is large, so it loads on your say-so'],
+  },
+  {
+    number: '12',
+    title: 'Conditions: wind, tides & currents',
+    copy: 'Check what the water is doing before you go: wind and waves, tide heights, and tidal currents, with local station information where available and model guidance elsewhere. The weather button reads in two lines, and a toggle pulls conditions for your GPS position or the screen centre, instantly.',
+    points: ['Wind, waves and sea conditions at a glance', 'Tide heights and tidal current vectors', 'Station readings where a station is nearby', 'Weather for your GPS position or the screen centre, switched instantly'],
+  },
+  {
+    number: '13',
     title: 'Traffic schemes & ferry lanes',
     copy: 'Traffic Separation Schemes are drawn with their boundaries, separation zones and direction arrows, and ferry lanes show as their own layer — so the rules of the road are visible on the chart, not just in a book.',
     points: ['TSS boundaries, shaded separation zones and arrows', 'Ferry lanes as a separate toggle', 'Independent toggles for schemes and ferries'],
   },
   {
-    number: '09',
+    number: '14',
     title: 'Marine areas, restrictions & public places',
     copy: 'Marine areas and restrictions sit on the chart alongside public places — hospitals, restaurants, pharmacies, bathrooms, marinas and boat ramps/launches — each with its own detail card and source link.',
     points: ['Designated marine areas and restrictions', 'Public places: hospitals, restaurants, pharmacies, bathrooms, marinas, boat ramps and launches', 'Every card links its source record'],
   },
   {
-    number: '10',
+    number: '15',
     title: 'Position & coordinates',
     copy: 'Your own position is shown on screen as a live GPS own-ship marker with a Locate Me button, and every position can be read or entered in any of eight coordinate formats.',
     points: ['On-screen vessel position with GPS own-ship marker and Locate Me', 'Decimal degrees, degrees-decimal-minutes and degrees-minutes-seconds', 'UTM, MGRS, Maidenhead, Plus Codes and Geohash'],
   },
   {
-    number: '11',
+    number: '16',
     title: 'Anchor watch & course',
     copy: 'Set an anchor watch on your anchored position and be alerted if the boat drifts beyond your watch radius, with your course shown on screen alongside your position.',
     points: ['Anchor position with a watch radius you set', 'Alert if the vessel drifts outside the watch circle', 'Course shown on screen with your position'],
   },
   {
-    number: '12',
+    number: '17',
     title: 'Own boat database',
     copy: 'Keep a database of your own boats, each with its measurements, so your vessel details are always at hand on the chart whenever you need them.',
     points: ['Save multiple boats with their measurements', 'Your vessel details at hand on the chart', 'Switch between your boats as needed'],
   },
   {
-    number: '13',
+    number: '18',
     title: 'COLREGs guide',
     copy: 'Collision Regulations guidance is built in, with the Canada, US and UK modifications alongside the international rules — structured study notes for the helm, kept close at hand while you plan.',
     points: ['All 41 IMO 1972 rules in structured form', 'Canada, US and UK modifications included', 'Written as guidance for study, not verbatim statute'],
@@ -89,7 +119,7 @@ export default function FeaturesPage() {
       <section className="page-hero">
         <div className="section-kicker">EVERYTHING IN THE APP <span>—</span> FEATURES</div>
         <h1>What {BRAND} does,<br /><em>in depth.</em></h1>
-        <p className="page-lead">Charts, navigation aids, live traffic, bridges, routes and conditions — the full feature set of the app, in one place. Open the web app to try any of it in your browser.</p>
+        <p className="page-lead">Charts, navigation aids, live traffic, bridges, warnings, boat log and conditions — the full feature set of the app, in one place. Open the web app to try any of it in your browser.</p>
         <div className="hero-actions"><a className="button-primary" href="/app"><span className="button-icon">↗</span> Open the web app</a><a className="button-quiet" href="/future-projects">What comes next <span aria-hidden="true">→</span></a></div>
       </section>
       <section className="page-sections">

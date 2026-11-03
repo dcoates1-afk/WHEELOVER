@@ -10,7 +10,7 @@ export default function SupportPage() {
       <section className="page-hero">
         <div className="section-kicker">KEEP THIS PROJECT AFLOAT <span>—</span> SUPPORT</div>
         <h1>Enjoy {BRAND}?<br /><em>Help it chart ahead.</em></h1>
-        <p className="page-lead">{BRAND} is an independent project, built to make useful marine information easier to explore. The app remains free to use. If it is helpful to you, an optional contribution helps support its ongoing development.</p>
+        <p className="page-lead">{BRAND} is an independent project, built to make useful marine information easier to explore. The app remains free to use. If it is helpful to you, an optional contribution helps support its ongoing development — paying for the unglamorous parts: keeping the chart and traffic feeds working, building the next features, and keeping the app free for everyone who uses it. There are no investors and no ads, just sailors chipping in when the app earns it.</p>
       </section>
       <section className="page-sections">
         <h2 className="page-section-title">Ways to contribute</h2>
@@ -22,12 +22,12 @@ export default function SupportPage() {
         <div className="detail-grid">
           <article className="detail-card">
             <h2>Found an issue?</h2>
-            <p>Something drawn wrong, a bridge card that looks off, or a view that came up empty? Tell the developer what you saw and where — a place name or coordinates make it much faster to track down.</p>
+            <p>Something drawn wrong, a bridge card that looks off, a warning in the wrong place, or a view that came up empty? Tell the developer what you saw and where — a place name or coordinates make it much faster to track down. A screenshot and the time you saw it help even more, and if it is a bridge or a mark, the name on the card is worth including. Reports go straight to the developer, who reproduces the problem, fixes it, and ships the fix in a later build — the app updates in your browser, nothing to reinstall.</p>
             <a className="text-link" href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('@ Wheel-over feedback')}`}>Email the developer <span>↗</span></a>
           </article>
           <article className="detail-card">
             <h2>Have an idea?</h2>
-            <p>Ideas for future builds are welcome — sailing tools, race features, planning improvements, anything that would make time on the water better. Good ideas travel, and several features in the app started exactly this way.</p>
+            <p>Ideas for future builds are welcome — sailing tools, race features, planning improvements, community features, anything that would make time on the water better. The most useful ideas say what problem they solve and how you would use the feature: where you sail, how often, and what you do today instead. Good ideas travel, and several features in the app started exactly this way.</p>
             <a className="text-link" href="/future-projects">See what is planned <span>→</span></a>
           </article>
         </div>

@@ -1,0 +1,8728 @@
+[
+ {
+  "n": "bridge",
+  "w": null,
+  "la": 44.4333,
+  "lo": -67.8833,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": 12.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.5"
+ },
+ {
+  "n": "bridge",
+  "w": null,
+  "la": 44.4333,
+  "lo": -67.8833,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": 35.7,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.5"
+ },
+ {
+  "n": "A causeway and highway bridge",
+  "w": null,
+  "la": 43.9983,
+  "lo": -69.1333,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.7"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 43.9983,
+  "lo": -69.1333,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.7"
+ },
+ {
+  "n": "former highway swing bridge",
+  "w": "Passagassawakeag River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": 7.6,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP1 Ch.7"
+ },
+ {
+  "n": "U.S. Route 1 highway bridge",
+  "w": "Passagassawakeag River",
+  "la": null,
+  "lo": null,
+  "v": [
+   20.7
+  ],
+  "c": true,
+  "o": null,
+  "h": 7.6,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.7"
+ },
+ {
+  "n": "George River is crossed at Thomaston by a fixed highway bridge",
+  "w": "Mill River",
+  "la": null,
+  "lo": null,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.7"
+ },
+ {
+  "n": "fixed railroad bridge",
+  "w": "Mill River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.7"
+ },
+ {
+  "n": "Route 129 highway bridge",
+  "w": null,
+  "la": 43.8622,
+  "lo": -69.5567,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "State Route 27 highway bridge",
+  "w": "Sheepscot River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "State Route 127 highway bridge",
+  "w": "Sasanoa River",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "State Route 27 highway bridge",
+  "w": null,
+  "la": 43.8514,
+  "lo": -69.6683,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "It is also connected at the northeast end to the south end of Hodgdon Island by a fixed highway bridge",
+  "w": null,
+  "la": 43.8514,
+  "lo": -69.6683,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "A causeway and fixed bridge",
+  "w": null,
+  "la": 43.8225,
+  "lo": -69.6897,
+  "v": [
+   0.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "A fixed bridge",
+  "w": "Sheepscot River",
+  "la": null,
+  "lo": null,
+  "v": [
+   14.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "U.S. Route 1 fixed highway bridge",
+  "w": "Sheepscot River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Sheepscot River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Cathance River",
+  "la": null,
+  "lo": null,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Cathance River",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "State Route 128 bridge",
+  "w": "Kennebec River",
+  "la": 44.005,
+  "lo": -69.8233,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 44.1067,
+  "lo": -69.7667,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "This passage is crossed by State Route 24 highway bridge",
+  "w": null,
+  "la": 43.6558,
+  "lo": -70.0367,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "Casco Bay Bridge",
+  "w": null,
+  "la": 43.6483,
+  "lo": -70.1933,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP1 Ch.8"
+ },
+ {
+  "n": "bridge",
+  "w": null,
+  "la": 43.1653,
+  "lo": -70.5911,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.9"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Little Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP1 Ch.9"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Little Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.9"
+ },
+ {
+  "n": "State Route 1B highway bridge",
+  "w": "Little Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP1 Ch.9"
+ },
+ {
+  "n": "other bridge",
+  "w": "Little Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP1 Ch.9"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Little Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.9"
+ },
+ {
+  "n": "It is crossed by a highway bridge",
+  "w": null,
+  "la": 42.6853,
+  "lo": -70.7661,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP1 Ch.9"
+ },
+ {
+  "n": "bridge",
+  "w": "North River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP1 Ch.10"
+ },
+ {
+  "n": "fixed bridge",
+  "w": "South River",
+  "la": 42.5242,
+  "lo": -70.8778,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.10"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 42.315,
+  "lo": -71.0394,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.11"
+ },
+ {
+  "n": "A highway bridge",
+  "w": null,
+  "la": 42.1472,
+  "lo": -70.7028,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.12"
+ },
+ {
+  "n": "second highway bridge",
+  "w": null,
+  "la": 42.1472,
+  "lo": -70.7028,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP1 Ch.12"
+ },
+ {
+  "n": "A railroad bridge",
+  "w": null,
+  "la": 41.7461,
+  "lo": -70.6228,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.5"
+ },
+ {
+  "n": "A highway bridge",
+  "w": null,
+  "la": 41.7461,
+  "lo": -70.6228,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.5"
+ },
+ {
+  "n": "bridge",
+  "w": null,
+  "la": 41.7,
+  "lo": -70.6949,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.5"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Sakonnet River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.6"
+ },
+ {
+  "n": "Route 114 Bridge",
+  "w": null,
+  "la": 41.7275,
+  "lo": -71.2875,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.6"
+ },
+ {
+  "n": "A fixed bridge",
+  "w": "Shelter Island Sound",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.7"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Mystic River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP2 Ch.7"
+ },
+ {
+  "n": "U.S. Route 1 highway bridge",
+  "w": "Mystic River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.7"
+ },
+ {
+  "n": "Interstate 91 highway bridge",
+  "w": null,
+  "la": 41.7119,
+  "lo": -72.6296,
+  "v": [
+   11.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.8"
+ },
+ {
+  "n": "Throgs Neck Bridge",
+  "w": "East River",
+  "la": 40.8044,
+  "lo": -73.7906,
+  "v": [
+   42.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "Bruckner Expressway bascule bridge",
+  "w": null,
+  "la": null,
+  "lo": null,
+  "v": [
+   15.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "Van Wyck Expressway fixed highway bridge",
+  "w": "Flushing Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "Bruckner Expressway Bridge",
+  "w": "Flushing Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   8.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "Westchester Avenue Bridge",
+  "w": "Flushing Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "elevated railway structure over Westchester Avenue Bridge",
+  "w": "Flushing Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   18.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Flushing Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "drawbridge",
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "A fixed railroad bridge",
+  "w": "Rikers Island Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   20.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "Hell Gate Bridge",
+  "w": "Rikers Island Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   40.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "Triborough Bridge",
+  "w": "Rikers Island Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   42.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP2 Ch.9"
+ },
+ {
+  "n": "Ponquogue Bridge",
+  "w": "Shinnecock Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.10"
+ },
+ {
+  "n": "canal is crossed by a highway bascule bridge",
+  "w": "Shinnecock Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.10"
+ },
+ {
+  "n": "A reported depth of about 4 feet can be carried to the yacht basin just before reaching the Stevens Lane Bridge",
+  "w": "Shinnecock Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.10"
+ },
+ {
+  "n": "Robert Moses Causeway Bridge",
+  "w": "State Boat Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   8.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.10"
+ },
+ {
+  "n": "twin fixed spans of this bridge",
+  "w": "Great South Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   18.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.10"
+ },
+ {
+  "n": "northern fixed bridge",
+  "w": "Goose Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": 23.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.10"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Reynolds Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.10"
+ },
+ {
+  "n": "fixed footbridge and highway bridge",
+  "w": "Reynolds Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.10"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Reynolds Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.10"
+ },
+ {
+  "n": "State Route 36 highway bridge",
+  "w": "Shrewsbury River",
+  "la": null,
+  "lo": null,
+  "v": [
+   18.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.11"
+ },
+ {
+  "n": "State Route 35 highway bridge",
+  "w": "Cheesequake Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.11"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Cheesequake Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   0.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP2 Ch.11"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Annsville Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   5.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.12"
+ },
+ {
+  "n": "Patroon Island Bridge",
+  "w": "Hudson River",
+  "la": null,
+  "lo": null,
+  "v": [
+   18.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.12"
+ },
+ {
+  "n": "Troy-Menands Bridge",
+  "w": "Hudson River",
+  "la": null,
+  "lo": null,
+  "v": [
+   18.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.12"
+ },
+ {
+  "n": "vertical lift highway bridge",
+  "w": null,
+  "la": 42.7353,
+  "lo": -73.6894,
+  "v": [
+   8.8
+  ],
+  "c": true,
+  "o": [
+   18.3
+  ],
+  "h": null,
+  "d": "normal pool",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP2 Ch.12"
+ },
+ {
+  "n": "A rock ledge is on the east side of the river at the bridge",
+  "w": null,
+  "la": 42.7353,
+  "lo": -73.6894,
+  "v": [
+   18.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "normal pool",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP2 Ch.12"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Townsends Inlet",
+  "la": null,
+  "lo": null,
+  "v": [
+   7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.4"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Manasquan River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Manasquan River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "State Route 70 highway bridge",
+  "w": "Manasquan River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "Beaverdam Road bridge",
+  "w": "Manasquan River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "Jordan Road bridge",
+  "w": "Manasquan River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "bridge",
+  "w": null,
+  "la": 40.0319,
+  "lo": -74.0639,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "fixed span of the State Route 37 bridge",
+  "w": null,
+  "la": 40.0319,
+  "lo": -74.0639,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "State Route 72 bridge",
+  "w": null,
+  "la": 39.7761,
+  "lo": -74.1344,
+  "v": [
+   17.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Little Sheepshead Creek",
+  "la": 39.5222,
+  "lo": -74.3211,
+  "v": [
+   11
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Little Sheepshead Creek",
+  "la": 39.5222,
+  "lo": -74.3211,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Great Egg Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "State Route 152 fixed highway bridge",
+  "w": "Great Egg Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   17.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "Ship Channel 1.7 miles from the inlet bridge",
+  "w": "Great Egg Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "Beesleys Point Bridge",
+  "w": "Great Egg Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Great Egg Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "State Route 50 highway bridge",
+  "w": "Great Egg Harbor",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.5"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": null,
+  "la": 39.16,
+  "lo": -75.4083,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.6"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": null,
+  "la": 39.18,
+  "lo": -75.1367,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.6"
+ },
+ {
+  "n": "State Route 49 highway bridge",
+  "w": null,
+  "la": 39.4483,
+  "lo": -75.5783,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.6"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": null,
+  "la": 39.4483,
+  "lo": -75.5783,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.6"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": null,
+  "la": 39.4483,
+  "lo": -75.5783,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.6"
+ },
+ {
+  "n": "Commodore John Barry Bridge",
+  "w": "Delaware River",
+  "la": null,
+  "lo": null,
+  "v": [
+   55.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.6"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 39.8542,
+  "lo": -75.2283,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.6"
+ },
+ {
+  "n": "railroad-highway bridge",
+  "w": "Back Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.6"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": null,
+  "la": 40.0767,
+  "lo": -74.9067,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.6"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": null,
+  "la": 38.4517,
+  "lo": -75.055,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.8"
+ },
+ {
+  "n": "State Route 90 fixed highway bridge",
+  "w": null,
+  "la": 38.4517,
+  "lo": -75.055,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.8"
+ },
+ {
+  "n": "State Route 611 fixed highway and pedestrian bridge",
+  "w": "Sinepuxent Bay",
+  "la": 38.3261,
+  "lo": -75.0983,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.8"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Cat Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.8"
+ },
+ {
+  "n": "fixed bridge",
+  "w": null,
+  "la": 36.905,
+  "lo": -76.4417,
+  "v": [
+   9.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Chuckatuck Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   0.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Chuckatuck Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Sandy Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Sandy Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "A fixed bridge",
+  "w": "Sandy Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "Judith Stewart Dresser Memorial Bridge",
+  "w": null,
+  "la": 37.23,
+  "lo": -76.95,
+  "v": [
+   15.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "A highway lift bridge",
+  "w": null,
+  "la": 37.23,
+  "lo": -76.95,
+  "v": [
+   15.2
+  ],
+  "c": true,
+  "o": [
+   44.2
+  ],
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 37.3825,
+  "lo": -77.3789,
+  "v": [
+   6.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "James River at Mile 72.4W. A fixed highway bridge",
+  "w": null,
+  "la": 37.3825,
+  "lo": -77.3789,
+  "v": [
+   44.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "turnpike fixed highway bridge",
+  "w": null,
+  "la": 37.3825,
+  "lo": -77.3789,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.10"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Southwest Branch",
+  "la": 37.165,
+  "lo": -76.2725,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": 6.1,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 37.2267,
+  "lo": -76.4783,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "George P. Coleman Memorial Bridge",
+  "w": null,
+  "la": 37.2267,
+  "lo": -76.4783,
+  "v": [
+   18.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "Lord Delaware Bridge",
+  "w": "Mattaponi River",
+  "la": 37.5283,
+  "lo": -76.795,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "Walkerton highway bridge",
+  "w": "Mattaponi River",
+  "la": 37.5283,
+  "lo": -76.795,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "Eltham Bridge",
+  "w": "Pamunkey River",
+  "la": null,
+  "lo": null,
+  "v": [
+   17.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Pamunkey River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Urbanna Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "Totuskey Bridge",
+  "w": "Rappahannock River",
+  "la": 37.8244,
+  "lo": -76.7328,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Rappahannock River",
+  "la": 37.8244,
+  "lo": -76.7328,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 37.9878,
+  "lo": -76.8386,
+  "v": [
+   15.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 37.9878,
+  "lo": -76.8386,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 37.9878,
+  "lo": -76.8386,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 37.9878,
+  "lo": -76.8386,
+  "v": [
+   11.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Great Wicomico River",
+  "la": null,
+  "lo": null,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.11"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 38.095,
+  "lo": -76.5817,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.12"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 38.1933,
+  "lo": -76.9033,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.12"
+ },
+ {
+  "n": "A fixed railroad bridge",
+  "w": null,
+  "la": 38.3497,
+  "lo": -77.1975,
+  "v": [
+   7.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.12"
+ },
+ {
+  "n": "fixed railroad bridge",
+  "w": "Occoquan River",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.12"
+ },
+ {
+  "n": "Fredericksburg and Potomac Railroad bridge",
+  "w": "Occoquan River",
+  "la": null,
+  "lo": null,
+  "v": [
+   13.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.12"
+ },
+ {
+  "n": "State Route 123 fixed highway bridge",
+  "w": "Occoquan River",
+  "la": null,
+  "lo": null,
+  "v": [
+   12.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.12"
+ },
+ {
+  "n": "lower bridge",
+  "w": null,
+  "la": 38.7609,
+  "lo": -77.0432,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP3 Ch.12"
+ },
+ {
+  "n": "Hunting Creek and at the lower end of the Alexandria waterfront.Woodrow Wilson Memorial Bridge",
+  "w": null,
+  "la": 38.7609,
+  "lo": -77.0432,
+  "v": [
+   23.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.12"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Patuxent River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP3 Ch.13"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Selby Bay",
+  "la": 38.8989,
+  "lo": -76.4358,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.13"
+ },
+ {
+  "n": "State Route 2 fixed highway bridge",
+  "w": null,
+  "la": 38.9433,
+  "lo": -76.5767,
+  "v": [
+   16.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.13"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 38.9433,
+  "lo": -76.5767,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.13"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Severn River",
+  "la": 39,
+  "lo": -76.5017,
+  "v": [
+   22.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.13"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Severn River",
+  "la": 39,
+  "lo": -76.5017,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP3 Ch.13"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Severn River",
+  "la": 39,
+  "lo": -76.5017,
+  "v": [
+   8.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.13"
+ },
+ {
+  "n": "suspension spans over Chesapeake Channel 1.4 miles from the western end of the bridge",
+  "w": "Chesapeake Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   55.5
+  ],
+  "c": true,
+  "o": null,
+  "h": 457.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP3 Ch.13"
+ },
+ {
+  "n": "fixed spans over Eastern Channel 1.2 miles from the eastern end of the bridge",
+  "w": "Eastern Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   17.7
+  ],
+  "c": true,
+  "o": null,
+  "h": 210.3,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.13"
+ },
+ {
+  "n": "bridge",
+  "w": "Occohannock Creek",
+  "la": 37.55,
+  "lo": -75.9383,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": 9.1,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Choptank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.2
+  ],
+  "c": true,
+  "o": null,
+  "h": 5.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "bridge",
+  "w": "Choptank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": 5.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Choptank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": 5.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "Dover Bridge",
+  "w": "Choptank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": 5.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "Tuckahoe Bridge",
+  "w": "Choptank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": 5.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Choptank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "fixed bridge",
+  "w": "Choptank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Choptank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Miles River",
+  "la": 38.7989,
+  "lo": -76.1943,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": 7.3,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Miles River",
+  "la": null,
+  "lo": null,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.14"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Bear Creek",
+  "la": 39.2194,
+  "lo": -76.5169,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "Peninsula Expressway Bridge",
+  "w": "Bear Creek",
+  "la": 39.2194,
+  "lo": -76.5169,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Bear Creek",
+  "la": 39.2194,
+  "lo": -76.5169,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Bear Creek",
+  "la": 39.2194,
+  "lo": -76.5169,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Marley Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Marley Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "Hanover Street bridge",
+  "w": "Middle Branch",
+  "la": null,
+  "lo": null,
+  "v": [
+   11.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "Western Maryland Railway bridge",
+  "w": "Middle Branch",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "railroad bridge",
+  "w": null,
+  "la": 39.3403,
+  "lo": -76.1417,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "railroad bridge",
+  "w": null,
+  "la": 39.5556,
+  "lo": -76.0828,
+  "v": [
+   15.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP3 Ch.15"
+ },
+ {
+  "n": "bridge",
+  "w": null,
+  "la": 36.3769,
+  "lo": -75.8297,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "About 4 miles west of the highway bridge",
+  "w": null,
+  "la": 36.0569,
+  "lo": -76.6178,
+  "v": [
+   28.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "U.S. Route 17 highway bridge",
+  "w": null,
+  "la": 36.0569,
+  "lo": -76.6178,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "U.S. Route 258 highway bridge",
+  "w": "Blackwater River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Blackwater River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Blackwater River",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "U.S. Routes 13 and 17 highway bridge",
+  "w": "Blackwater River",
+  "la": null,
+  "lo": null,
+  "v": [
+   13.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "U.S. Route 64 highway bridge",
+  "w": "East Lake",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Croatan Sound",
+  "la": null,
+  "lo": null,
+  "v": [
+   13.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "U.S. Route 264 highway bridge",
+  "w": "Pamlico River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "A highway bridge",
+  "w": null,
+  "la": 35.4589,
+  "lo": -76.5558,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "State Route 92 highway bridge",
+  "w": null,
+  "la": 35.4589,
+  "lo": -76.5558,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "State Route 33 highway bridge",
+  "w": null,
+  "la": 35.3406,
+  "lo": -76.6969,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 35.3406,
+  "lo": -76.6969,
+  "v": [
+   0.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "State Route 92 highway bridge",
+  "w": null,
+  "la": 35.4319,
+  "lo": -76.8069,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "A highway bridge",
+  "w": null,
+  "la": 35.4319,
+  "lo": -76.8069,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "A highway bridge",
+  "w": null,
+  "la": 35.4319,
+  "lo": -76.8069,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Neuse River",
+  "la": null,
+  "lo": null,
+  "v": [
+   13.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "U.S. Route 17 highway bridge",
+  "w": "Neuse River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Neuse River",
+  "la": null,
+  "lo": null,
+  "v": [
+   0
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "U.S. Route 70 highway bascule bridge",
+  "w": "Trent River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Neuse River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "Fixed twin highway bridges about 0.3 mile southwest of the railroad swing bridge",
+  "w": "Neuse River",
+  "la": null,
+  "lo": null,
+  "v": [
+   13.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "U.S. Route 17 highway bridge",
+  "w": "Neuse River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Neuse River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.4"
+ },
+ {
+  "n": "Beaufort is connected to Radio Island by the U.S. 70 highway fixed bridge",
+  "w": "Gallants Channel",
+  "la": 34.726,
+  "lo": -76.6691,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "Grayden Paul bascule bridge",
+  "w": "Gallants Channel",
+  "la": 34.7228,
+  "lo": -76.6692,
+  "v": [
+   26.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "State Route 172 highway bridge",
+  "w": "New River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "New River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "Above this bridge",
+  "w": "New River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "U.S. Route 421 highway bridge",
+  "w": "Cape Fear River",
+  "la": 33.9167,
+  "lo": -78.02,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Cape Fear River",
+  "la": 33.9167,
+  "lo": -78.02,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "U.S. Route 117 highway bridge",
+  "w": "Northeast Cape Fear River",
+  "la": 34.2408,
+  "lo": -77.9556,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "Hilton railroad bridge",
+  "w": "Cape Fear River",
+  "la": 34.2408,
+  "lo": -77.9556,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "State Route 117 highway bridge",
+  "w": "Cape Fear River",
+  "la": 34.2408,
+  "lo": -77.9556,
+  "v": [
+   7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Cape Fear River",
+  "la": 34.2408,
+  "lo": -77.9556,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "twin fixed spans of the Interstate Route 40 bridge",
+  "w": "Cape Fear River",
+  "la": 34.2408,
+  "lo": -77.9556,
+  "v": [
+   8.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "U.S. Route 117 highway bridge",
+  "w": "Cape Fear River",
+  "la": 34.2408,
+  "lo": -77.9556,
+  "v": [
+   0.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.5"
+ },
+ {
+  "n": "U.S. Route 17 fixed highway bridge",
+  "w": "Great Pee Dee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.6"
+ },
+ {
+  "n": "U.S. Route 701 fixed highway bridge",
+  "w": "Great Pee Dee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.6"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Dewees Inlet",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.6"
+ },
+ {
+  "n": "I-526 fixed highway bridge",
+  "w": "Wando River",
+  "la": null,
+  "lo": null,
+  "v": [
+   47.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.6"
+ },
+ {
+  "n": "I-526 fixed highway bridge",
+  "w": "Wando River",
+  "la": null,
+  "lo": null,
+  "v": [
+   42.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.6"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 32.6867,
+  "lo": -79.8833,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "State Route 171 highway bridge",
+  "w": null,
+  "la": 32.6867,
+  "lo": -79.8833,
+  "v": [
+   16.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 32.5383,
+  "lo": -80.3883,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Harbor River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "U.S. Route 21 fixed highway bridge",
+  "w": "Harbor River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "On the southwest side of the bridge",
+  "w": "Harbor River",
+  "la": null,
+  "lo": null,
+  "v": [
+   33.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "State Route 170 highway swing bridge",
+  "w": "Whale Branch",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "U.S. Route 21 highway bridge",
+  "w": "Whale Branch",
+  "la": null,
+  "lo": null,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "U.S. Route 21 highway bridge",
+  "w": "Whale Branch",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "U.S. Route 278 highway bridge",
+  "w": "Mackay Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "bridge",
+  "w": "Middle River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.7"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 32.0111,
+  "lo": -80.8833,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 32.0111,
+  "lo": -80.8833,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "U.S. Route 80 highway bridge",
+  "w": "Turner Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "U.S. Route 80 highway bridge",
+  "w": "Turner Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Turner Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "Old Teakettle Creek from the yards west of the bridge",
+  "w": "South Altamaha River",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "U.S. Route 17 highway bridge",
+  "w": "South Altamaha River",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "A small-boat landing at the side of the bridge",
+  "w": "South Altamaha River",
+  "la": null,
+  "lo": null,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "Doboy Island Route 95 highway bridge",
+  "w": "South Altamaha River",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Blackbank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "only bridge",
+  "w": "Turtle River",
+  "la": null,
+  "lo": null,
+  "v": [
+   56.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "State Route 303 highway bridge",
+  "w": "Turtle River",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.8"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Arlington Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   51.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "fixed Matthews highway bridge",
+  "w": "Arlington Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   44.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "Hart suspension bridge",
+  "w": "Arlington Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   41.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "Acosta highway bridge",
+  "w": "Arlington Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "railroad bridge",
+  "w": null,
+  "la": 30.315,
+  "lo": -81.6717,
+  "v": [
+   0.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "Timquana Road highway bridge",
+  "w": null,
+  "la": 30.315,
+  "lo": -81.6717,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "twin fixed spans of Highway 295 bridge",
+  "w": null,
+  "la": 30.1892,
+  "lo": -81.6592,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "U.S. Route 17 fixed highway bridge",
+  "w": null,
+  "la": 30.1892,
+  "lo": -81.6592,
+  "v": [
+   11.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 30.1892,
+  "lo": -81.6592,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "U.S. Route 17 fixed highway bridge",
+  "w": "St. Johns River",
+  "la": 29.6222,
+  "lo": -81.5978,
+  "v": [
+   11
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "Henry Holland Buckman Lock by State Route 19 fixed highway bridge",
+  "w": "Oklawaha River",
+  "la": null,
+  "lo": null,
+  "v": [
+   20.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "State Route 316 fixed highway bridge",
+  "w": "Oklawaha River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.9"
+ },
+ {
+  "n": "bridge",
+  "w": null,
+  "la": 26.9486,
+  "lo": -80.0819,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.10"
+ },
+ {
+  "n": "Route A1A highway bridge",
+  "w": null,
+  "la": 26.2592,
+  "lo": -80.0808,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.10"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 25.5906,
+  "lo": -80.0967,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.11"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 24.8514,
+  "lo": -80.6178,
+  "v": [
+   8.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.11"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": null,
+  "la": 24.8514,
+  "lo": -80.6178,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.11"
+ },
+ {
+  "n": "A highway bridge",
+  "w": null,
+  "la": 24.8514,
+  "lo": -80.6178,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.11"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Moser Channel",
+  "la": 24.6278,
+  "lo": -81.1086,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.11"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Niles Channel",
+  "la": 24.6192,
+  "lo": -81.4153,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.11"
+ },
+ {
+  "n": "U.S. Route 1 highway bridge",
+  "w": "Kemp Channel",
+  "la": 24.5258,
+  "lo": -81.5175,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.11"
+ },
+ {
+  "n": "A causeway bridge",
+  "w": null,
+  "la": 24.7183,
+  "lo": -81.9217,
+  "v": [
+   5.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.11"
+ },
+ {
+  "n": "channel is crossed by a 42-foot fixed span highway bridge",
+  "w": null,
+  "la": 24.7183,
+  "lo": -81.9217,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.11"
+ },
+ {
+  "n": "State Route 168 highway bridge",
+  "w": null,
+  "la": 36.7339,
+  "lo": -76.2856,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 168 Bypass fixed highway bridge",
+  "w": null,
+  "la": 36.7339,
+  "lo": -76.2856,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Norfolk Southern Railway bridge",
+  "w": "North Landing River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MLW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Centerville Turnpike Bridge",
+  "w": "North Landing River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MLW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 165 highway bridge",
+  "w": "North Landing River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MLW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 726 fixed highway bridge",
+  "w": "North Landing River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MLW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "U.S. Route 158 fixed highway bridge",
+  "w": "North Landing River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MLW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Norfolk Southern Railway bridge",
+  "w": "Pasquotank River",
+  "la": null,
+  "lo": null,
+  "v": [
+   0.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 101 highway bridge",
+  "w": "Adams Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Adams Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Bogue Sound",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 544 highway bridge",
+  "w": "Waccamaw River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "U.S. Route 17 highway bridge",
+  "w": "Waccamaw River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Isle of Palms Connector is a fixed highway bridge",
+  "w": "Dewees Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Dewees Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   8.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "James Island Expressway fixed highway bridge",
+  "w": "Wappoo Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   20.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 171 highway bridge",
+  "w": "Wappoo Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "John F. Limehouse Highway Bridge",
+  "w": "Stono River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "About 1.3 miles above the mouth U.S. Route 17 highway bridge",
+  "w": "Wappoo Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 162 highway bridge",
+  "w": "Wappoo Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Dawho bridge",
+  "w": "Dawho River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "U.S. Route 278 highway bridge",
+  "w": "Port Royal Sound",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Wilmington River",
+  "la": 32.0711,
+  "lo": -80.9708,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State of Georgia Memorial Bridge",
+  "w": "Wilmington River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A double-bascule highway bridge",
+  "w": "Wilmington River",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 520 highway fixed bridge",
+  "w": "St. Andrew Sound",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 105 highway bridge",
+  "w": "St. Johns River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Matanzas River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Route A1A highway bridge",
+  "w": "Matanzas River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Route A1A highway bridge",
+  "w": "Matanzas River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 100 highway bridge",
+  "w": "Matanzas River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Banana River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 520 highway fixed bridge",
+  "w": "Banana River",
+  "la": null,
+  "lo": null,
+  "v": [
+   11
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Across the entrance to Sykes Creek at the north end of Newfound Harbor there is a highway bridge",
+  "w": "Sykes Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A 37-foot fixed span bridge",
+  "w": "Banana River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "U.S. Route 1 highway bridge",
+  "w": "Indian River",
+  "la": null,
+  "lo": null,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "About 1 mile above the highway bridge",
+  "w": "Indian River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "About 300 yards above the railroad bridge",
+  "w": "Indian River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Indian River",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "bridge",
+  "w": "Indian River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 76A fixed highway bridge",
+  "w": "St. Lucie Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   17.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 710 highway bridge",
+  "w": "St. Lucie Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "South Central Florida Express Railroad bridge",
+  "w": "St. Lucie Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 708 highway bridge",
+  "w": "Loxahatchee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 707 highway bridge",
+  "w": "Loxahatchee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "U.S. Route 1 highway bridge",
+  "w": "Loxahatchee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   11.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Alternate State Route A1A highway bridge",
+  "w": "Loxahatchee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Florida East Coast railroad bridge",
+  "w": "Loxahatchee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Loxahatchee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 706 highway bridge",
+  "w": "Loxahatchee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Las Olas Boulevard highway bridge",
+  "w": null,
+  "la": 26.1036,
+  "lo": -80.1597,
+  "v": [
+   7.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Southeast Third Avenue highway bridge",
+  "w": null,
+  "la": 26.1036,
+  "lo": -80.1597,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Marietta River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Marietta River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 26.0592,
+  "lo": -80.1411,
+  "v": [
+   6.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "State Route 858 highway bridge",
+  "w": null,
+  "la": 26.0592,
+  "lo": -80.1411,
+  "v": [
+   7.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "N.E. 192nd Street fixed highway bridge",
+  "w": null,
+  "la": 26.0592,
+  "lo": -80.1411,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Bal Harbour",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "bridge",
+  "w": "Bal Harbour",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "Indian Creek is crossed by West 63rd Street bridge",
+  "w": "Bal Harbour",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Bal Harbour",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "W. A fixed highway bridge",
+  "w": null,
+  "la": 24.99,
+  "lo": -80.5183,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 24.99,
+  "lo": -80.5183,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 24.9533,
+  "lo": -80.5867,
+  "v": [
+   8.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP4 Ch.12"
+ },
+ {
+  "n": "A causeway bridge",
+  "w": null,
+  "la": 24.5888,
+  "lo": -81.8048,
+  "v": [
+   5.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "channel is crossed by a 42-foot fixed span highway bridge",
+  "w": null,
+  "la": 24.5888,
+  "lo": -81.8048,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Moser Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "A highway bridge",
+  "w": null,
+  "la": 25.1167,
+  "lo": -81.0833,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Estero Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": 12.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "bridge",
+  "w": "Estero Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   9.1
+  ],
+  "c": true,
+  "o": null,
+  "h": 12.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "highway bridge",
+  "w": "San Carlos Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "highway bridge",
+  "w": "San Carlos Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Caloosahatchee River",
+  "la": null,
+  "lo": null,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 26.6372,
+  "lo": -81.9061,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 26.6372,
+  "lo": -81.9061,
+  "v": [
+   16.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "A highway bridge",
+  "w": null,
+  "la": 26.6372,
+  "lo": -81.9061,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.4"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Braden River",
+  "la": 27.525,
+  "lo": -82.6083,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.5"
+ },
+ {
+  "n": "State Route 64 highway bridge",
+  "w": "Braden River",
+  "la": 27.525,
+  "lo": -82.6083,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.5"
+ },
+ {
+  "n": "Gandy Highway Bridge",
+  "w": "Old Tampa Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   13.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.5"
+ },
+ {
+  "n": "State Route 679 Pinellas Bayway Bridge",
+  "w": "Tampa Bay",
+  "la": 27.6483,
+  "lo": -82.74,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.5"
+ },
+ {
+  "n": "Sunshine Skyway Bridge",
+  "w": "Tampa Bay",
+  "la": 27.6483,
+  "lo": -82.74,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.5"
+ },
+ {
+  "n": "State Route 358 highway bridge",
+  "w": null,
+  "la": 29.6564,
+  "lo": -83.4564,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.5"
+ },
+ {
+  "n": "U.S. Route 98 highway bridge",
+  "w": null,
+  "la": 29.9342,
+  "lo": -84.3014,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "bridge",
+  "w": null,
+  "la": 29.9342,
+  "lo": -84.3014,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "U.S. Route 319 highway bridge",
+  "w": null,
+  "la": 29.9342,
+  "lo": -84.3014,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 30.505,
+  "lo": -86.4844,
+  "v": [
+   11.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "State Route 85 fixed highway bridge",
+  "w": null,
+  "la": 30.505,
+  "lo": -86.4844,
+  "v": [
+   5.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "Barrancas Avenue highway bridge",
+  "w": null,
+  "la": 30.375,
+  "lo": -87.2633,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "A fixed bridge",
+  "w": null,
+  "la": 30.375,
+  "lo": -87.2633,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "CSX Railroad bridge",
+  "w": null,
+  "la": 30.375,
+  "lo": -87.2633,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "U.S. Route 90 highway bridge",
+  "w": null,
+  "la": 30.375,
+  "lo": -87.2633,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "East Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   19.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.6"
+ },
+ {
+  "n": "State Route 98 highway bridge",
+  "w": "Fish River",
+  "la": 30.3981,
+  "lo": -88.1442,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "State Route 32 highway bridge",
+  "w": "Fish River",
+  "la": 30.3981,
+  "lo": -88.1442,
+  "v": [
+   6.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "State Route 193 highway bridge",
+  "w": "Fish River",
+  "la": 30.3981,
+  "lo": -88.1442,
+  "v": [
+   13.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "W. A marina on the north side of East Fowl River just east of the bridge",
+  "w": "Fish River",
+  "la": 30.3981,
+  "lo": -88.1442,
+  "v": [
+   14.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "State Route 163 highway bridge",
+  "w": "Dog River",
+  "la": null,
+  "lo": null,
+  "v": [
+   22.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Dog River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "A railroad bridge",
+  "w": "Mobile River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "A railroad bridge",
+  "w": "Tensaw River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "Dauphin Island Bridge",
+  "w": "Dauphin Island Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Dauphin Island Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "State Route 188 highway bridge",
+  "w": null,
+  "la": 30.3981,
+  "lo": -88.1442,
+  "v": [
+   7.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "entrance to the river from Mississippi Sound is marked by private daybeacons from east of Cat Island to just below the highway bridge",
+  "w": null,
+  "la": 30.3981,
+  "lo": -88.1442,
+  "v": [
+   9.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "State Route 188 fixed highway bridge",
+  "w": null,
+  "la": 30.3981,
+  "lo": -88.1442,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "CSX railroad bridge",
+  "w": "Pascagoula River",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "U.S. Route 90 highway bridge",
+  "w": "Pascagoula River",
+  "la": null,
+  "lo": null,
+  "v": [
+   24.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "State Route 63 fixed highway bridge",
+  "w": null,
+  "la": 30.355,
+  "lo": -88.6017,
+  "v": [
+   22.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "Mississippi Export railroad bridge",
+  "w": null,
+  "la": 30.355,
+  "lo": -88.6017,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "West Pascagoula River is crossed about 0.8 mile above the mouth by a CSX bridge",
+  "w": null,
+  "la": 30.355,
+  "lo": -88.6017,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "CSX bridge",
+  "w": null,
+  "la": 30.3419,
+  "lo": -89.1422,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "U.S. Route 90 highway bridge",
+  "w": "Wolf River",
+  "la": null,
+  "lo": null,
+  "v": [
+   25.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "A bascule bridge",
+  "w": "Wolf River",
+  "la": null,
+  "lo": null,
+  "v": [
+   8.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Wolf River",
+  "la": null,
+  "lo": null,
+  "v": [
+   8.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Wolf River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "U.S. Route 90 highway bridge",
+  "w": "Pearl River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "About 5.3 miles above this swing bridge",
+  "w": "Pearl River",
+  "la": null,
+  "lo": null,
+  "v": [
+   22.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "East Middle River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Middle River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "West Middle River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "About 5 miles above the junction of East Mouth and West Mouth there is a vertical lift bridge",
+  "w": "Pearl River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": [
+   15.2
+  ],
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "Interstate Route 59 highway bridge",
+  "w": "Pearl River",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "A swing bridge",
+  "w": null,
+  "la": 30.3733,
+  "lo": -90.17,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "former railroad bridge",
+  "w": null,
+  "la": 30.3733,
+  "lo": -90.17,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "U.S. Route 190 highway bridge",
+  "w": null,
+  "la": 30.3733,
+  "lo": -90.17,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "State Route 22 highway bridge",
+  "w": null,
+  "la": 30.3733,
+  "lo": -90.17,
+  "v": [
+   0.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "twin fixed spans of Interstate Route 12 highway bridge",
+  "w": "Tangipahoa River",
+  "la": null,
+  "lo": null,
+  "v": [
+   9.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "State Route 22 highway bridge",
+  "w": "Amite River",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "State Route 22 highway bridge",
+  "w": "Amite River",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "bridge",
+  "w": "Amite River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.7"
+ },
+ {
+  "n": "Paris Road Bridge",
+  "w": "Mississippi River",
+  "la": null,
+  "lo": null,
+  "v": [
+   42.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MSL",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.8"
+ },
+ {
+  "n": "Huey P. Long Bridge",
+  "w": "Mississippi River",
+  "la": null,
+  "lo": null,
+  "v": [
+   45.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP5 Ch.8"
+ },
+ {
+  "n": "Veterans Memorial Bridge",
+  "w": null,
+  "la": 30.0536,
+  "lo": -90.5833,
+  "v": [
+   48.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP5 Ch.8"
+ },
+ {
+  "n": "Sunshine Bridge",
+  "w": null,
+  "la": 30.0172,
+  "lo": -90.8381,
+  "v": [
+   51.8
+  ],
+  "c": true,
+  "o": null,
+  "h": 228.6,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.8"
+ },
+ {
+  "n": "Doullut Canal is crossed by a highway swing bridge",
+  "w": "Mississippi River",
+  "la": 29.4,
+  "lo": -89.7717,
+  "v": [
+   0.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Mississippi River",
+  "la": 29.4,
+  "lo": -89.7717,
+  "v": [
+   16.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "East 661 highway bridge",
+  "w": "Terrebonne Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   0.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "A vertical lift highway bridge",
+  "w": "Ashland Canal",
+  "la": 29.265,
+  "lo": -90.9361,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": 4.6,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "A vertical lift highway bridge",
+  "w": "Ashland Canal",
+  "la": 29.265,
+  "lo": -90.9361,
+  "v": [
+   0.9
+  ],
+  "c": true,
+  "o": null,
+  "h": 4.6,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Ashland Canal",
+  "la": 29.265,
+  "lo": -90.9361,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": 4.6,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "Fixed bridges crossing Bayou Grand Caillou above the highway bridge",
+  "w": "Ashland Canal",
+  "la": 29.265,
+  "lo": -90.9361,
+  "v": [
+   0.3
+  ],
+  "c": true,
+  "o": null,
+  "h": 4.6,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "At the town of Franklin a highway bridge",
+  "w": null,
+  "la": 29.7865,
+  "lo": -91.5197,
+  "v": [
+   0.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "Another highway bridge",
+  "w": null,
+  "la": 29.7865,
+  "lo": -91.5197,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "highway bridge",
+  "w": null,
+  "la": 29.7865,
+  "lo": -91.5197,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "A highway swing bridge",
+  "w": null,
+  "la": 29.7865,
+  "lo": -91.5197,
+  "v": [
+   1.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Weeks Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   0.9
+  ],
+  "c": true,
+  "o": [
+   15.2
+  ],
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Weeks Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "State Route 82 highway vertical lift bridge",
+  "w": "Vermilion Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": [
+   16.8
+  ],
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "State Route 82 highway bridge",
+  "w": "Mermentau River",
+  "la": null,
+  "lo": null,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "State Route 14 highway bridge",
+  "w": "Mermentau River",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "Southern Pacific railroad bridge",
+  "w": "Mermentau River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "I-210 highway bridge",
+  "w": null,
+  "la": 30.1592,
+  "lo": -93.3242,
+  "v": [
+   41.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.9"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Neches River",
+  "la": null,
+  "lo": null,
+  "v": [
+   41.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.10"
+ },
+ {
+  "n": "A high-level fixed highway bridge",
+  "w": "Galveston Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   53.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.10"
+ },
+ {
+  "n": "A high-level fixed highway bridge",
+  "w": "Galveston Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   41.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.10"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 29.7244,
+  "lo": -95.02,
+  "v": [
+   53.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.10"
+ },
+ {
+  "n": "Harris County Houston Ship Channel Terminal railroad bridge",
+  "w": null,
+  "la": 29.7281,
+  "lo": -95.2572,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.10"
+ },
+ {
+  "n": "San Bernard River is crossed by three fixed highway bridges with least clearance of 36 feet horizontal and 13 feet vertical and by a railroad swing bridge",
+  "w": null,
+  "la": null,
+  "lo": null,
+  "v": [
+   11
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.11"
+ },
+ {
+  "n": "State Route 616 highway bridge",
+  "w": "Lavaca Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP5 Ch.11"
+ },
+ {
+  "n": "State Route 35 fixed highway bridge",
+  "w": "Carlos Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.7
+  ],
+  "c": true,
+  "o": [
+   15.2
+  ],
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP5 Ch.11"
+ },
+ {
+  "n": "State Route 136 highway bridge",
+  "w": "Port Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.11"
+ },
+ {
+  "n": "A hump-backed highway bridge",
+  "w": "Port Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.11"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Nueces Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.11"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Sarasota Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": 8.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.12"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Sarasota Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": 8.2,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.12"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Cats Point Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.12"
+ },
+ {
+  "n": "State Route 682 highway bridge",
+  "w": "Boca Ciega Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.12"
+ },
+ {
+  "n": "Close north of the highway bridge",
+  "w": "Long Bayou. Cross Bayou Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": 9.8,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.12"
+ },
+ {
+  "n": "Pelican Island railroad-highway bridge",
+  "w": "Galveston Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP5 Ch.12"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Matagorda Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.12"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Matagorda Ship Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   16.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP5 Ch.12"
+ },
+ {
+  "n": "Ogdensburg-Prescott International Bridge",
+  "w": null,
+  "la": 44.73,
+  "lo": -75.4675,
+  "v": [
+   39.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP6 Ch.4"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Chaumont River",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": 15.2,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.5"
+ },
+ {
+  "n": "Peace Bridge",
+  "w": "Black Rock Canal",
+  "la": 42.9064,
+  "lo": -78.9019,
+  "v": [
+   30.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "Ferry Street Bridge",
+  "w": "Black Rock Canal",
+  "la": 42.9153,
+  "lo": -78.9022,
+  "v": [
+   5.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "International Bridge",
+  "w": "Black Rock Canal",
+  "la": 42.9314,
+  "lo": -78.9022,
+  "v": [
+   5.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "This railroad bridge",
+  "w": "Black Rock Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": null,
+  "lo": null,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": true,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Cayuga Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Cayuga Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "bridge",
+  "w": "Niagara River",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "Liberty Avenue bridge",
+  "w": null,
+  "la": 41.4044,
+  "lo": -82.5439,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "Norfolk Southern Railroad bridge",
+  "w": null,
+  "la": 41.4044,
+  "lo": -82.5439,
+  "v": [
+   6.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "east bridge",
+  "w": "Sandusky River",
+  "la": 41.4503,
+  "lo": -82.9992,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "west bridge",
+  "w": "Sandusky River",
+  "la": 41.4503,
+  "lo": -82.9992,
+  "v": [
+   13.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "Ohio Turnpike I-80 and I-90 Bridge",
+  "w": "Sandusky River",
+  "la": 41.4503,
+  "lo": -82.9992,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "Ohio Route 20 bridge",
+  "w": "Sandusky River",
+  "la": 41.4503,
+  "lo": -82.9992,
+  "v": [
+   16.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "W. Fred C. Young fixed highway bridge",
+  "w": null,
+  "la": 41.7417,
+  "lo": -83.455,
+  "v": [
+   4.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.6"
+ },
+ {
+  "n": "Grosse Ile Toll highway bridge",
+  "w": "Trenton Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP6 Ch.7"
+ },
+ {
+  "n": "Grosse Ile Parkway bridge",
+  "w": "Trenton Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP6 Ch.7"
+ },
+ {
+  "n": "Douglas McArthur Bridge",
+  "w": null,
+  "la": 42.3483,
+  "lo": -82.9428,
+  "v": [
+   9.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP6 Ch.7"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 42.4639,
+  "lo": -82.8792,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.8"
+ },
+ {
+  "n": "bridge",
+  "w": null,
+  "la": 42.3167,
+  "lo": -82.55,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP6 Ch.8"
+ },
+ {
+  "n": "Canadian National Railways bridge",
+  "w": "Belle River",
+  "la": 42.3,
+  "lo": -82.6167,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP6 Ch.8"
+ },
+ {
+  "n": "A Canadian National Railways bridge",
+  "w": "Puce River",
+  "la": 42.3,
+  "lo": -82.7833,
+  "v": [
+   2.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP6 Ch.8"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Pike Creek",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP6 Ch.8"
+ },
+ {
+  "n": "Blue Water Bridge",
+  "w": null,
+  "la": 43.0064,
+  "lo": -82.4225,
+  "v": [
+   41.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": true,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.9"
+ },
+ {
+  "n": "U.S. Route 23 Highway Bridge",
+  "w": null,
+  "la": 44.0197,
+  "lo": -83.5383,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": 4.6,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.10"
+ },
+ {
+  "n": "center suspension span of the bridge",
+  "w": null,
+  "la": 45.85,
+  "lo": -84.7033,
+  "v": [
+   45.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP6 Ch.10"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": true,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.11"
+ },
+ {
+  "n": "bridge",
+  "w": "State Harbor",
+  "la": 45.3581,
+  "lo": -87.1825,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP6 Ch.11"
+ },
+ {
+  "n": "International Highway Bridge",
+  "w": "South Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   37.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.12"
+ },
+ {
+  "n": "International Highway Bridge",
+  "w": "South Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.9
+  ],
+  "c": true,
+  "o": [
+   37.5
+  ],
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP6 Ch.12"
+ },
+ {
+  "n": "International Highway Bridge",
+  "w": "North Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP6 Ch.12"
+ },
+ {
+  "n": "International Highway Bridge",
+  "w": "South Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP6 Ch.12"
+ },
+ {
+  "n": "Arailroad bridge",
+  "w": null,
+  "la": 46.8675,
+  "lo": -89.3175,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.13"
+ },
+ {
+  "n": "SR64 highway bridge",
+  "w": null,
+  "la": 46.8675,
+  "lo": -89.3175,
+  "v": [
+   10.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.13"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 44.9708,
+  "lo": -73.3564,
+  "v": [
+   17.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "LWD",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP6 Ch.14"
+ },
+ {
+  "n": "A fixed bridge",
+  "w": "Rivo Alto Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.4"
+ },
+ {
+  "n": "fixed bridge",
+  "w": null,
+  "la": 33.7292,
+  "lo": -118.1239,
+  "v": [
+   9.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.4"
+ },
+ {
+  "n": "Golden Gate Bridge",
+  "w": null,
+  "la": 37.7928,
+  "lo": -122.5103,
+  "v": [
+   70.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "San Mateo-Hayward Bridge",
+  "w": "San Francisco Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   41.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "Dumbarton Highway Bridge",
+  "w": null,
+  "la": 37.5022,
+  "lo": -122.2125,
+  "v": [
+   25.9
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "Dumbarton Railroad Bridge",
+  "w": null,
+  "la": 37.5022,
+  "lo": -122.2125,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Tidal Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": null,
+  "w": "Tidal Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": "three highway drawbridges across Tidal Canal",
+  "t": "drawbridge",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "vertical lift railroad bridge",
+  "w": "Tidal Canal",
+  "la": null,
+  "lo": null,
+  "v": [
+   4
+  ],
+  "c": true,
+  "o": [
+   41.1
+  ],
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "A railroad bridge",
+  "w": "San Rafael Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "Grand Avenue Pedestrian bridge",
+  "w": "San Rafael Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "Grand Avenue bridge",
+  "w": "San Rafael Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   1.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "railroad bridge",
+  "w": "Napa River",
+  "la": null,
+  "lo": null,
+  "v": [
+   0.6
+  ],
+  "c": true,
+  "o": [
+   29.6
+  ],
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Napa River",
+  "la": null,
+  "lo": null,
+  "v": [
+   32.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "Vallejo-Mare Island Causeway bridge",
+  "w": "Napa River",
+  "la": null,
+  "lo": null,
+  "v": [
+   18.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "Antioch Bridge",
+  "w": "San Joaquin River",
+  "la": null,
+  "lo": null,
+  "v": [
+   43.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.7"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 39.4278,
+  "lo": -123.8056,
+  "v": [
+   29.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP7 Ch.8"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "Blind River",
+  "la": 56.7,
+  "lo": -133.9533,
+  "v": [
+   1.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP8 Ch.7"
+ },
+ {
+  "n": "Juneau-Douglas fixed highway bridge",
+  "w": "Gastineau Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   15.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP8 Ch.9"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 59.2733,
+  "lo": -135.4006,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP8 Ch.11"
+ },
+ {
+  "n": "A highway bridge",
+  "w": null,
+  "la": 60.4458,
+  "lo": -145.8783,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP9 Ch.4"
+ },
+ {
+  "n": "A fixed bridge",
+  "w": null,
+  "la": 54.9856,
+  "lo": -162.3008,
+  "v": [
+   2.1
+  ],
+  "c": true,
+  "o": null,
+  "h": 4.6,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP9 Ch.6"
+ },
+ {
+  "n": "outer bridge",
+  "w": null,
+  "la": 65.9167,
+  "lo": -166.3167,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP9 Ch.9"
+ },
+ {
+  "n": "A concrete arch highway bridge",
+  "w": "Rogue River",
+  "la": null,
+  "lo": null,
+  "v": [
+   9.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "Coos Bay Railroad bridge",
+  "w": "Coos Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "highway bridge",
+  "w": "South Slough",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "A causeway with a fixed bridge",
+  "w": "North Slough",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "causeway extends east and joins the state highway fixed bridge",
+  "w": "Haynes Inlet",
+  "la": null,
+  "lo": null,
+  "v": [
+   6.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Millicoma River",
+  "la": null,
+  "lo": null,
+  "v": [
+   5.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Millicoma River",
+  "la": null,
+  "lo": null,
+  "v": [
+   12.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "A highway bridge",
+  "w": "Millicoma River",
+  "la": null,
+  "lo": null,
+  "v": [
+   8.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": "South Fork",
+  "la": null,
+  "lo": null,
+  "v": [
+   11.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "fixed bridge",
+  "w": "Alsea Bay",
+  "la": null,
+  "lo": null,
+  "v": [
+   20.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "fixed highway bridge",
+  "w": "Yaquina River",
+  "la": null,
+  "lo": null,
+  "v": [
+   10.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.4"
+ },
+ {
+  "n": "highway bascule bridge",
+  "w": "Youngs River",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "bascule",
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Youngs River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "A railroad swing bridge",
+  "w": null,
+  "la": 46.19,
+  "lo": -123.7383,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "Burlington Northern Railroad swing bridge",
+  "w": "Tomahawk Bar Channel",
+  "la": null,
+  "lo": null,
+  "v": [
+   67.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": null,
+  "t": "swing",
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "Dalles Bridge",
+  "w": "Columbia River",
+  "la": null,
+  "lo": null,
+  "v": [
+   41.1
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "highway bridge",
+  "w": "Columbia River",
+  "la": null,
+  "lo": null,
+  "v": [
+   20.4
+  ],
+  "c": true,
+  "o": [
+   45.1
+  ],
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "A highway and a railroad bridge",
+  "w": null,
+  "la": 45.6381,
+  "lo": -120.9156,
+  "v": [
+   5.2
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": null,
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "Biggs Bridge",
+  "w": null,
+  "la": 45.6381,
+  "lo": -120.9156,
+  "v": [
+   26.8
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "Union Pacific Railroad bridge",
+  "w": "Columbia River",
+  "la": null,
+  "lo": null,
+  "v": [
+   3.4
+  ],
+  "c": true,
+  "o": [
+   21.9
+  ],
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "Just above the railroad bridges is the U.S. Route 95 fixed highway bridge",
+  "w": null,
+  "la": 47.9833,
+  "lo": -116.5667,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.5"
+ },
+ {
+  "n": "A railroad fixed bridge",
+  "w": "Ellis Slough",
+  "la": null,
+  "lo": null,
+  "v": [
+   7.3
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.6"
+ },
+ {
+  "n": "Burlington Northern railroad swing bridge",
+  "w": "South Fork",
+  "la": null,
+  "lo": null,
+  "v": [
+   2.4
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "swing",
+  "ch": "CP10 Ch.6"
+ },
+ {
+  "n": "Two fixed highway bridges over South Fork about 0.5 mile above the railroad swing bridge",
+  "w": "South Fork",
+  "la": null,
+  "lo": null,
+  "v": [
+   4.6
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": true,
+  "g": null,
+  "t": "swing",
+  "ch": "CP10 Ch.6"
+ },
+ {
+  "n": "canal is crossed by a fixed highway bridge",
+  "w": null,
+  "la": 48.0717,
+  "lo": -122.7464,
+  "v": [
+   17.7
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.8"
+ },
+ {
+  "n": "South 11th Street vertical lift bridge",
+  "w": null,
+  "la": 47.3058,
+  "lo": -122.4442,
+  "v": [
+   19.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "lift",
+  "ch": "CP10 Ch.8"
+ },
+ {
+  "n": "A fixed highway bridge",
+  "w": null,
+  "la": 47.3058,
+  "lo": -122.4442,
+  "v": [
+   8.5
+  ],
+  "c": true,
+  "o": null,
+  "h": null,
+  "d": "MHW",
+  "least": false,
+  "g": null,
+  "t": "fixed",
+  "ch": "CP10 Ch.8"
+ }
+]

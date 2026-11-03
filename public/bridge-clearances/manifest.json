@@ -20,6 +20,12 @@
       "label": "viadonau Danube list",
       "datum": "HNWL",
       "count": 133
+    },
+    "coastpilot": {
+      "label": "US Coast Pilot",
+      "datum": "MHW (CP6: LWD)",
+      "count": 512,
+      "retrieved": "2026-11-03"
     }
   },
   "incomplete": []

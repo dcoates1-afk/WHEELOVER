@@ -145,6 +145,41 @@ function value(tags: Record<string, string>, ...keys: string[]): string | null {
   return null;
 }
 
+/** Coast Pilot passage kinds, mapped to the card's Type wording. */
+const COAST_PILOT_KINDS: Record<string, string> = {
+  bascule: 'Bascule bridge',
+  lift: 'Lift bridge',
+  swing: 'Swing bridge',
+  fixed: 'Fixed bridge',
+  transporter: 'Transporter bridge',
+  pontoon: 'Pontoon bridge',
+  drawbridge: 'Drawbridge',
+};
+
+/** Coast Pilot passage kinds, mapped to the card's Operation wording. */
+const COAST_PILOT_OPERATIONS: Record<string, string> = {
+  bascule: 'Raising',
+  lift: 'Raising',
+  swing: 'Rotating',
+  fixed: 'Fixed',
+  transporter: 'Movable',
+  pontoon: 'Movable',
+  drawbridge: 'Movable',
+};
+
+/**
+ * The Coast Pilot kind for a bridge, if any: a specific (non-group) row
+ * first, else a group row's generic kind. Used only when the mapped
+ * record carries no kind of its own — the mapped record always wins.
+ */
+function coastPilotKind(clearances: BridgeClearance[] | undefined): string | null {
+  const rows = (clearances ?? []).filter(
+    (row) => row.source === 'US Coast Pilot' && row.bridgeType,
+  );
+  const specific = rows.find((row) => !row.least);
+  return (specific ?? rows[0])?.bridgeType ?? null;
+}
+
 function bridgeKind(tags: Record<string, string>): string | null {
   const movable = tags['bridge:movable'] ?? (tags.bridge !== 'yes' && tags.bridge !== 'no' ? tags.bridge : undefined);
   if (movable) {
@@ -249,12 +284,25 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     facts.push({ label: 'Horizontal clearance', value: clearanceWidth });
   }
 
-  const kind = bridgeKind(tags);
+  // A Coast Pilot passage kind fills a missing Type or Operation only:
+  // the mapped record, where it says anything, always wins.
+  const mappedKind = bridgeKind(tags);
+  const pilotKind = coastPilotKind(feature.clearances);
+  const kind = mappedKind ?? (pilotKind ? COAST_PILOT_KINDS[pilotKind] ?? null : null);
   if (kind) {
-    shownKeys.push('bridge:movable', 'bridge:structure', 'bridge:type', 'seamark:bridge:category');
+    if (mappedKind) {
+      shownKeys.push('bridge:movable', 'bridge:structure', 'bridge:type', 'seamark:bridge:category');
+    }
     facts.push({ label: 'Type', value: kind });
   }
-  facts.push({ label: 'Operation', value: bridgeOperation(tags) });
+  const hasMovableTag =
+    tags['bridge:movable'] !== undefined ||
+    (tags.bridge !== undefined && tags.bridge !== 'yes' && tags.bridge !== 'no') ||
+    tags['seamark:bridge:category'] !== undefined;
+  const operation = hasMovableTag
+    ? bridgeOperation(tags)
+    : (pilotKind ? COAST_PILOT_OPERATIONS[pilotKind] ?? null : null) ?? 'Fixed';
+  facts.push({ label: 'Operation', value: operation });
   const carries = carrying(tags);
   if (carries) facts.push({ label: 'Carrying', value: carries });
 
@@ -377,7 +425,10 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
       .map((metres) => formatDepthWithUnit(metres, units.depth))
       .join(' / ');
     if (standing === '') continue;
-    let value = authority.datum ? `${standing} above ${authority.datum}` : `${standing} (datum not stated)`;
+    // A group least is a lower bound across the group, so it reads with a
+    // ≥ prefix — never as an exact figure for this bridge.
+    const prefix = authority.least ? '≥ ' : '';
+    let value = authority.datum ? `${prefix}${standing} above ${authority.datum}` : `${prefix}${standing} (datum not stated)`;
     if (authority.closed) value += authority.datum ? ' (closed)' : ', closed';
     if (authority.openValues.length > 0) {
       value += ` · open ${authority.openValues.map((metres) => formatDepthWithUnit(metres, units.depth)).join(' / ')}`;

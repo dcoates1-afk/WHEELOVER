@@ -19,6 +19,12 @@
  *  - viadonau Danube list: metres above HNWL (highest navigable water
  *    level), with the reference gauge per bridge, joined by name to bridges
  *    crossing the Danube.
+ *  - US Coast Pilot (built by scripts/build-coast-pilot-clearances.mjs):
+ *    narrative sailing directions, feet above MHW (Great Lakes volume:
+ *    Low Water Datum), converted to metres. Named passages join by name
+ *    plus waterway or coordinates; passages that give one least figure
+ *    for a group of bridges join by waterway plus kind, and render as a
+ *    lower bound (least), never as an exact figure.
  */
 
 export interface BridgeClearance {
@@ -35,6 +41,10 @@ export interface BridgeClearance {
   datum: string | null;
   /** Extra datum detail, e.g. the Danube reference gauge. */
   datumNote: string | null;
+  /** True when the figure is a group least (a lower bound), not an exact figure. */
+  least?: boolean;
+  /** Bridge kind wording from a Coast Pilot passage, for a missing Type/Operation fact. */
+  bridgeType?: string | null;
   /** Dataset retrieval date (YYYY-MM-DD) from the manifest. */
   retrieved: string;
 }
@@ -90,9 +100,25 @@ export interface DanubeClearanceRecord {
   nt: string;
 }
 
+export interface CoastPilotClearanceRecord {
+  n: string | null;
+  w: string | null;
+  la: number | null;
+  lo: number | null;
+  v: number[];
+  c: boolean;
+  o: number[] | null;
+  h: number | null;
+  d: string | null;
+  least: boolean;
+  g: string | null;
+  t: string | null;
+  ch: string;
+}
+
 export interface ClearanceManifest {
   generatedAt: string;
-  sources: Record<string, { label: string; datum: string | null; count: number }>;
+  sources: Record<string, { label: string; datum: string | null; count: number; retrieved?: string }>;
   incomplete: string[];
 }
 
@@ -102,6 +128,8 @@ export interface ClearanceDatasets {
   usace: UsaceClearanceRecord[];
   euris: EurisClearanceRecord[];
   danube: DanubeClearanceRecord[];
+  /** Optional: the file does not exist until the Coast Pilot build runs. */
+  coastpilot?: CoastPilotClearanceRecord[];
 }
 
 const EMPTY_DATASETS: ClearanceDatasets = {
@@ -110,6 +138,7 @@ const EMPTY_DATASETS: ClearanceDatasets = {
   usace: [],
   euris: [],
   danube: [],
+  coastpilot: [],
 };
 
 let datasetsPromise: Promise<ClearanceDatasets> | null = null;
@@ -124,15 +153,16 @@ async function fetchDataset<T>(path: string): Promise<T | null> {
   }
 }
 
-/** Fetch the five clearance files once; a missing file just means no rows. */
+/** Fetch the six clearance files once; a missing file just means no rows. */
 export function loadClearanceDatasets(): Promise<ClearanceDatasets> {
   datasetsPromise ??= (async () => {
-    const [manifest, noaa, usace, euris, danube] = await Promise.all([
+    const [manifest, noaa, usace, euris, danube, coastpilot] = await Promise.all([
       fetchDataset<ClearanceManifest>('/bridge-clearances/manifest.json'),
       fetchDataset<NoaaClearanceRecord[]>('/bridge-clearances/noaa.json'),
       fetchDataset<UsaceClearanceRecord[]>('/bridge-clearances/usace.json'),
       fetchDataset<EurisClearanceRecord[]>('/bridge-clearances/euris.json'),
       fetchDataset<DanubeClearanceRecord[]>('/bridge-clearances/danube.json'),
+      fetchDataset<CoastPilotClearanceRecord[]>('/bridge-clearances/coastpilot.json'),
     ]);
     if (!manifest) return EMPTY_DATASETS;
     return {
@@ -141,6 +171,7 @@ export function loadClearanceDatasets(): Promise<ClearanceDatasets> {
       usace: usace ?? [],
       euris: euris ?? [],
       danube: danube ?? [],
+      coastpilot: coastpilot ?? [],
     };
   })();
   return datasetsPromise;
@@ -248,6 +279,28 @@ function namesMatch(a: string, b: string): boolean {
   const tb = nb.split(' ');
   const [short, long] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
   return short.length >= 2 && short.every((word) => long.includes(word));
+}
+
+/**
+ * A passage name is specific when it carries a proper noun beyond bridge
+ * kinds and transport words: "Dumbarton Highway Bridge" is specific,
+ * "vertical lift railroad bridge" is not — it names no bridge, only a kind.
+ * Specific names must match the feature; generic ones are identified by
+ * their coordinates alone.
+ */
+const NAME_FILLER_WORDS = new Set([
+  'bascule', 'lift', 'lifting', 'swing', 'fixed', 'drawbridge', 'transporter',
+  'pontoon', 'submersible', 'tilt', 'retractable', 'vertical', 'railroad',
+  'railway', 'highway', 'road', 'foot', 'pedestrian', 'cycle', 'bicycle',
+  'trestle', 'causeway', 'viaduct', 'aqueduct', 'roadway', 'street',
+  'avenue', 'interstate', 'route', 'state', 'county', 'river', 'canal',
+]);
+
+function isSpecificBridgeName(name: string): boolean {
+  return normalizeBridgeName(name)
+    .split(' ')
+    .filter((word) => word !== '')
+    .some((word) => !NAME_FILLER_WORDS.has(word));
 }
 
 function waterwayMatches(crossed: string, waterway: string): boolean {
@@ -435,6 +488,78 @@ export function clearancesForFeature(feature: JoinableBridgeFeature, datasets: C
         retrieved,
       });
     }
+  }
+
+  // Coast Pilot narrative figures. Named passages join by name plus
+  // waterway, or by proximity to the mapped path (the same 150 m /
+  // name-within-5 km rules as the ENC sources). Group least figures join
+  // by waterway plus kind — and the kind filter is safety-critical: a
+  // highway group's least (15 ft on the Tidal Canal) must never land on
+  // the neighbouring rail bridge whose own clearance is lower (13 ft).
+  // A least figure is valid for every member of its group, so it renders
+  // with a ≥ prefix and the group description, never as an exact figure.
+  // Passages with no coordinates, no waterway and no usable name never
+  // reach this code: the builder drops them as unjoinable.
+  const seenCoastPilot = new Set<string>();
+  for (const record of datasets.coastpilot ?? []) {
+    if (record.least) {
+      if (!record.w || !waterwayMatches(crossed, record.w)) continue;
+      const group = (record.g ?? '').toLowerCase();
+      if (group.includes('highway') && !feature.properties.highway) continue;
+      if ((group.includes('railroad') || group.includes('railway')) && !feature.properties.railway) continue;
+      const values = unionSorted(record.v);
+      if (values.length === 0) continue;
+      const key = JSON.stringify([values, record.g]);
+      if (seenCoastPilot.has(key)) continue;
+      seenCoastPilot.add(key);
+      out.push({
+        source: 'US Coast Pilot',
+        values,
+        closed: true,
+        openValues: [],
+        horizontal: record.h,
+        datum: record.d,
+        datumNote: record.g,
+        least: true,
+        bridgeType: record.t,
+        retrieved,
+      });
+      continue;
+    }
+    if (!record.n) continue;
+    const nameHit = names.some((name) => namesMatch(name, record.n!));
+    let joined = false;
+    if (record.la !== null && record.lo !== null) {
+      const distance = distanceToPathMeters(record.la, record.lo, path);
+      // A passage with a specific name joins only the bridge it names:
+      // two adjacent bridges can share one paragraph position (the two
+      // Dumbarton bridges), and proximity alone would put each figure on
+      // both. A generic-named passage has no name to match, so its
+      // coordinates are its identifier and the proximity rule stands.
+      joined = isSpecificBridgeName(record.n)
+        ? nameHit && distance <= 5000
+        : distance <= JOIN_TOLERANCE_METERS || (nameHit && distance <= 5000);
+    } else if (record.w) {
+      joined = nameHit && waterwayMatches(crossed, record.w);
+    }
+    if (!joined) continue;
+    const values = unionSorted(record.v);
+    if (values.length === 0) continue;
+    const key = JSON.stringify([record.n, values, record.d, record.w]);
+    if (seenCoastPilot.has(key)) continue;
+    seenCoastPilot.add(key);
+    out.push({
+      source: 'US Coast Pilot',
+      values,
+      closed: record.c,
+      openValues: unionSorted(record.o ?? []),
+      horizontal: record.h,
+      datum: record.d,
+      datumNote: null,
+      least: false,
+      bridgeType: record.t,
+      retrieved,
+    });
   }
 
   return out;

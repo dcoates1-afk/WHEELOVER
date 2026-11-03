@@ -1329,6 +1329,32 @@ ul {
   color: #ff8a7a;
 }
 
+.route-hazards {
+  margin: 12px 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(61, 214, 255, 0.25);
+}
+
+.route-hazards h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.route-hazards-note {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #87a1b0;
+}
+
+.route-hazards-legs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
 .route-clear {
   margin-top: 12px;
   width: 100%;

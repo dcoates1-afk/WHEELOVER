@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { formatLatLon } from '../lib/coordinates';
 import { formatEtaHours, routeTotals, type RouteWaypoint } from '../lib/routes';
+import { checkRouteHazards } from '../lib/routeHazards';
+import type { ChartFeature } from '../lib/overpass';
+import type { ProtectedAreaFeature } from '../lib/protectedAreas';
+import type { MarineFeature } from '../lib/marineDb';
 
 interface RoutePanelProps {
   waypoints: RouteWaypoint[];
   speedKnots: number;
   adding: boolean;
+  areas: ChartFeature[];
+  protectedAreas: ProtectedAreaFeature[];
+  ferries: MarineFeature[];
+  tss: MarineFeature[];
   onClose: () => void;
   onAdd: () => void;
   onCancelAdding: () => void;
@@ -24,6 +32,18 @@ interface RoutePanelProps {
  */
 export default function RoutePanel(props: RoutePanelProps) {
   const totals = routeTotals(props.waypoints, props.speedKnots);
+  const hazards = useMemo(
+    () =>
+      checkRouteHazards({
+        waypoints: props.waypoints,
+        areas: props.areas,
+        protectedAreas: props.protectedAreas,
+        ferries: props.ferries,
+        tss: props.tss,
+      }),
+    [props.waypoints, props.areas, props.protectedAreas, props.ferries, props.tss],
+  );
+  const hazardCount = hazards.reduce((sum, leg) => sum + leg.hazards.length, 0);
   const [latText, setLatText] = useState('');
   const [lonText, setLonText] = useState('');
   const [typedError, setTypedError] = useState<string | null>(null);
@@ -100,6 +120,34 @@ export default function RoutePanel(props: RoutePanelProps) {
             </li>
           ))}
         </ol>
+      )}
+      {props.waypoints.length >= 2 && (
+        <div className="route-hazards">
+          <h3>
+            Hazards {hazardCount > 0 ? `(${hazardCount})` : ''}
+          </h3>
+          <p className="route-hazards-note">
+            Mapped hazards only — marine areas, ferry lanes and traffic schemes whose chart data
+            has loaded for this area. Pan the route&apos;s area first if a stretch looks empty.
+            A clear leg is not a guarantee of safe water.
+          </p>
+          <ol className="route-hazards-legs">
+            {hazards.map((leg) => (
+              <li key={leg.legIndex}>
+                <span>
+                  W{leg.legIndex + 1} → W{leg.legIndex + 2}:{' '}
+                </span>
+                {leg.hazards.length === 0 ? (
+                  <span>No mapped hazards</span>
+                ) : (
+                  <span>
+                    {leg.hazards.map((hazard) => `${hazard.name} (${hazard.group})`).join(', ')}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
       <ol className="route-waypoints">
         {props.waypoints.map((waypoint, index) => (

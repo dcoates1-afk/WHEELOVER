@@ -22,3 +22,65 @@ export function compassPoint(degrees: number): string {
   const normalised = ((degrees % 360) + 360) % 360;
   return COMPASS[Math.round(normalised / 22.5) % 16];
 }
+
+// --- Route safety helpers -------------------------------------------------
+// Small pure functions for the route-vs-hazard checks. Coordinates are
+// [lat, lon] pairs throughout, matching the rest of the app. Distances use a
+// local flat-earth projection around the segment's midpoint: accurate well
+// under a kilometre for the short legs these checks run on, and far cheaper
+// than a great-circle per sample. These helpers never decide anything on
+// their own — the route checks report what they find and the skipper decides.
+
+type LatLon = [number, number];
+
+export type { LatLon };
+
+function toLocalKm(lat: number, lon: number, lat0: number): { x: number; y: number } {
+  return {
+    x: toRad(lon) * EARTH_RADIUS_KM * Math.cos(toRad(lat0)),
+    y: toRad(lat) * EARTH_RADIUS_KM,
+  };
+}
+
+/** Shortest distance in kilometres from a point to a line segment. */
+export function pointSegmentDistanceKm(
+  lat: number,
+  lon: number,
+  a: LatLon,
+  b: LatLon,
+): number {
+  const lat0 = (a[0] + b[0]) / 2;
+  const p = toLocalKm(lat, lon, lat0);
+  const pa = toLocalKm(a[0], a[1], lat0);
+  const pb = toLocalKm(b[0], b[1], lat0);
+  const dx = pb.x - pa.x;
+  const dy = pb.y - pa.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(p.x - pa.x, p.y - pa.y);
+  const t = Math.max(0, Math.min(1, ((p.x - pa.x) * dx + (p.y - pa.y) * dy) / lenSq));
+  return Math.hypot(p.x - (pa.x + t * dx), p.y - (pa.y + t * dy));
+}
+
+/**
+ * Ray-casting point-in-polygon test. A point on an edge counts as inside —
+ * for a hazard check, touching the boundary is the same as crossing it.
+ */
+export function pointInPolygon(lat: number, lon: number, ring: LatLon[]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [latI, lonI] = ring[i];
+    const [latJ, lonJ] = ring[j];
+    // On-edge check: collinear and within the edge's bounding box.
+    const cross = (lon - lonI) * (latJ - latI) - (lat - latI) * (lonJ - lonI);
+    const onEdge =
+      Math.abs(cross) < 1e-12 &&
+      lat >= Math.min(latI, latJ) && lat <= Math.max(latI, latJ) &&
+      lon >= Math.min(lonI, lonJ) && lon <= Math.max(lonI, lonJ);
+    if (onEdge) return true;
+    const crosses =
+      (latI > lat) !== (latJ > lat) &&
+      lon < ((lonJ - lonI) * (lat - latI)) / (latJ - latI) + lonI;
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}

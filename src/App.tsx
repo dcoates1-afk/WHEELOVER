@@ -1059,6 +1059,10 @@ export default function App() {
           waypoints={routeWaypoints}
           speedKnots={speedKnots}
           adding={routeAdding}
+          areas={chartFeatures}
+          protectedAreas={protectedAreaFeatures}
+          ferries={marineFeatures?.ferries ?? []}
+          tss={marineFeatures?.tss ?? []}
           onClose={() => {
             setRouteOpen(false);
             setRouteAdding(false);

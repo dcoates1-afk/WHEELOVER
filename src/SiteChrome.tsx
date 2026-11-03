@@ -3,7 +3,7 @@ import './landing.css';
 
 export const BRAND = '@ Wheel-over';
 export const DONATE_EMAIL = 'atwheel-over@outlook.com';
-export const PAYPAL_URL = 'https://paypal.me/DouglasCoates230';
+export const PAYPAL_URL = 'https://www.paypal.com/donate/?hosted_button_id=FHZ77E4AD4E2W';
 
 export function SiteHeader() {
   return (

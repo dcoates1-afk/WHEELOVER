@@ -94,7 +94,7 @@ export function VesselSheet({ vessel, centre, onCentre, onClose, distanceUnit, d
           <span
             className="sheet-symbol vessel-sheet-symbol"
             style={{ ['--vessel' as string]: vesselColour(vessel) }}
-            dangerouslySetInnerHTML={{ __html: vesselIconSvg(vessel, 46) }}
+            dangerouslySetInnerHTML={{ __html: vesselIconSvg(vessel, 24) }}
             aria-hidden="true"
           />
           <div>

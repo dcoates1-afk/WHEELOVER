@@ -107,7 +107,7 @@ export function TrackingPanel({
         <span
           className="tracking-icon"
           style={{ ['--vessel' as string]: vesselColour(vessel) }}
-          dangerouslySetInnerHTML={{ __html: vesselIconSvg(vessel, 40) }}
+          dangerouslySetInnerHTML={{ __html: vesselIconSvg(vessel, 20) }}
           aria-hidden="true"
         />
         <div className="tracking-identity">

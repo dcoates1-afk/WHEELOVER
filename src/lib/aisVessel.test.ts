@@ -8,10 +8,12 @@ import {
   navStatusLabel,
   selectedVesselLabelHtml,
   speedLabel,
+  vesselIconHeight,
   vesselIconSize,
   vesselIconSvg,
   vesselIsMoving,
   vesselKind,
+  vesselMarkerRotation,
   vesselMotion,
   vesselStatusColour,
   vesselTooltipHtml,
@@ -96,16 +98,33 @@ describe('AIS vessel presentation', () => {
     expect(vesselIsMoving(vessel({ navStatus: 0 }))).toBe(true);
   });
 
-  it('draws a turning hull when moving and a disc when stopped', () => {
+  it('draws one long boat hull for moving and stopped targets alike', () => {
     const moving = vesselIconSvg(vessel({ typeCode: 70, navStatus: 0 }), 26);
     expect(moving).toContain('width="26"');
+    expect(moving).toContain('height="52"');
+    expect(moving).toContain('viewBox="0 0 32 64"');
     expect(moving).toContain(VESSEL_KIND_COLOURS.cargo);
     expect(moving).toContain(vesselStatusColour(vessel({ navStatus: 0 })));
-    expect(moving).toContain('<path d="M16 2.4');
+    expect(moving).toContain('<path d="M16 3');
+    expect(moving).not.toContain('<circle');
 
     const stopped = vesselIconSvg(vessel({ navStatus: 5 }), 26);
-    expect(stopped).toContain('<circle cx="16" cy="16" r="8.8"');
-    expect(stopped).not.toContain('<path d="M16 2.4');
+    expect(stopped).toContain('width="26"');
+    expect(stopped).toContain('height="52"');
+    expect(stopped).toContain('<path d="M16 3');
+    expect(stopped).not.toContain('<circle');
+    expect(stopped).toContain(vesselStatusColour(vessel({ navStatus: 5 })));
+  });
+
+  it('keeps the marker width and doubles its height', () => {
+    expect(vesselIconHeight(26)).toBe(52);
+    expect(vesselIconHeight(18)).toBe(36);
+  });
+
+  it('points a stopped target by heading, and north when unknown', () => {
+    expect(vesselMarkerRotation(vessel({ navStatus: 0, cog: 205, heading: 203 }))).toBe(205);
+    expect(vesselMarkerRotation(vessel({ navStatus: 5, sog: 0, cog: null, heading: 142 }))).toBe(142);
+    expect(vesselMarkerRotation(vessel({ navStatus: 5, sog: 0, cog: null, heading: null }))).toBe(0);
   });
 
   it('scales the marker with zoom and hull length', () => {

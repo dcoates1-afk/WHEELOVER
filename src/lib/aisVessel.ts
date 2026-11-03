@@ -211,6 +211,26 @@ export function vesselIconSize(vessel: AisVessel, zoom: number): number {
   return base;
 }
 
+/**
+ * The marker is twice as long as it is wide, so the hull reads as a boat
+ * instead of a diamond. The width is vesselIconSize; the height follows it,
+ * and MapCanvas sizes the divIcon from this pair so the two cannot drift.
+ */
+export function vesselIconHeight(width: number): number {
+  return width * 2;
+}
+
+/**
+ * The direction the marker points on the chart: course over ground when
+ * under way, the reported heading when stopped (an anchored or moored hull
+ * still has an orientation), north when neither is known.
+ */
+export function vesselMarkerRotation(vessel: AisVessel): number {
+  if (vesselIsMoving(vessel)) return Math.round(vesselCourse(vessel));
+  if (vessel.heading !== null) return Math.round(vessel.heading);
+  return 0;
+}
+
 const escapeHtml = (value: string): string =>
   value
     .replace(/&/g, '&amp;')
@@ -220,27 +240,25 @@ const escapeHtml = (value: string): string =>
     .replace(/'/g, '&#39;');
 
 /**
- * Marker silhouette: a hull with a pointed bow when under way, a disc when
- * stopped. The fill is the vessel class, the outline the navigational status.
+ * Marker silhouette: one boat-like hull for every target, moving or stopped.
+ * The hull is twice as long as it is wide — a pointed bow, straight midbody
+ * sides and a flat transom stern, in the MyShipTracking manner — with the
+ * vessel class as the fill and the navigational status as the outline, which
+ * is how a stopped target stays readable now that it is no longer a disc.
+ * The viewBox is 32 by 64 and the icon is rendered width by twice the width,
+ * so the stroke scales uniformly and the width is unchanged from before.
  */
 export function vesselIconSvg(vessel: AisVessel, size: number): string {
   const fill = vesselColour(vessel);
   const stroke = vesselStatusColour(vessel);
-  const moving = vesselIsMoving(vessel);
-  const hull = moving
-    ? '<path d="M16 2.4 L25.4 13.8 L21.6 28.4 L16 25.8 L10.4 28.4 L6.6 13.8 Z" fill="' +
-      fill +
-      '" stroke="' +
-      stroke +
-      '" stroke-width="2.1" stroke-linejoin="round"/>' +
-      '<path d="M16 8.4 L16 21.4" stroke="rgba(4,20,31,0.45)" stroke-width="1.5" stroke-linecap="round"/>'
-    : '<circle cx="16" cy="16" r="8.8" fill="' +
-      fill +
-      '" stroke="' +
-      stroke +
-      '" stroke-width="2.2"/>' +
-      '<circle cx="16" cy="16" r="2.6" fill="rgba(4,20,31,0.55)"/>';
-  return `<svg viewBox="0 0 32 32" width="${size}" height="${size}" aria-hidden="true" focusable="false">${hull}</svg>`;
+  const hull =
+    '<path d="M16 3 L22.5 12 L25 20 L25 51 L20.5 60.5 L11.5 60.5 L7 51 L7 20 L9.5 12 Z" fill="' +
+    fill +
+    '" stroke="' +
+    stroke +
+    '" stroke-width="2.1" stroke-linejoin="round"/>' +
+    '<path d="M16 14 L16 48" stroke="rgba(4,20,31,0.45)" stroke-width="1.5" stroke-linecap="round"/>';
+  return `<svg viewBox="0 0 32 64" width="${size}" height="${size * 2}" aria-hidden="true" focusable="false">${hull}</svg>`;
 }
 
 /** Small colour key used by the station list and the detail sheet. */

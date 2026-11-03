@@ -14,10 +14,10 @@ import { ialaRegion, quickInfo, symbolForMark } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
 import {
   selectedVesselLabelHtml,
-  vesselCourse,
+  vesselIconHeight,
   vesselIconSize,
   vesselIconSvg,
-  vesselIsMoving,
+  vesselMarkerRotation,
   vesselTooltipHtml,
 } from '../lib/aisVessel';
 import { loadNoaaTile, noaaTileUrl, tileBounds } from '../lib/noaaChart';
@@ -1331,7 +1331,8 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     for (const vessel of props.aisVessels) {
       seen.add(vessel.mmsi);
       const size = vesselIconSize(vessel, props.zoom);
-      const rotation = vesselIsMoving(vessel) ? Math.round(vesselCourse(vessel)) : 0;
+      const height = vesselIconHeight(size);
+      const rotation = vesselMarkerRotation(vessel);
       const html = vesselIconSvg(vessel, size);
       const iconHtml = `<span class="marnav-ais" style="--rot:${rotation}deg">${html}</span>`;
       const label = vesselLabel(vessel);
@@ -1342,8 +1343,8 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           icon: L.divIcon({
             className: 'marnav-ais-wrap',
             html: iconHtml,
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2],
+            iconSize: [size, height],
+            iconAnchor: [size / 2, height / 2],
           }),
           title: label,
           riseOnHover: true,
@@ -1372,8 +1373,8 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           L.divIcon({
             className: 'marnav-ais-wrap',
             html: iconHtml,
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2],
+            iconSize: [size, height],
+            iconAnchor: [size / 2, height / 2],
           }),
         );
         existing.iconHtml = iconHtml;

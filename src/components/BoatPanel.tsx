@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   CHECKLIST,
   createFuelFill,
@@ -16,6 +16,8 @@ import {
   trackDistanceKm,
   type Track,
 } from '../lib/tracks';
+import { exportGpx, gpxFileName, parseGpx } from '../lib/gpx';
+import type { Pin } from '../lib/pins';
 
 type Tab = 'log' | 'checklist' | 'maintenance' | 'fuel' | 'tracks';
 
@@ -41,6 +43,9 @@ interface BoatPanelProps {
   onStopRecording: () => void;
   onShowTrack: (id: string | null) => void;
   onDeleteTrack: (id: string) => void;
+  pins: Pin[];
+  onImportPins: (pins: Pin[]) => void;
+  onImportTracks: (tracks: Track[]) => void;
   onClose: () => void;
 }
 
@@ -76,6 +81,33 @@ export function BoatPanel(props: BoatPanelProps) {
   const [fuelLitres, setFuelLitres] = useState('');
   const [fuelCost, setFuelCost] = useState('');
   const [fuelNote, setFuelNote] = useState('');
+  const [gpxMessage, setGpxMessage] = useState<string | null>(null);
+  const gpxFileRef = useRef<HTMLInputElement | null>(null);
+
+  const downloadGpx = () => {
+    const xml = exportGpx(props.pins, props.tracks);
+    const blob = new Blob([xml], { type: 'application/gpx+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = gpxFileName();
+    link.click();
+    URL.revokeObjectURL(url);
+    setGpxMessage(`Exported ${props.pins.length} pin(s) and ${props.tracks.length} track(s).`);
+  };
+
+  const importGpxFile = async (file: File) => {
+    const text = await file.text();
+    const result = parseGpx(text);
+    props.onImportPins(result.pins);
+    props.onImportTracks(result.tracks);
+    let message = `Added ${result.pins.length} pin(s) and ${result.tracks.length} track(s).`;
+    if (result.skippedRows > 0) message += ` Skipped ${result.skippedRows} bad row(s).`;
+    if (result.skippedRoutes > 0) {
+      message += ` ${result.skippedRoutes} planned route(s) skipped — routes arrive with the route builder.`;
+    }
+    setGpxMessage(message);
+  };
 
   const checkedCount = CHECKLIST.flatMap((group) => group.items).filter(
     (item) => props.checked[item.id],
@@ -436,6 +468,36 @@ export function BoatPanel(props: BoatPanelProps) {
               ))}
             </ul>
           )}
+          <div className="track-recording">
+            <h3>GPX</h3>
+            <p className="boat-note">
+              Export your pins and tracks as one GPX file, or import a GPX file. Importing
+              always adds new records — importing the same file twice doubles the data.
+            </p>
+            <button type="button" className="boat-submit" onClick={downloadGpx}>
+              Export GPX
+            </button>
+            <button
+              type="button"
+              className="boat-submit"
+              onClick={() => gpxFileRef.current?.click()}
+            >
+              Import GPX
+            </button>
+            <input
+              ref={gpxFileRef}
+              type="file"
+              accept=".gpx,application/gpx+xml,text/xml"
+              style={{ display: 'none' }}
+              aria-label="Import a GPX file"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (file) void importGpxFile(file);
+              }}
+            />
+            {gpxMessage && <p className="boat-note">{gpxMessage}</p>}
+          </div>
         </div>
       )}
     </section>

@@ -1069,6 +1069,16 @@ ul {
   cursor: default;
 }
 
+.track-recording h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: #87a1b0;
+}
+
+.track-recording .boat-submit + .boat-submit {
+  margin-top: 10px;
+}
+
 .boat-panel {
   position: fixed;
   z-index: 1250;

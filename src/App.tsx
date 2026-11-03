@@ -9,8 +9,22 @@ import { GpsWidget } from './components/GpsWidget';
 import { LocateButton } from './components/LocateButton';
 import { DestinationSearch } from './components/DestinationSearch';
 import { PinsPanel } from './components/PinsPanel';
+import { BoatPanel } from './components/BoatPanel';
 import type { DestinationResult } from './lib/destinationSearch';
 import { createPin, loadPins, removePin, updatePin, writePins, type Pin } from './lib/pins';
+import {
+  loadChecklist,
+  loadFuel,
+  loadLogbook,
+  loadMaintenance,
+  writeChecklist,
+  writeFuel,
+  writeLogbook,
+  writeMaintenance,
+  type FuelFill,
+  type LogEntry,
+  type MaintenanceTask,
+} from './lib/boatLog';
 import { ZoomControls } from './components/ZoomControls';
 
 const MapCanvas = lazy(() => import('./components/MapCanvas').then((module) => ({ default: module.MapCanvas })));
@@ -118,6 +132,12 @@ export default function App() {
     setSelectedPinId(pin.id);
     setPinsOpen(true);
   }, []);
+  // The boat's own records, kept on this device only.
+  const [logbook, setLogbook] = useState<LogEntry[]>(() => loadLogbook(safeStorage()));
+  const [checked, setChecked] = useState<Record<string, boolean>>(() => loadChecklist(safeStorage()));
+  const [maintenance, setMaintenance] = useState<MaintenanceTask[]>(() => loadMaintenance(safeStorage()));
+  const [fuel, setFuel] = useState<FuelFill[]>(() => loadFuel(safeStorage()));
+  const [boatOpen, setBoatOpen] = useState(false);
   // Tracking info keeps the target it was given and follows the live snapshot,
   // so a page left open keeps reading as the transponder reports again.
   const [trackingVessel, setTrackingVessel] = useState<AisVessel | null>(null);
@@ -233,9 +253,9 @@ export default function App() {
     Boolean(selectedMark) ||
     Boolean(selectedVessel) ||
     preferences.showPosition;
-  // The pins panel covers the bottom-left corner, so the other chart
-  // controls step aside while it is open; the pins button itself stays.
-  const chartControlsHiddenWithPins = chartControlsHidden || pinsOpen;
+  // The pins and boat panels cover the bottom-left corner, so the other
+  // chart controls step aside while either is open; the panel buttons stay.
+  const chartControlsHiddenWithPanels = chartControlsHidden || pinsOpen || boatOpen;
 
   const locateMe = useCallback(() => {
     if (gpsMode === 'off') {
@@ -281,6 +301,22 @@ export default function App() {
   useEffect(() => {
     writePins(storage, pins);
   }, [pins, storage]);
+
+  useEffect(() => {
+    writeLogbook(storage, logbook);
+  }, [logbook, storage]);
+
+  useEffect(() => {
+    writeChecklist(storage, checked);
+  }, [checked, storage]);
+
+  useEffect(() => {
+    writeMaintenance(storage, maintenance);
+  }, [maintenance, storage]);
+
+  useEffect(() => {
+    writeFuel(storage, fuel);
+  }, [fuel, storage]);
 
   // Manifest + weekly revalidation, once per session.
   useEffect(() => {
@@ -752,7 +788,7 @@ export default function App() {
       </Suspense>
 
       <ZoomControls
-        hidden={chartControlsHiddenWithPins}
+        hidden={chartControlsHiddenWithPanels}
         onZoomIn={() => mapRef.current?.zoomIn()}
         onZoomOut={() => mapRef.current?.zoomOut()}
       />
@@ -760,12 +796,12 @@ export default function App() {
       <LocateButton
         fix={geo.fix}
         status={geo.status}
-        hidden={chartControlsHiddenWithPins}
+        hidden={chartControlsHiddenWithPanels}
         onLocate={locateMe}
       />
 
       <DestinationSearch
-        hidden={chartControlsHiddenWithPins}
+        hidden={chartControlsHiddenWithPanels}
         onSelect={(result) => {
           setSearchPin(result);
           centreOn(result.lat, result.lon, 14);
@@ -775,7 +811,10 @@ export default function App() {
       <button
         type="button"
         className={`pins-button ${chartControlsHidden ? 'is-hidden' : ''}`}
-        onClick={() => setPinsOpen((open) => !open)}
+        onClick={() => {
+          setPinsOpen((open) => !open);
+          setBoatOpen(false);
+        }}
         aria-label="Place pins"
       >
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -788,6 +827,24 @@ export default function App() {
           <circle cx="12" cy="9.5" r="3.5" fill="#04141f" />
         </svg>
         <span>Pins{pins.length > 0 ? ` (${pins.length})` : ''}</span>
+      </button>
+
+      <button
+        type="button"
+        className={`boat-button ${chartControlsHidden ? 'is-hidden' : ''}`}
+        onClick={() => {
+          setBoatOpen((open) => !open);
+          setPinsOpen(false);
+        }}
+        aria-label="Boat log"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <line x1="8" y1="8" x2="16" y2="8" stroke="currentColor" strokeWidth="1.8" />
+          <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="1.8" />
+          <line x1="8" y1="16" x2="13" y2="16" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+        <span>Boat log</span>
       </button>
 
       {pinsOpen && (
@@ -810,6 +867,42 @@ export default function App() {
             setPins((current) => removePin(current, id));
             setSelectedPinId((current) => (current === id ? null : current));
           }}
+        />
+      )}
+
+      {boatOpen && (
+        <BoatPanel
+          logbook={logbook}
+          onAddLog={(entry) =>
+            setLogbook((current) => [...current, entry].sort((a, b) => (a.date < b.date ? 1 : -1)))
+          }
+          onDeleteLog={(id) => setLogbook((current) => current.filter((entry) => entry.id !== id))}
+          checked={checked}
+          onToggleCheck={(id) =>
+            setChecked((current) => {
+              const next = { ...current };
+              if (next[id]) delete next[id];
+              else next[id] = true;
+              return next;
+            })
+          }
+          onResetChecklist={() => setChecked({})}
+          maintenance={maintenance}
+          onAddMaintenance={(task) => setMaintenance((current) => [...current, task])}
+          onDoneMaintenance={(id, date) =>
+            setMaintenance((current) =>
+              current.map((task) => (task.id === id ? { ...task, lastDone: date } : task)),
+            )
+          }
+          onDeleteMaintenance={(id) =>
+            setMaintenance((current) => current.filter((task) => task.id !== id))
+          }
+          fuel={fuel}
+          onAddFuel={(fill) =>
+            setFuel((current) => [...current, fill].sort((a, b) => (a.date < b.date ? 1 : -1)))
+          }
+          onDeleteFuel={(id) => setFuel((current) => current.filter((fill) => fill.id !== id))}
+          onClose={() => setBoatOpen(false)}
         />
       )}
 

@@ -176,6 +176,10 @@ export interface MapCanvasProps {
   aisVessels: AisVessel[];
   /** AIS target the navigator picked, kept picked out on the chart. */
   selectedVesselMmsi?: number | null;
+  /** Place picked from destination search, pinned on the chart. */
+  searchPin?: { lat: number; lon: number; name: string } | null;
+  /** The search pin was tapped; the app clears it. */
+  onSearchPinClear?: () => void;
   /** Anchor circle and course to steer, set from the menu. */
   watch: VoyageWatch;
   /** Grid the cursor readout is written in. */
@@ -393,6 +397,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   const contourRequestRef = useRef<AbortController | null>(null);
   const groupsRef = useRef<Partial<Record<'navaids' | 'ferries' | 'tss' | 'ais' | 'pois' | 'reportingSystems' | 'bridges' | 'protectedAreas', L.LayerGroup>>>({});
   const vesselRef = useRef<L.Marker | null>(null);
+  const searchPinRef = useRef<L.CircleMarker | null>(null);
   const watchRef = useRef<L.LayerGroup | null>(null);
   const aisMarkersRef = useRef(
     new Map<
@@ -1472,6 +1477,41 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       vesselRef.current.setIcon(icon);
     }
   }, [props.fix]);
+
+  // Destination search pin. Tapping the pin itself, or tapping open water,
+  // clears it; a new search replaces it.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!props.searchPin) {
+      if (searchPinRef.current) {
+        map.removeLayer(searchPinRef.current);
+        searchPinRef.current = null;
+      }
+      return;
+    }
+    if (!searchPinRef.current) {
+      searchPinRef.current = L.circleMarker([props.searchPin.lat, props.searchPin.lon], {
+        radius: 10,
+        color: '#f2a65a',
+        weight: 2,
+        fillColor: '#f2a65a',
+        fillOpacity: 0.9,
+      });
+      searchPinRef.current.addTo(map);
+    } else {
+      searchPinRef.current.setLatLng([props.searchPin.lat, props.searchPin.lon]);
+    }
+    searchPinRef.current.bindTooltip(props.searchPin.name, {
+      sticky: true,
+      className: 'marnav-tip',
+      direction: 'top',
+    });
+    searchPinRef.current.off('click');
+    searchPinRef.current.on('click', () => {
+      props.onSearchPinClear?.();
+    });
+  }, [props.searchPin, props.onSearchPinClear]);
 
   // Anchor swing circle and course to steer. Both are set by the navigator on
   // this device, so they are drawn whatever the overlay switches are doing. The

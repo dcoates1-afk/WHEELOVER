@@ -17,7 +17,7 @@ const projects = [
   {
     number: '03',
     title: 'Navigation planning',
-    copy: 'A fuller planning workspace beyond today’s route builder — preparing a passage end to end, with the checks and notes a voyage plan needs, before you leave the dock.',
+    copy: 'A route builder and fuller planning workspace — tap waypoints on the chart or type coordinates, drag them into place, with per-leg distance, bearing and ETA, plus the safety checks a voyage plan needs, before you leave the dock.',
     status: 'Exploring',
   },
   {
@@ -30,6 +30,18 @@ const projects = [
     number: '05',
     title: 'Native Android & iPhone apps',
     copy: 'Dedicated downloads for Android and iPhone/iPad, so the chart lives on your phone like any other app. The web app remains the way to use it today.',
+    status: 'Planned',
+  },
+  {
+    number: '06',
+    title: 'Community features — unlocked by accounts',
+    copy: 'Destination reviews, crowdsourced updates, shared pins, community routes and hazards with voting, connecting with other boaters, and sharing routes and experiences. These need accounts first, so they follow the account project above.',
+    status: 'Planned',
+  },
+  {
+    number: '07',
+    title: 'Routes that steer around land and hazards',
+    copy: 'Automatic routing that steers your route around land and charted hazards, using your boat’s draft and air draft. Until this arrives, the route builder stays manual — you plot, the app checks.',
     status: 'Planned',
   },
 ];

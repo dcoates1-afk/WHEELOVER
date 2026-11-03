@@ -7,6 +7,8 @@ import type { MapHandle } from './components/MapCanvas';
 import type { DbInfo } from './components/LayerControl';
 import { GpsWidget } from './components/GpsWidget';
 import { LocateButton } from './components/LocateButton';
+import { DestinationSearch } from './components/DestinationSearch';
+import type { DestinationResult } from './lib/destinationSearch';
 import { ZoomControls } from './components/ZoomControls';
 
 const MapCanvas = lazy(() => import('./components/MapCanvas').then((module) => ({ default: module.MapCanvas })));
@@ -101,6 +103,10 @@ export default function App() {
   // The target picked from the AIS list or the chart. It survives closing the
   // sheet so the vessel is still ringed on the chart afterwards.
   const [highlightedVessel, setHighlightedVessel] = useState<number | null>(null);
+  // Place picked from destination search, pinned on the chart until it is
+  // tapped away or a new search replaces it.
+  const [searchPin, setSearchPin] = useState<DestinationResult | null>(null);
+  const clearSearchPin = useCallback(() => setSearchPin(null), []);
   // Tracking info keeps the target it was given and follows the live snapshot,
   // so a page left open keeps reading as the transponder reports again.
   const [trackingVessel, setTrackingVessel] = useState<AisVessel | null>(null);
@@ -682,7 +688,10 @@ export default function App() {
         onMapClick={(_lat, _lon) => {
           // Tapping open water puts the picked target down again.
           setHighlightedVessel(null);
+          setSearchPin(null);
         }}
+        searchPin={searchPin}
+        onSearchPinClear={clearSearchPin}
         fix={geo.fix}
         aisVessels={ais.vessels}
         selectedVesselMmsi={highlightedVessel}
@@ -723,6 +732,14 @@ export default function App() {
         status={geo.status}
         hidden={chartControlsHidden}
         onLocate={locateMe}
+      />
+
+      <DestinationSearch
+        hidden={chartControlsHidden}
+        onSelect={(result) => {
+          setSearchPin(result);
+          centreOn(result.lat, result.lon, 14);
+        }}
       />
 
       {locateNote && (

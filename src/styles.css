@@ -695,6 +695,131 @@ ul {
   display: none;
 }
 
+/* Destination search: sits under the weather button, top-left. */
+.destination-search {
+  position: fixed;
+  z-index: 1200;
+  top: calc(var(--safe-top) + 76px);
+  left: 12px;
+  width: min(320px, calc(100vw - 24px));
+}
+
+.destination-search.is-hidden {
+  display: none;
+}
+
+.destination-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 1px solid rgba(61, 214, 255, 0.45);
+  border-radius: 16px;
+  background: rgba(6, 28, 41, 0.94);
+  color: var(--ink);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.destination-search-box input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.destination-search-box input::placeholder {
+  color: #87a1b0;
+}
+
+.destination-search-clear {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.destination-search-spin {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 2px solid rgba(61, 214, 255, 0.35);
+  border-top-color: #3dd6ff;
+  border-radius: 50%;
+  animation: destination-spin 0.7s linear infinite;
+}
+
+@keyframes destination-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.destination-search-results {
+  margin: 8px 0 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid rgba(61, 214, 255, 0.45);
+  border-radius: 16px;
+  background: rgba(6, 28, 41, 0.97);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.destination-search-results button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.destination-search-results button:hover,
+.destination-search-results button:focus-visible {
+  background: rgba(61, 214, 255, 0.14);
+}
+
+.destination-search-results button strong {
+  display: block;
+  font-size: 15px;
+}
+
+.destination-search-results button span {
+  display: block;
+  font-size: 13px;
+  color: #87a1b0;
+  margin-top: 2px;
+}
+
+.destination-search-attribution {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  color: #87a1b0;
+}
+
+.destination-search-note {
+  margin: 8px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(61, 214, 255, 0.45);
+  border-radius: 16px;
+  background: rgba(6, 28, 41, 0.97);
+  color: var(--ink);
+  font-size: 14px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
+
 .weather-button-label {
   font-size: 13px;
   letter-spacing: 0.01em;

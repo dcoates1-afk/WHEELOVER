@@ -6,7 +6,6 @@ export type BaseLayerId = 'osm' | 'satellite' | 'nautical' | 'relief' | 'noaa' |
 export type ThemeId = 'day' | 'night' | 'red';
 export interface OverlayPreferences {
   openseamap: boolean;
-  navaids: boolean;
   ferries: boolean;
   tss: boolean;
   ais: boolean;
@@ -15,7 +14,6 @@ export interface OverlayPreferences {
   depthLabels: boolean;
   pois: boolean;
   bridges: boolean;
-  protectedAreas: boolean;
 }
 
 export interface ChartPreferences {
@@ -41,7 +39,6 @@ export const DEFAULT_PREFERENCES: ChartPreferences = {
   base: 'osm',
   overlays: {
     openseamap: false,
-    navaids: true,
     ferries: true,
     tss: true,
     ais: true,
@@ -49,11 +46,12 @@ export const DEFAULT_PREFERENCES: ChartPreferences = {
     soundings: false,
     depthLabels: false,
     pois: false,
-    // Bridges and marine areas are chart context a navigator expects to see, so
-    // they start on. A saved record keeps whatever this device chose: only a
-    // device with no stored value for the key inherits these defaults.
+    // Bridges are chart context a navigator expects to see, so they start
+    // on. A saved record keeps whatever this device chose: only a device
+    // with no stored value for the key inherits these defaults. Navaids and
+    // marine areas have no master switch any more: they are always drawn,
+    // filtered per type in the Legend & mark filters.
     bridges: true,
-    protectedAreas: true,
   },
   showAllMarks: false,
   showPosition: false,

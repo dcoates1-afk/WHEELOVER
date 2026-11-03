@@ -473,9 +473,12 @@ ul {
 }
 
 /* Bridge card: the chart's reference popup for a bridge, built from every
-   mapped tag the record carries. Facts run in two columns so the card reads
-   shorter and wider instead of one long list; on a narrow phone screen the
-   popup clamps to the map width and the columns simply get tighter. */
+   mapped tag the record carries. Facts run in one column on a narrow screen
+   and two columns on a wider one, so the card reads shorter and wider
+   instead of one long list. The switch follows the viewport, not the card:
+   a container query on the popup content is not an option, because Leaflet
+   measures the popup from its content and size containment collapsed the
+   whole popup to a thin strip that split words letter by letter. */
 .leaflet-popup.bridge-popup .leaflet-popup-content-wrapper {
   background: #0a2230;
   color: #e6f2f8;
@@ -524,15 +527,7 @@ ul {
   margin: 0;
 }
 
-/* Two columns only when the card itself is wide enough to hold them: on a
-   phone the popup is clamped to the map width, and two columns squeezed
-   labels into values and split words mid-word. The popup content is the
-   query container, so this follows the card's own width on any device. */
-.bridge-popup .leaflet-popup-content {
-  container-type: inline-size;
-}
-
-@container (min-width: 480px) {
+@media (min-width: 640px) {
   .bridge-card dl {
     grid-template-columns: 1fr 1fr;
   }
@@ -542,6 +537,11 @@ ul {
   display: grid;
   grid-template-columns: minmax(0, 40%) minmax(0, 1fr);
   gap: 10px;
+  /* Floor for each fact: without it Leaflet measures the popup from the
+     grid's shrunken content and the card collapses to ~185 px, squeezing
+     two columns into a strip. 240 px gives one readable column on a phone
+     popup and two on a desktop popup. */
+  min-width: 240px;
 }
 
 .bridge-card dt {
@@ -1671,6 +1671,35 @@ ul {
 .legend-reset {
   width: 100%;
   margin: 0 0 8px;
+}
+
+.legend-subhead {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 10px 0 4px;
+}
+
+/* Map options rows reuse the legend toggle look. They carry a hint line
+   under the label and no symbol, so the label stacks its hint and the row
+   gets breathing room on the left; the section's rows get the same gap as a
+   legend grid. */
+.legend-label small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+#menu-overlays .menu-rows {
+  gap: 4px;
+}
+
+#menu-overlays .legend-item {
+  padding-left: 10px;
 }
 
 /* Chips are chart-paper light: black cardinal and isolated-danger bodies are

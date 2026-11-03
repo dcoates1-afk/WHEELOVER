@@ -72,18 +72,19 @@ describe('chart preferences', () => {
     expect(sanitizePreferences({ overlays: { openseamap: false } }).overlays.openseamap).toBe(false);
   });
 
-  it('starts bridges and marine areas on, and keeps a saved off choice', () => {
+  it('starts bridges on, and keeps a saved off choice', () => {
     expect(DEFAULT_PREFERENCES.overlays.bridges).toBe(true);
-    expect(DEFAULT_PREFERENCES.overlays.protectedAreas).toBe(true);
     // No stored value for the keys: the device never chose, so it gets the new
     // default rather than the off value older builds wrote.
-    const older = sanitizePreferences({ base: 'osm', overlays: { navaids: true } });
+    const older = sanitizePreferences({ base: 'osm', overlays: { ferries: true } });
     expect(older.overlays.bridges).toBe(true);
-    expect(older.overlays.protectedAreas).toBe(true);
     // A stored choice is preserved in both directions.
     expect(sanitizePreferences({ overlays: { bridges: false } }).overlays.bridges).toBe(false);
-    expect(sanitizePreferences({ overlays: { protectedAreas: false } }).overlays.protectedAreas).toBe(false);
     expect(sanitizePreferences({ overlays: { bridges: true } }).overlays.bridges).toBe(true);
+    // Marine areas have no master switch any more: every class starts shown,
+    // and a saved per-class choice is preserved.
+    expect(DEFAULT_PREFERENCES.hiddenAreaGroups).toEqual([]);
+    expect(sanitizePreferences({ hiddenAreaGroups: ['reef'] }).hiddenAreaGroups).toEqual(['reef']);
   });
 
   it('fills missing overlay keys from an older saved preference', () => {
@@ -124,14 +125,13 @@ describe('chart preferences', () => {
   it('keeps valid values and persists them', () => {
     const sanitized = sanitizePreferences({
       base: 'satellite',
-      overlays: { tss: true, navaids: false },
+      overlays: { tss: true },
       showAllMarks: true,
       showPosition: true,
       theme: 'red',
     });
     expect(sanitized.base).toBe('satellite');
     expect(sanitized.overlays.tss).toBe(true);
-    expect(sanitized.overlays.navaids).toBe(false);
     expect(sanitized.overlays.ferries).toBe(true);
     expect(sanitized.showAllMarks).toBe(true);
     expect(sanitized.theme).toBe('red');

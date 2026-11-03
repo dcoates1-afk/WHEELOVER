@@ -712,4 +712,39 @@ describe('chart feature fetching', () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it('uses drawn features when the proxy sends them instead of raw elements', async () => {
+    const feature = {
+      id: 'bridge-1',
+      type: 'bridge',
+      name: 'Test Bridge',
+      lat: 51.11,
+      lon: -1.58,
+      path: [[51.11, -1.58]],
+      paths: [[[51.11, -1.58]]],
+      properties: {},
+      sourceUrl: 'https://example.invalid/1',
+    };
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ features: [feature] }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const result = await queryChartFeaturePart([51.101, -1.601, 51.129, -1.561], 'bridges');
+      expect(result.features).toEqual([feature]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('reuses one cell answer for nearby views instead of refetching', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ elements: [] }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await queryChartFeaturePart([50.901, -1.401, 50.929, -1.361], 'bridges');
+      const second = await queryChartFeaturePart([50.905, -1.405, 50.925, -1.365], 'bridges');
+      expect(second.cached).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

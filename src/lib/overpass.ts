@@ -423,6 +423,20 @@ function keyFor(bounds: Bounds): string {
 }
 
 /**
+ * The proxy fetches bridge/area data in fixed 0.05° cells (see
+ * server/overpassProxy.ts CHART_FEATURE_CELL_DEGREES), so the device cache
+ * key uses the same snapped cell: panning inside one cell reuses the answer
+ * instead of missing the cache on every small move.
+ */
+const CHART_FEATURE_CELL_DEGREES = 0.05;
+function snapCellBounds([south, west, north, east]: Bounds): Bounds {
+  const step = CHART_FEATURE_CELL_DEGREES;
+  const down = (value: number) => Math.round(Math.floor(value / step) * step * 1000) / 1000;
+  const up = (value: number) => Math.round(Math.ceil(value / step) * step * 1000) / 1000;
+  return [down(south), down(west), up(north), up(east)];
+}
+
+/**
  * Query marks for an arbitrary viewport. The proxy hedges across Overpass
  * mirrors and caches on disk, so this is only used outside the built regions.
  */
@@ -477,7 +491,7 @@ export async function queryChartFeaturePart(
   part: ChartFeaturePart,
   options: { signal?: AbortSignal; force?: boolean } = {},
 ): Promise<LiveChartFeaturesResult> {
-  const key = `${part}:${keyFor(bounds)}`;
+  const key = `${part}:${keyFor(snapCellBounds(bounds))}`;
   const cached = chartFeatureMemory.get(key);
   if (!options.force && cached && Date.now() - cached.at < CHART_FEATURE_CACHE_MS) {
     return { features: cached.features, cached: true, fetchedAt: cached.at };
@@ -492,6 +506,7 @@ export async function queryChartFeaturePart(
   let lastError: Error | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
     if (options.signal?.aborted) break;
+    const attemptStarted = Date.now();
     try {
       response = await fetch(url, { signal: options.signal });
       if (response.ok) break;
@@ -503,6 +518,10 @@ export async function queryChartFeaturePart(
       response = undefined;
     }
     if (attempt < 2 && !options.signal?.aborted) {
+      // A failure that itself took a long time means the mirrors are
+      // saturated, not momentarily blinking: retrying immediately only adds
+      // another slow wait, and the next view change tries again anyway.
+      if (Date.now() - attemptStarted > 20_000) break;
       await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
     }
   }
@@ -511,12 +530,19 @@ export async function queryChartFeaturePart(
   }
   const payload = (await response.json()) as {
     elements?: RawChartElement[];
+    features?: ChartFeature[];
     meta?: { cached?: boolean };
   };
-  const elements = payload.elements ?? [];
-  const { bridges, areas } = chartFeaturesFromElements(elements);
+  // The proxy now sends the drawn features directly: the raw reply is mostly
+  // water geometry the card never shows, so shipping it doubled the wait.
+  // A reply that still carries elements is computed the same way as before.
   // Each half only produces its own kind, and the callers merge the two lists.
-  const features: ChartFeature[] = [...areas, ...bridges];
+  const features: ChartFeature[] = Array.isArray(payload.features)
+    ? payload.features
+    : (() => {
+      const { bridges, areas } = chartFeaturesFromElements(payload.elements ?? []);
+      return [...areas, ...bridges];
+    })();
   const fetchedAt = Date.now();
   chartFeatureMemory.set(key, { features, at: fetchedAt });
   return { features, cached: Boolean(payload.meta?.cached), fetchedAt };

@@ -373,7 +373,8 @@ export default function App() {
     };
   }, [view.bounds]);
 
-  // Bridges and protected-area outlines are optional OSM context overlays.
+  // Bridges and protected-area outlines are OSM context overlays; marine
+  // areas are always fetched and filtered per type in the Legend & mark filters.
   const chartFeatureRequestId = useRef(0);
   // The view an answer arrived for, per half. A mirror dropping mid-refresh used
   // to blank an overlay that was already drawn for this same view; keeping the
@@ -383,7 +384,7 @@ export default function App() {
   useEffect(() => {
     const parts: ChartFeaturePart[] = [];
     if (preferences.overlays.bridges) parts.push('bridges');
-    if (preferences.overlays.protectedAreas) parts.push('areas');
+    parts.push('areas');
     const [south, west, north, east] = view.bounds;
     const viewKey = view.bounds.map((value) => value.toFixed(3)).join(',');
     if (parts.length === 0 || view.zoom < 8 || north - south > 2 || east - west > 2) {
@@ -430,11 +431,11 @@ export default function App() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [preferences.overlays.bridges, preferences.overlays.protectedAreas, view]);
+  }, [preferences.overlays.bridges, view]);
 
   const protectedAreaRequestId = useRef(0);
   useEffect(() => {
-    if (!preferences.overlays.protectedAreas || view.zoom < 6) {
+    if (view.zoom < 6) {
       // Drop any answer still in flight, so it cannot refill a cleared overlay.
       protectedAreaRequestId.current += 1;
       setProtectedAreaFeatures([]);
@@ -462,7 +463,7 @@ export default function App() {
         });
     }, 450);
     return () => clearTimeout(timer);
-  }, [preferences.overlays.protectedAreas, view]);
+  }, [view]);
 
   // Public places follow the viewport and only load once a harbour-scale view
   // is on screen. A stale answer for an older view is discarded by request id.

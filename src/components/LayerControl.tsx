@@ -136,6 +136,40 @@ function ToggleRow({
   );
 }
 
+/**
+ * A Map options row in the Legend & mark filters style: the same bordered
+ * row and On/Off pill as a legend toggle, with the layer's hint kept as a
+ * second line. Used only for the Map options section.
+ */
+function LegendRow({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={`${label} — ${checked ? 'on' : 'off'}`}
+      className={`legend-item ${checked ? '' : 'is-off'}`}
+      onClick={() => onChange(!checked)}
+    >
+      <span className="legend-label">
+        {label}
+        {hint && <small>{hint}</small>}
+      </span>
+      <span className="legend-state">{checked ? 'On' : 'Off'}</span>
+    </button>
+  );
+}
+
 function RadioRow({
   label,
   hint,
@@ -842,7 +876,7 @@ export function LayerControl({
               </Section>
 
               <Section title="Map options" id="menu-overlays">
-                <ToggleRow
+                <LegendRow
                   label="Depth contours"
                   hint="NOAA ENC isobaths in US waters (zoom 9+), GEBCO elsewhere"
                   checked={preferences.overlays.contours}
@@ -855,7 +889,7 @@ export function LayerControl({
                       : 'Global GEBCO contour layer.'}
                   </p>
                 )}
-                <ToggleRow
+                <LegendRow
                   label="Depth numbers"
                   hint={`Modelled labels in ${depthUnitLabel(
                     settings.units.depth,
@@ -863,7 +897,7 @@ export function LayerControl({
                   checked={preferences.overlays.depthLabels}
                   onChange={(value) => setOverlay('depthLabels', value)}
                 />
-                <ToggleRow
+                <LegendRow
                   label="Charted soundings"
                   hint="NOAA ENC spot depths in the chart's printed unit · US waters, zoom 15+"
                   checked={preferences.overlays.soundings}
@@ -875,89 +909,32 @@ export function LayerControl({
                     until you pan to a US harbour; depth contours fall back to GEBCO here.
                   </p>
                 )}
-                <ToggleRow
+                <LegendRow
                   label="OpenSeaMap seamarks"
                   hint="Transparent raster over any base chart"
                   checked={preferences.overlays.openseamap}
                   onChange={(value) => setOverlay('openseamap', value)}
                 />
-                <ToggleRow
-                  label="NAVAIDs from database"
-                  hint="Aids to navigation, calling-in points and mapped reporting areas"
-                  checked={preferences.overlays.navaids}
-                  onChange={(value) => setOverlay('navaids', value)}
-                />
-                <ToggleRow
+                <LegendRow
                   label="Ferry lanes"
                   hint="Ferry routes"
                   checked={preferences.overlays.ferries}
                   onChange={(value) => setOverlay('ferries', value)}
                 />
-                <ToggleRow
+                <LegendRow
                   label="TSS lanes"
                   hint="Traffic separation schemes"
                   checked={preferences.overlays.tss}
                   onChange={(value) => setOverlay('tss', value)}
                 />
-                <ToggleRow
+                <LegendRow
                   label="Bridges & clearances"
                   hint="Mapped bridge types and reported clearance/opening details · zoom 8+"
                   checked={preferences.overlays.bridges}
                   onChange={(value) => setOverlay('bridges', value)}
                 />
-                <ToggleRow
-                  label="Marine areas & restrictions"
-                  hint="Protected sites, conservation designations, reefs, banks, danger areas and ranges · zoom 8+ · worldwide OSM + European Natura 2000"
-                  checked={preferences.overlays.protectedAreas}
-                  onChange={(value) => setOverlay('protectedAreas', value)}
-                />
-                {preferences.overlays.protectedAreas && (
-                  <>
-                    <p className="menu-note">
-                      Tap a class to show or hide it; the choice is remembered on this device. Mapped outlines are
-                      indicative, not a survey or a legal boundary.
-                    </p>
-                    <ul className="legend-grid poi-legend">
-                      {MARINE_AREA_GROUPS.map((group) => {
-                        const meta = MARINE_AREA_GROUP_META[group];
-                        const hidden = isAreaGroupHidden(preferences.hiddenAreaGroups, group);
-                        return (
-                          <li key={group}>
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={!hidden}
-                              aria-label={`${meta.label} — ${hidden ? 'hidden' : 'shown'}`}
-                              className={`legend-item ${hidden ? 'is-off' : ''}`}
-                              data-area-group={group}
-                              onClick={() =>
-                                onChange({
-                                  ...preferences,
-                                  hiddenAreaGroups: toggleAreaGroup(preferences.hiddenAreaGroups, group),
-                                })
-                              }
-                            >
-                              <span className="poi-chip" style={{ background: meta.colour }} aria-hidden="true" />
-                              <span className="legend-label">{meta.label}</span>
-                              <span className="legend-state">{hidden ? 'Off' : 'On'}</span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    {preferences.hiddenAreaGroups.length > 0 && (
-                      <button
-                        type="button"
-                        className="secondary-button legend-reset"
-                        onClick={() => onChange({ ...preferences, hiddenAreaGroups: [] })}
-                      >
-                        Show every marine-area class
-                      </button>
-                    )}
-                  </>
-                )}
                 <a className="menu-row disclaimer-link" href="/disclaimer" onClick={() => onOpen(false)}>Data sources &amp; disclaimer<span className="chevron" aria-hidden="true">›</span></a>
-                <ToggleRow
+                <LegendRow
                   label="AIS targets"
                   hint="Live vessel positions on the chart"
                   checked={preferences.overlays.ais}
@@ -1077,6 +1054,49 @@ export function LayerControl({
                       onClick={() => onChange({ ...preferences, hiddenGroups: [] })}
                     >
                       Show every mark class
+                    </button>
+                  )}
+                  <p className="legend-subhead">Marine areas &amp; restrictions</p>
+                  <p className="menu-note">
+                    Protected sites, conservation designations, reefs, banks, danger areas and ranges · zoom 8+ ·
+                    worldwide OSM + European Natura 2000. Mapped outlines are indicative, not a survey or a legal
+                    boundary.
+                  </p>
+                  <ul className="legend-grid poi-legend">
+                    {MARINE_AREA_GROUPS.map((group) => {
+                      const meta = MARINE_AREA_GROUP_META[group];
+                      const hidden = isAreaGroupHidden(preferences.hiddenAreaGroups, group);
+                      return (
+                        <li key={group}>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={!hidden}
+                            aria-label={`${meta.label} — ${hidden ? 'hidden' : 'shown'}`}
+                            className={`legend-item ${hidden ? 'is-off' : ''}`}
+                            data-area-group={group}
+                            onClick={() =>
+                              onChange({
+                                ...preferences,
+                                hiddenAreaGroups: toggleAreaGroup(preferences.hiddenAreaGroups, group),
+                              })
+                            }
+                          >
+                            <span className="poi-chip" style={{ background: meta.colour }} aria-hidden="true" />
+                            <span className="legend-label">{meta.label}</span>
+                            <span className="legend-state">{hidden ? 'Off' : 'On'}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {preferences.hiddenAreaGroups.length > 0 && (
+                    <button
+                      type="button"
+                      className="secondary-button legend-reset"
+                      onClick={() => onChange({ ...preferences, hiddenAreaGroups: [] })}
+                    >
+                      Show every marine-area class
                     </button>
                   )}
                 </details>

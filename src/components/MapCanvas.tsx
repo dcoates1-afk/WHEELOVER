@@ -877,7 +877,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    for (const key of ['navaids', 'ferries', 'tss', 'ais', 'pois'] as const) {
+    for (const key of ['ferries', 'tss', 'ais', 'pois'] as const) {
       const group = groupsRef.current[key];
       if (!group) continue;
       const wanted = overlays[key];
@@ -887,22 +887,21 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
         map.removeLayer(group);
       }
     }
+    // Navaids and the curated reporting systems have no master switch any
+    // more: they are always drawn, with navaids filtered per type by the
+    // Legend & mark filters.
+    const navaids = groupsRef.current.navaids;
+    if (navaids && !map.hasLayer(navaids)) navaids.addTo(map);
+    const reportingSystems = groupsRef.current.reportingSystems;
+    if (reportingSystems && !map.hasLayer(reportingSystems)) reportingSystems.addTo(map);
     // The lane geometry is OpenStreetMap data, so its credit follows the
     // toggles rather than sitting on the chart when nothing is drawn.
-    const reportingSystems = groupsRef.current.reportingSystems;
-    if (reportingSystems) {
-      if (overlays.navaids) {
-        if (!map.hasLayer(reportingSystems)) reportingSystems.addTo(map);
-      } else if (map.hasLayer(reportingSystems)) {
-        map.removeLayer(reportingSystems);
-      }
-    }
     const control = map.attributionControl;
     if (control) {
       control.removeAttribution(LANE_ATTRIBUTION);
       control.removeAttribution(REPORTING_SYSTEM_ATTRIBUTION);
       if (overlays.ferries || overlays.tss) control.addAttribution(LANE_ATTRIBUTION);
-      if (overlays.navaids && SHIP_REPORTING_SYSTEMS.features.length > 0) {
+      if (SHIP_REPORTING_SYSTEMS.features.length > 0) {
         control.addAttribution(REPORTING_SYSTEM_ATTRIBUTION);
       }
     }
@@ -1052,10 +1051,6 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     const group = groupsRef.current.protectedAreas;
     if (!map || !group) return;
     group.clearLayers();
-    if (!props.preferences.overlays.protectedAreas) {
-      if (map.hasLayer(group)) map.removeLayer(group);
-      return;
-    }
     const hiddenAreas = props.preferences.hiddenAreaGroups ?? [];
     // Worldwide OSM areas: protected and conservation designations, reefs,
     // banks, restricted areas and military ranges, each with its own toggle.
@@ -1108,14 +1103,13 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     }
     if (group.getLayers().length > 0) group.addTo(map);
     else if (map.hasLayer(group)) map.removeLayer(group);
-  }, [props.marks, props.chartFeatures, props.protectedAreaFeatures, props.preferences.overlays.protectedAreas, props.preferences.hiddenAreaGroups]);
+  }, [props.marks, props.chartFeatures, props.protectedAreaFeatures, props.preferences.hiddenAreaGroups]);
 
   // NAVAID markers.
   useEffect(() => {
     const group = groupsRef.current.navaids;
     if (!group) return;
     group.clearLayers();
-    if (!props.preferences.overlays.navaids) return;
     // Symbols shrink at small scales so a dense harbour does not turn into a
     // wall of icons; the mark is still tappable at 16 px.
     const baseSize = props.zoom >= 15 ? 28 : props.zoom >= 13 ? 24 : props.zoom >= 11 ? 20 : 16;
@@ -1228,7 +1222,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       marker.on('click', () => handlers.current.onSelectMark(mark));
       group.addLayer(marker);
     }
-  }, [props.marks, props.zoom, props.preferences.overlays.navaids]);
+  }, [props.marks, props.zoom]);
 
   // Public places: one pin per marina, fuel berth, chandlery, ramp, meal or
   // facility in view. Names and details open on tap, so the chart stays clean.

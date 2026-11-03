@@ -493,6 +493,23 @@ function sendJson(req: IncomingMessage, res: ServerResponse, status: number, bod
   res.end(payload);
 }
 
+/**
+ * What a chart-features reply sends to the chart.
+ *
+ * The raw mirror reply is mostly water geometry the chart only uses to test
+ * which bridges cross water; the drawn bridges and areas are a small fraction
+ * of it. Sending the drawn features instead of the raw elements cuts the
+ * transfer and the chart's own water processing, which was a large share of
+ * the wait on a cold cell. Other query kinds still send the raw reply.
+ */
+function responseBody(payload: unknown, meta: Record<string, unknown>, kind: QueryKind): unknown {
+  if (kind !== 'chart-features') return { ...(payload as object), meta };
+  const elements = (payload as { elements?: unknown[] } | null)?.elements;
+  if (!Array.isArray(elements)) return { ...(payload as object), meta };
+  const { bridges, areas } = chartFeaturesFromElements(elements as RawChartElement[]);
+  return { features: [...areas, ...bridges], meta };
+}
+
 export function createOverpassHandler(log: (message: string) => void = () => {}) {
   return async function overpassHandler(req: IncomingMessage, res: ServerResponse) {
     const url = new URL(req.url ?? '/', 'http://localhost');
@@ -542,7 +559,7 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
       // The disclaimer page describes the reply this chart view is being served,
       // whether it came from a mirror just now or from the on-disk cache.
       if (kind === 'chart-features') void writeChartFeatureStats(cached, part, cell);
-      sendJson(req, res, 200, { ...(cached.payload as object), meta: { cached: true, ageMs: age, source: cached.source } });
+      sendJson(req, res, 200, responseBody(cached.payload, { cached: true, ageMs: age, source: cached.source }, kind));
       return;
     }
 
@@ -550,26 +567,17 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
       // Serve stale immediately, refresh quietly.
       refresh(key, query, kind, part, cell).catch((error) => log(`overpass refresh failed: ${error.message}`));
       if (kind === 'chart-features') void writeChartFeatureStats(cached, part, cell);
-      sendJson(req, res, 200, {
-        ...(cached.payload as object),
-        meta: { cached: true, stale: true, ageMs: age, source: cached.source },
-      });
+      sendJson(req, res, 200, responseBody(cached.payload, { cached: true, stale: true, ageMs: age, source: cached.source }, kind));
       return;
     }
 
     try {
       const entry = await refresh(key, query, kind, part, cell);
-      sendJson(req, res, 200, {
-        ...(entry.payload as object),
-        meta: { cached: false, ageMs: 0, source: entry.source },
-      });
+      sendJson(req, res, 200, responseBody(entry.payload, { cached: false, ageMs: 0, source: entry.source }, kind));
     } catch (error) {
       if (cached) {
         if (kind === 'chart-features') void writeChartFeatureStats(cached, part, cell);
-        sendJson(req, res, 200, {
-          ...(cached.payload as object),
-          meta: { cached: true, stale: true, ageMs: age, source: cached.source },
-        });
+        sendJson(req, res, 200, responseBody(cached.payload, { cached: true, stale: true, ageMs: age, source: cached.source }, kind));
         return;
       }
       sendJson(req, res, 502, { error: error instanceof Error ? error.message : 'overpass unavailable' });

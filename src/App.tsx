@@ -1063,6 +1063,10 @@ export default function App() {
           protectedAreas={protectedAreaFeatures}
           ferries={marineFeatures?.ferries ?? []}
           tss={marineFeatures?.tss ?? []}
+          draughtM={(() => {
+            const parsed = Number(settings.boat.draughtM);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+          })()}
           onClose={() => {
             setRouteOpen(false);
             setRouteAdding(false);

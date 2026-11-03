@@ -8,7 +8,9 @@ import type { DbInfo } from './components/LayerControl';
 import { GpsWidget } from './components/GpsWidget';
 import { LocateButton } from './components/LocateButton';
 import { DestinationSearch } from './components/DestinationSearch';
+import { PinsPanel } from './components/PinsPanel';
 import type { DestinationResult } from './lib/destinationSearch';
+import { createPin, loadPins, removePin, updatePin, writePins, type Pin } from './lib/pins';
 import { ZoomControls } from './components/ZoomControls';
 
 const MapCanvas = lazy(() => import('./components/MapCanvas').then((module) => ({ default: module.MapCanvas })));
@@ -107,6 +109,15 @@ export default function App() {
   // tapped away or a new search replaces it.
   const [searchPin, setSearchPin] = useState<DestinationResult | null>(null);
   const clearSearchPin = useCallback(() => setSearchPin(null), []);
+  // The navigator's own place pins, kept on this device only.
+  const [pins, setPins] = useState<Pin[]>(() => loadPins(safeStorage()));
+  const [pinsOpen, setPinsOpen] = useState(false);
+  const [placingPin, setPlacingPin] = useState(false);
+  const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
+  const selectPin = useCallback((pin: Pin) => {
+    setSelectedPinId(pin.id);
+    setPinsOpen(true);
+  }, []);
   // Tracking info keeps the target it was given and follows the live snapshot,
   // so a page left open keeps reading as the transponder reports again.
   const [trackingVessel, setTrackingVessel] = useState<AisVessel | null>(null);
@@ -222,6 +233,9 @@ export default function App() {
     Boolean(selectedMark) ||
     Boolean(selectedVessel) ||
     preferences.showPosition;
+  // The pins panel covers the bottom-left corner, so the other chart
+  // controls step aside while it is open; the pins button itself stays.
+  const chartControlsHiddenWithPins = chartControlsHidden || pinsOpen;
 
   const locateMe = useCallback(() => {
     if (gpsMode === 'off') {
@@ -263,6 +277,10 @@ export default function App() {
   useEffect(() => {
     writeVoyageWatch(storage, watch);
   }, [watch, storage]);
+
+  useEffect(() => {
+    writePins(storage, pins);
+  }, [pins, storage]);
 
   // Manifest + weekly revalidation, once per session.
   useEffect(() => {
@@ -686,12 +704,24 @@ export default function App() {
         }}
         onNoaaCoverageChange={setNoaaCovered}
         onMapClick={(_lat, _lon) => {
+          if (placingPin) {
+            // Placing mode: the tap drops a pin instead of clearing anything.
+            const pin = createPin(_lat, _lon);
+            setPins((current) => [...current, pin]);
+            setPlacingPin(false);
+            setSelectedPinId(pin.id);
+            setPinsOpen(true);
+            return;
+          }
           // Tapping open water puts the picked target down again.
           setHighlightedVessel(null);
           setSearchPin(null);
         }}
         searchPin={searchPin}
         onSearchPinClear={clearSearchPin}
+        pins={pins}
+        selectedPinId={selectedPinId}
+        onSelectPin={selectPin}
         fix={geo.fix}
         aisVessels={ais.vessels}
         selectedVesselMmsi={highlightedVessel}
@@ -722,7 +752,7 @@ export default function App() {
       </Suspense>
 
       <ZoomControls
-        hidden={chartControlsHidden}
+        hidden={chartControlsHiddenWithPins}
         onZoomIn={() => mapRef.current?.zoomIn()}
         onZoomOut={() => mapRef.current?.zoomOut()}
       />
@@ -730,17 +760,58 @@ export default function App() {
       <LocateButton
         fix={geo.fix}
         status={geo.status}
-        hidden={chartControlsHidden}
+        hidden={chartControlsHiddenWithPins}
         onLocate={locateMe}
       />
 
       <DestinationSearch
-        hidden={chartControlsHidden}
+        hidden={chartControlsHiddenWithPins}
         onSelect={(result) => {
           setSearchPin(result);
           centreOn(result.lat, result.lon, 14);
         }}
       />
+
+      <button
+        type="button"
+        className={`pins-button ${chartControlsHidden ? 'is-hidden' : ''}`}
+        onClick={() => setPinsOpen((open) => !open)}
+        aria-label="Place pins"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path
+            d="M12 1.5 C7.5 1.5 4 5 4 9.5 C4 15 12 22.5 12 22.5 C12 22.5 20 15 20 9.5 C20 5 16.5 1.5 12 1.5 Z"
+            fill="#f2a65a"
+            stroke="#04141f"
+            strokeWidth="1.2"
+          />
+          <circle cx="12" cy="9.5" r="3.5" fill="#04141f" />
+        </svg>
+        <span>Pins{pins.length > 0 ? ` (${pins.length})` : ''}</span>
+      </button>
+
+      {pinsOpen && (
+        <PinsPanel
+          pins={pins}
+          selectedId={selectedPinId}
+          placing={placingPin}
+          onClose={() => {
+            setPinsOpen(false);
+            setPlacingPin(false);
+          }}
+          onAdd={() => setPlacingPin(true)}
+          onCancelPlacing={() => setPlacingPin(false)}
+          onSelect={(pin) => {
+            setSelectedPinId(pin.id);
+            centreOn(pin.lat, pin.lon, 14);
+          }}
+          onUpdate={(id, patch) => setPins((current) => updatePin(current, id, patch))}
+          onDelete={(id) => {
+            setPins((current) => removePin(current, id));
+            setSelectedPinId((current) => (current === id ? null : current));
+          }}
+        />
+      )}
 
       {locateNote && (
         <p className="chart-toast" role="status" aria-live="polite">

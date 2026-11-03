@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, us
 import L from 'leaflet';
 import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
+import type { Pin } from '../lib/pins';
 import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import { describeBridge, type BridgeRow } from '../lib/bridges';
 import { clearancesForFeature, loadClearanceDatasets, type ClearanceDatasets } from '../lib/clearances';
@@ -180,6 +181,12 @@ export interface MapCanvasProps {
   searchPin?: { lat: number; lon: number; name: string } | null;
   /** The search pin was tapped; the app clears it. */
   onSearchPinClear?: () => void;
+  /** The navigator's own place pins, kept on this device. */
+  pins?: Pin[];
+  /** Pin whose details the panel is editing. */
+  selectedPinId?: string | null;
+  /** A pin was tapped on the chart. */
+  onSelectPin?: (pin: Pin) => void;
   /** Anchor circle and course to steer, set from the menu. */
   watch: VoyageWatch;
   /** Grid the cursor readout is written in. */
@@ -398,6 +405,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   const groupsRef = useRef<Partial<Record<'navaids' | 'ferries' | 'tss' | 'ais' | 'pois' | 'reportingSystems' | 'bridges' | 'protectedAreas', L.LayerGroup>>>({});
   const vesselRef = useRef<L.Marker | null>(null);
   const searchPinRef = useRef<L.CircleMarker | null>(null);
+  const pinsGroupRef = useRef<L.LayerGroup | null>(null);
   const watchRef = useRef<L.LayerGroup | null>(null);
   const aisMarkersRef = useRef(
     new Map<
@@ -1512,6 +1520,34 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       props.onSearchPinClear?.();
     });
   }, [props.searchPin, props.onSearchPinClear]);
+
+  // The navigator's own pins. The group is rebuilt when the list changes;
+  // there are only ever a handful, so a rebuild is cheaper than diffing.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!pinsGroupRef.current) {
+      pinsGroupRef.current = L.layerGroup().addTo(map);
+    }
+    const group = pinsGroupRef.current;
+    group.clearLayers();
+    for (const pin of props.pins ?? []) {
+      const selected = pin.id === props.selectedPinId;
+      const size = selected ? 36 : 28;
+      const icon = L.divIcon({
+        className: 'marnav-pin-wrap',
+        html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 1.5 C7.5 1.5 4 5 4 9.5 C4 15 12 22.5 12 22.5 C12 22.5 20 15 20 9.5 C20 5 16.5 1.5 12 1.5 Z" fill="${selected ? '#3dd6ff' : '#f2a65a'}" stroke="#04141f" stroke-width="1.2"/><circle cx="12" cy="9.5" r="3.5" fill="#04141f"/></svg>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size],
+      });
+      const marker = L.marker([pin.lat, pin.lon], { icon });
+      marker.bindTooltip(pin.title, { sticky: true, className: 'marnav-tip', direction: 'top' });
+      marker.on('click', () => {
+        props.onSelectPin?.(pin);
+      });
+      marker.addTo(group);
+    }
+  }, [props.pins, props.selectedPinId, props.onSelectPin]);
 
   // Anchor swing circle and course to steer. Both are set by the navigator on
   // this device, so they are drawn whatever the overlay switches are doing. The

@@ -28,6 +28,8 @@ import {
 } from '../lib/marineAreas';
 import { poiIconSvg } from '../lib/pois';
 import { formatBytes } from '../lib/noaaChart';
+import type { NotmarWarning } from '../lib/notmars';
+import { notmarAreaName } from '../lib/notmars';
 import {
   BEARING_MODES,
   BOAT_TYPES,
@@ -93,6 +95,9 @@ interface LayerControlProps {
   fix: GeoFix | null;
   watch: VoyageWatch;
   onWatch: (next: VoyageWatch) => void;
+  warnings: NotmarWarning[] | null;
+  warningsError: string | null;
+  onSelectWarning: (warning: NotmarWarning) => void;
   hidden?: boolean;
 }
 
@@ -602,6 +607,9 @@ export function LayerControl({
   fix,
   watch,
   onWatch,
+  warnings,
+  warningsError,
+  onSelectWarning,
   hidden = false,
 }: LayerControlProps) {
   const setBase = (base: BaseLayerId) => onChange({ ...preferences, base });
@@ -940,6 +948,40 @@ export function LayerControl({
                   checked={preferences.overlays.ais}
                   onChange={(value) => setOverlay('ais', value)}
                 />
+                <LegendRow
+                  label="NAVAREA warnings"
+                  hint="Live NGA broadcast warnings · in-force only · US Government public domain"
+                  checked={preferences.overlays.warnings}
+                  onChange={(value) => setOverlay('warnings', value)}
+                />
+                {preferences.overlays.warnings && warningsError && (
+                  <p className="inline-warning">{warningsError}</p>
+                )}
+                {preferences.overlays.warnings && warnings && (
+                  <details className="notmar-details">
+                    <summary>
+                      {warnings.length} warnings in force ·{' '}
+                      {warnings.filter((warning) => warning.positions.length > 0).length} with
+                      positions
+                    </summary>
+                    <div className="notmar-list">
+                      {warnings.map((warning) => (
+                        <details key={warning.id} className="notmar-row">
+                          <summary>
+                            <strong>{warning.id}</strong> · {notmarAreaName(warning.navArea)} ·{' '}
+                            {(warning.text.split('\n')[0] ?? '').slice(0, 80)}
+                          </summary>
+                          <p className="notmar-text">{warning.text}</p>
+                          {warning.positions.length > 0 && (
+                            <button type="button" onClick={() => onSelectWarning(warning)}>
+                              Centre on chart
+                            </button>
+                          )}
+                        </details>
+                      ))}
+                    </div>
+                  </details>
+                )}
               </Section>
 
               <Section

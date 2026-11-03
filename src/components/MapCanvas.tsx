@@ -4,6 +4,9 @@ import lanes from '../data/lanes.json';
 import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import type { Pin } from '../lib/pins';
 import type { Track } from '../lib/tracks';
+import type { NotmarWarning } from '../lib/notmars';
+import { notmarAreaName } from '../lib/notmars';
+import { escapeXml } from '../lib/gpx';
 import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import { describeBridge, type BridgeRow } from '../lib/bridges';
 import { clearancesForFeature, loadClearanceDatasets, type ClearanceDatasets } from '../lib/clearances';
@@ -192,6 +195,8 @@ export interface MapCanvasProps {
   activeTrack?: Track | null;
   /** A saved track the user chose to show, drawn in cyan. */
   shownTrack?: Track | null;
+  /** In-force NGA broadcast warnings; one marker per parsed position. */
+  warnings?: NotmarWarning[] | null;
   /** Anchor circle and course to steer, set from the menu. */
   watch: VoyageWatch;
   /** Grid the cursor readout is written in. */
@@ -1576,6 +1581,38 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     draw(props.activeTrack ?? null, '#f2a65a');
     draw(props.shownTrack ?? null, '#3dd6ff');
   }, [props.activeTrack, props.shownTrack]);
+
+  // NAVAREA warnings: one marker per parsed position, all markers of a
+  // warning opening the same full text. Position-less warnings have no
+  // marker; they are readable in the menu list.
+  const warningsGroupRef = useRef<L.LayerGroup | null>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!warningsGroupRef.current) {
+      warningsGroupRef.current = L.layerGroup().addTo(map);
+    }
+    const group = warningsGroupRef.current;
+    group.clearLayers();
+    for (const warning of props.warnings ?? []) {
+      for (const position of warning.positions) {
+        const marker = L.circleMarker([position.lat, position.lon], {
+          radius: 6,
+          color: '#ff8a7a',
+          weight: 2,
+          fillColor: '#ff8a7a',
+          fillOpacity: 0.4,
+        });
+        marker.bindTooltip(warning.id, { sticky: true, className: 'marnav-tip', direction: 'top' });
+        marker.bindPopup(
+          `<div style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;"><strong>${escapeXml(warning.id)}</strong> · ${escapeXml(notmarAreaName(warning.navArea))}${warning.issueDate ? ` · issued ${escapeXml(warning.issueDate)}` : ''}\n\n${escapeXml(warning.text)}</div>`,
+          { maxWidth: 360 },
+        );
+        marker.addTo(group);
+      }
+    }
+  }, [props.warnings]);
 
   // Anchor swing circle and course to steer. Both are set by the navigator on
   // this device, so they are drawn whatever the overlay switches are doing. The

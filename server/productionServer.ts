@@ -8,6 +8,7 @@ import { createAisRelay } from './aisRelay';
 import { createDepthHandler } from './depthProxy';
 import { createOverpassHandler } from './overpassProxy';
 import { createNatura2000Handler } from './natura2000Proxy';
+import { createNotmarHandler } from './notmarProxy';
 
 const root = resolve(process.cwd(), 'dist');
 const port = Number(process.env.PORT || 3000);
@@ -19,6 +20,7 @@ const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
 const overpassHandler = createOverpassHandler(log);
 const depthHandler = createDepthHandler(log);
 const natura2000Handler = createNatura2000Handler();
+const notmarHandler = createNotmarHandler(log);
 const contourDir = process.env.WHEELOVER_CONTOUR_DATA_DIR ? resolve(process.env.WHEELOVER_CONTOUR_DATA_DIR) : resolve(root, 'contours');
 const marineDir = process.env.WHEELOVER_MARINE_DATA_DIR ? resolve(process.env.WHEELOVER_MARINE_DATA_DIR) : null;
 
@@ -123,6 +125,10 @@ async function handleHttp(req: IncomingMessage, res: ServerResponse) {
   }
   if (url.pathname === '/api/natura2000') {
     await natura2000Handler(req, res);
+    return;
+  }
+  if (url.pathname === '/api/notmars') {
+    await notmarHandler(req, res);
     return;
   }
   if (url.pathname.startsWith('/contours/') && contourDir) {

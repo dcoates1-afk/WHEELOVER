@@ -1079,6 +1079,55 @@ ul {
   margin-top: 10px;
 }
 
+/* NAVAREA warnings list in the chart menu. */
+.notmar-details {
+  margin-top: 6px;
+}
+
+.notmar-details > summary {
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+.notmar-list {
+  max-height: 40vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.notmar-row {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 138, 122, 0.08);
+}
+
+.notmar-row > summary {
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.notmar-text {
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.notmar-row button {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
 .boat-panel {
   position: fixed;
   z-index: 1250;

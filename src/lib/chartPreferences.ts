@@ -14,6 +14,7 @@ export interface OverlayPreferences {
   depthLabels: boolean;
   pois: boolean;
   bridges: boolean;
+  warnings: boolean;
 }
 
 export interface ChartPreferences {
@@ -52,6 +53,9 @@ export const DEFAULT_PREFERENCES: ChartPreferences = {
     // marine areas have no master switch any more: they are always drawn,
     // filtered per type in the Legend & mark filters.
     bridges: true,
+    // Warnings start off: the feed is ~200 KB and draws hundreds of
+    // markers, so it loads on the navigator's say-so, not on first paint.
+    warnings: false,
   },
   showAllMarks: false,
   showPosition: false,

@@ -32,6 +32,10 @@ import {
   writeTracks,
   type Track,
 } from './lib/tracks';
+import {
+  fetchNotmarWarnings,
+  type NotmarWarning,
+} from './lib/notmars';
 import { ZoomControls } from './components/ZoomControls';
 
 const MapCanvas = lazy(() => import('./components/MapCanvas').then((module) => ({ default: module.MapCanvas })));
@@ -149,6 +153,11 @@ export default function App() {
   const [tracks, setTracks] = useState<Track[]>(() => loadTracks(safeStorage()));
   const [recording, setRecording] = useState<Track | null>(null);
   const [shownTrackId, setShownTrackId] = useState<string | null>(null);
+  // In-force NGA broadcast warnings, fetched through the app's own relay
+  // (the NGA API sends no CORS headers). Kept after first load so toggling
+  // the layer back on is instant; toggle off/on refetches on next mount.
+  const [warnings, setWarnings] = useState<NotmarWarning[] | null>(null);
+  const [warningsError, setWarningsError] = useState<string | null>(null);
   // Tracking info keeps the target it was given and follows the live snapshot,
   // so a page left open keeps reading as the transponder reports again.
   const [trackingVessel, setTrackingVessel] = useState<AisVessel | null>(null);
@@ -340,6 +349,30 @@ export default function App() {
     if (!recording || !fix) return;
     setRecording((current) => (current ? appendPoint(current, fix) : current));
   }, [geo.fix, recording]);
+
+  // Load NGA warnings when the layer is switched on. A failure leaves a
+  // note in the menu instead of a broken layer; switching the layer off
+  // clears the error so switching it back on retries.
+  useEffect(() => {
+    if (!preferences.overlays.warnings && warningsError !== null) {
+      setWarningsError(null);
+    }
+  }, [preferences.overlays.warnings, warningsError]);
+
+  useEffect(() => {
+    if (!preferences.overlays.warnings || warnings !== null || warningsError !== null) return;
+    let cancelled = false;
+    fetchNotmarWarnings()
+      .then((loaded) => {
+        if (!cancelled) setWarnings(loaded);
+      })
+      .catch(() => {
+        if (!cancelled) setWarningsError('NGA warnings could not be loaded — try switching the layer off and on again.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [preferences.overlays.warnings, warnings, warningsError]);
 
   // Manifest + weekly revalidation, once per session.
   useEffect(() => {
@@ -783,6 +816,7 @@ export default function App() {
         onSelectPin={selectPin}
         activeTrack={recording}
         shownTrack={tracks.find((track) => track.id === shownTrackId) ?? null}
+        warnings={preferences.overlays.warnings ? warnings : null}
         fix={geo.fix}
         aisVessels={ais.vessels}
         selectedVesselMmsi={highlightedVessel}
@@ -1004,6 +1038,12 @@ export default function App() {
         fix={geo.fix}
         watch={watch}
         onWatch={setWatch}
+        warnings={warnings}
+        warningsError={warningsError}
+        onSelectWarning={(warning) => {
+          const first = warning.positions[0];
+          if (first) centreOn(first.lat, first.lon, 10);
+        }}
         hidden={Boolean(station || selectedMark || selectedVessel)}
       />
 

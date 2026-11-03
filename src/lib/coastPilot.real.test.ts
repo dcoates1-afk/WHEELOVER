@@ -55,5 +55,8 @@ describe('San Francisco Bay bridges against the real Coast Pilot dataset', () =>
       );
       if (least.length > 0) expect(feature.properties.highway).toBeTruthy();
     }
-  });
+    // Real-data joins over the whole SF fixture run ~3 s alone and tip over
+    // the 5 s default under full-suite parallel load; the work is the test's
+    // own cost, not a regression.
+  }, 15000);
 });

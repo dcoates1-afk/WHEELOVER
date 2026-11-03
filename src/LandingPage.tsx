@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import './landing.css';
 import { BRAND, DonateOptions } from './SiteChrome';
 
-const FEEDBACK_EMAIL = 'dcoates1@outlook.com';
+const FEEDBACK_EMAIL = 'atwheel-over@outlook.com';
 
 const features = [
   {

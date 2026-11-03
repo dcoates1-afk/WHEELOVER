@@ -1,7 +1,7 @@
 import './landing.css';
 import { BRAND, DonateOptions, SiteFooter, SiteHeader } from './SiteChrome';
 
-const FEEDBACK_EMAIL = 'dcoates1@outlook.com';
+const FEEDBACK_EMAIL = 'atwheel-over@outlook.com';
 
 export default function SupportPage() {
   return (

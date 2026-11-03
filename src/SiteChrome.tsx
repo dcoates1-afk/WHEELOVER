@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import './landing.css';
 
 export const BRAND = '@ Wheel-over';
-export const DONATE_EMAIL = 'dcoates1@outlook.com';
+export const DONATE_EMAIL = 'atwheel-over@outlook.com';
 export const PAYPAL_URL = 'https://paypal.me/DouglasCoates230';
 
 export function SiteHeader() {

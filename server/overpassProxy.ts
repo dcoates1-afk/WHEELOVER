@@ -270,6 +270,16 @@ export function buildOverpassQuery([south, west, north, east]: Bounds): string {
     `way["seamark:type"](${box})["seamark:type"!="calling-in_point"];`,
     `node["man_made"="lighthouse"](${box});`,
     `node["seamark:light:character"](${box});`,
+    // Lights mapped on the structure itself, not as a separate node: a
+    // bridge, pier or jetty way carrying seamark:light:* tags. The
+    // centre block collapses each way to its centre point, which is where
+    // the light is charted. Numbered (:1:) keys are second lights on the
+    // same structure; colour-only records are fixed lights mapped without
+    // a character.
+    `way["seamark:light:character"](${box});`,
+    `way["seamark:light:1:character"](${box});`,
+    `way["seamark:light:colour"](${box});`,
+    `way["seamark:light:1:colour"](${box});`,
     // Offshore structures: turbines are nodes, rigs are nodes or ways, and
     // node-mapped farms are points. Way/relation farms are fetched with
     // geometry below, not here, so each farm appears once.
@@ -571,7 +581,7 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
     // generic road-bridge results cannot linger as if they were water crossings.
     // Navaid replies are versioned the same way: the v2 query adds offshore
     // selectors, so a cached v1 reply must not serve as if it had them.
-    const cacheKind = kind === 'chart-features' ? `chart-features-cell-v9-${part}` : kind === 'navaids' ? 'navaids-v2' : kind;
+    const cacheKind = kind === 'chart-features' ? `chart-features-cell-v9-${part}` : kind === 'navaids' ? 'navaids-v3' : kind;
     const key = createHash('sha1')
       .update(`${cacheKind}:${cell}`)
       .digest('hex')

@@ -11,6 +11,15 @@ describe('navaid query', () => {
     expect(query).toContain('node["power"="plant"]["plant:source"="wind"](50.6,-0.4,50.8,-0.1)');
   });
 
+  it('fetches lights mapped on structure ways, not just light nodes', () => {
+    const query = buildOverpassQuery(view);
+    const centreBlock = query.split('out center tags;')[0];
+    expect(centreBlock).toContain('way["seamark:light:character"](50.6,-0.4,50.8,-0.1)');
+    expect(centreBlock).toContain('way["seamark:light:1:character"](50.6,-0.4,50.8,-0.1)');
+    expect(centreBlock).toContain('way["seamark:light:colour"](50.6,-0.4,50.8,-0.1)');
+    expect(centreBlock).toContain('way["seamark:light:1:colour"](50.6,-0.4,50.8,-0.1)');
+  });
+
   it('fetches farm areas with geometry, not as centre points', () => {
     const query = buildOverpassQuery(view);
     const centreBlock = query.split('out center tags;')[0];

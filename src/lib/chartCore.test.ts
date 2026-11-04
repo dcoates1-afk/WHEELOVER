@@ -11,6 +11,7 @@ import {
   lightSectorDisplayRadius,
   lightSectorDrawLimits,
   lightSectorsFromTags,
+  lightText,
   mirrorLightSectorBearings,
   mergeLightSectors,
   mergeNavaidSources,
@@ -166,6 +167,87 @@ describe('sector light geometry', () => {
     expect(lightSectorDisplayRadius(11, 12)).toBeCloseTo(lightSectorDisplayRadius(11, 24) / 2, 6);
     expect(lightSectorDisplayRadius(11, 0)).toBe(0);
     expect(lightSectorDisplayRadius(Number.NaN, 12)).toBe(0);
+  });
+});
+
+describe('structure-attached lights', () => {
+  it('charts a light mapped on a structure way with no seamark type', () => {
+    const result = classifyTags({
+      highway: 'footway',
+      bridge: 'yes',
+      'seamark:light:character': 'Fl',
+      'seamark:light:colour': 'R',
+      'seamark:light:period': '4',
+    });
+    expect(result?.category).toBe('light');
+    expect(result?.form).toBe('light');
+    expect(result?.lit).toBe(true);
+  });
+
+  it('charts a colour-only way light', () => {
+    const result = classifyTags({ 'man_made': 'pier', 'seamark:light:colour': 'G' });
+    expect(result?.category).toBe('light');
+  });
+
+  it('charts a lit bridge way as its light, not a facility dot', () => {
+    const lit = classifyTags({
+      'seamark:type': 'bridge',
+      'seamark:light:character': 'Oc',
+      'seamark:light:colour': 'W',
+    });
+    expect(lit?.category).toBe('light');
+    const unlit = classifyTags({ 'seamark:type': 'bridge' });
+    expect(unlit?.category).toBe('facility');
+  });
+
+  it('joins a second light on the same structure, but not its sectors', () => {
+    expect(lightText({
+      'seamark:light:character': 'Fl',
+      'seamark:light:colour': 'R',
+      'seamark:light:period': '4',
+      'seamark:light:1:character': 'Oc',
+      'seamark:light:1:colour': 'G',
+      'seamark:light:1:period': '6',
+    })).toBe('Fl R 4s; Oc G 6s');
+    // A numbered record with bearings is a sector of the one light, not
+    // a second light, so it stays out of the joined text.
+    expect(lightText({
+      'seamark:light:character': 'Fl',
+      'seamark:light:colour': 'W',
+      'seamark:light:1:character': 'Fl',
+      'seamark:light:1:colour': 'R',
+      'seamark:light:1:sector_start': '0',
+      'seamark:light:1:sector_end': '90',
+    })).toBe('Fl W');
+  });
+
+  it('keeps the sector-light summary unchanged', () => {
+    expect(lightText({
+      'seamark:light:1:character': 'Iso',
+      'seamark:light:1:colour': 'W',
+      'seamark:light:1:period': '2',
+      'seamark:light:1:sector_start': '0',
+      'seamark:light:1:sector_end': '360',
+    })).toBe('Iso W 2s');
+  });
+
+  it('normalizes a way-tagged light at the way centre', () => {
+    const mark = normalizeElement({
+      type: 'way',
+      id: 999,
+      center: { lat: 50.8, lon: -1.1 },
+      tags: {
+        highway: 'footway',
+        bridge: 'yes',
+        'seamark:light:character': 'Fl',
+        'seamark:light:colour': 'R',
+        'seamark:light:period': '4',
+      },
+    });
+    expect(mark?.category).toBe('light');
+    expect(mark?.lat).toBe(50.8);
+    expect(mark?.lon).toBe(-1.1);
+    expect(mark?.light).toBe('Fl R 4s');
   });
 });
 

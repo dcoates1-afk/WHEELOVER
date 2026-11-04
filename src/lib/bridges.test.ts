@@ -21,6 +21,27 @@ const johnsonStreet = {
 };
 
 describe('bridge card', () => {
+  it('shows lights mapped on the bridge itself', () => {
+    const card = describeBridge({
+      name: 'Lit Bridge',
+      properties: {
+        bridge: 'yes',
+        highway: 'footway',
+        'seamark:light:character': 'Fl',
+        'seamark:light:colour': 'R',
+        'seamark:light:period': '4',
+        'seamark:light:1:character': 'Oc',
+        'seamark:light:1:colour': 'G',
+        'seamark:light:1:period': '6',
+      },
+    }, { depth: 'm', distance: 'm-nm' });
+    const lights = card.sections.find((section) => section.title === 'Lights');
+    expect(lights?.rows).toContainEqual({ label: 'Light', value: 'Fl R 4s; Oc G 6s' });
+    // Light keys are shown, so they must not also spill into Other detail.
+    const other = card.sections.find((section) => section.title === 'Other mapped detail');
+    expect(other?.rows.some((row) => row.label.startsWith('Seamark light'))).toBe(false);
+  });
+
   it('names the bridge and the water it crosses', () => {
     const card = describeBridge(johnsonStreet, { depth: 'm', distance: 'm-nm' });
     expect(card.title).toBe('Johnson Street Bridge');

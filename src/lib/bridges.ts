@@ -5,6 +5,7 @@ import {
   type DistanceUnit,
 } from './settings';
 import type { BridgeClearance } from './clearances';
+import { lightText } from '../../shared/navaid-core.mjs';
 
 /** One labelled value in the bridge card. */
 export interface BridgeRow {
@@ -449,6 +450,19 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     });
   }
   if (clearance.length > 0) sections.push({ title: 'Air and water draught', rows: clearance });
+
+  // Lights mapped on the bridge itself, not as separate light nodes: the
+  // same joined text the mark detail shows, so a bridge with two lights
+  // reads as both, not just the first.
+  const bridgeLight = lightText(tags);
+  if (bridgeLight) {
+    for (const key of Object.keys(tags)) {
+      if (/^seamark:light:(1:|2:)?(character|colour|group|period|sequence|range|height|category)$/.test(key)) {
+        shownKeys.push(key);
+      }
+    }
+    sections.push({ title: 'Lights', rows: [{ label: 'Light', value: bridgeLight }] });
+  }
   if (structure.length > 0) sections.push({ title: 'Structure and operator', rows: structure });
   if (carryingRows.length > 0) sections.push({ title: 'Carrying', rows: carryingRows });
   if (restrictions.length > 0) sections.push({ title: 'Restrictions and access', rows: restrictions });

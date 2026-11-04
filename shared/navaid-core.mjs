@@ -141,7 +141,8 @@ function formFor(type, tags) {
   if (type.startsWith('beacon')) return 'beacon';
   if (type === 'lighthouse' || tags['man_made'] === 'lighthouse') return 'landmark';
   if (type.startsWith('light')) return 'light';
-  if (tags['seamark:light:character']) return 'light';
+  if (tags['seamark:light:character'] || tags['seamark:light:1:character'] ||
+    tags['seamark:light:colour'] || tags['seamark:light:1:colour']) return 'light';
   return 'mark';
 }
 
@@ -223,6 +224,11 @@ export function classifyTags(tags) {
       return { ...base, category: 'oil_rig', priority: PRIORITY.oil_rig };
     }
     if (lightChar) return { ...base, category: 'light', priority: PRIORITY.light };
+    // A colour with no character is still a light: fixed harbour and pier
+    // lights are often mapped with colour alone.
+    if (tags['seamark:light:colour'] || tags['seamark:light:1:colour']) {
+      return { ...base, category: 'light', priority: PRIORITY.light };
+    }
     // Some wrecks are mapped without the seamark schema at all.
     if (tags['man_made'] === 'wreck' || tags['historic'] === 'wreck') {
       return { ...base, category: 'wreck', priority: PRIORITY.wreck };
@@ -351,6 +357,10 @@ export function classifyTags(tags) {
     if (type === 'mooring') return { ...base, category: 'mooring', priority: PRIORITY.mooring };
     if (type === 'notice') return { ...base, category: 'notice', priority: PRIORITY.notice };
     if (type === 'gate') return { ...base, category: 'gate', priority: PRIORITY.gate };
+    // A bridge carrying a mapped light is charted as that light: the bridge
+    // itself is already drawn by the bridge layer, so the facility dot at
+    // its centre would hide the navigationally significant fact.
+    if (type === 'bridge' && lit) return { ...base, category: 'light', priority: PRIORITY.light };
     return { ...base, category: 'facility', priority: PRIORITY.facility };
   }
 
@@ -361,14 +371,46 @@ export function classifyTags(tags) {
   return null;
 }
 
-export function lightText(tags) {
-  const sector = lightSectorsFromTags(tags).find((entry) => entry.character);
-  const character = tags['seamark:light:character'] ?? sector?.character;
+/**
+ * Compose one light from its tags: character, optional group in brackets,
+ * colour, period in seconds. A numbered suffix (1, 2) reads that light's
+ * own tags; the un-suffixed set is the first light.
+ */
+function composeLight(tags, suffix) {
+  const prefix = suffix ? `seamark:light:${suffix}:` : 'seamark:light:';
+  const character = tags[`${prefix}character`];
   if (!character) return null;
-  const group = tags['seamark:light:group'] ?? sector?.group;
-  const colour = tags['seamark:light:colour'] ?? sector?.colour;
-  const period = tags['seamark:light:period'] ?? sector?.period;
+  const group = tags[`${prefix}group`];
+  const colour = tags[`${prefix}colour`];
+  const period = tags[`${prefix}period`];
   const char = group ? `${character}(${group})` : character;
+  return [char, colour, period ? `${period}s` : null].filter(Boolean).join(' ');
+}
+
+export function lightText(tags) {
+  // A structure with a mapped first light shows every light on it: numbered
+  // records without sector bearings are separate lights (a pierhead pair),
+  // while numbered records WITH bearings are sectors of one light and stay
+  // in the sector display, not joined here as if they were extra lights.
+  const primary = composeLight(tags, '');
+  if (primary) {
+    const parts = [primary];
+    for (const suffix of ['1', '2']) {
+      if (tags[`seamark:light:${suffix}:sector_start`] || tags[`seamark:light:${suffix}:sector_end`]) continue;
+      const extra = composeLight(tags, suffix);
+      if (extra) parts.push(extra);
+    }
+    return parts.join('; ');
+  }
+  // No first light mapped: fall back to the first numbered sector record,
+  // which is how sector-only lights (Hurst Point, St Catherine's Point)
+  // have always been summarised.
+  const sector = lightSectorsFromTags(tags).find((entry) => entry.character);
+  if (!sector?.character) return null;
+  const group = sector?.group;
+  const colour = sector?.colour;
+  const period = sector?.period;
+  const char = group ? `${sector.character}(${group})` : sector.character;
   return [char, colour, period ? `${period}s` : null].filter(Boolean).join(' ');
 }
 

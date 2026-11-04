@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatLatLon } from '../lib/coordinates';
 import { formatEtaHours, routeTotals, type RouteWaypoint } from '../lib/routes';
+import type { SavedRoute } from '../lib/savedRoutes';
 import { checkRouteHazards } from '../lib/routeHazards';
 import {
   evaluateGrounding,
@@ -22,11 +23,15 @@ interface RoutePanelProps {
   tss: MarineFeature[];
   /** Boat draught in metres, or null when the navigator has not set one. */
   draughtM: number | null;
+  savedRoutes: SavedRoute[];
   onClose: () => void;
   onAdd: () => void;
   onCancelAdding: () => void;
   onSpeedChange: (speedKnots: number) => void;
   onClear: () => void;
+  onSaveRoute: (name: string) => void;
+  onLoadRoute: (route: SavedRoute) => void;
+  onDeleteSavedRoute: (id: string) => void;
   onRemoveWaypoint: (index: number) => void;
   onCentreWaypoint: (waypoint: RouteWaypoint) => void;
   onAddTyped: (lat: number, lon: number) => void;
@@ -95,6 +100,7 @@ export default function RoutePanel(props: RoutePanelProps) {
   const [latText, setLatText] = useState('');
   const [lonText, setLonText] = useState('');
   const [typedError, setTypedError] = useState<string | null>(null);
+  const [saveName, setSaveName] = useState('');
 
   const addTyped = () => {
     const lat = Number(latText);
@@ -321,6 +327,52 @@ export default function RoutePanel(props: RoutePanelProps) {
         </button>
       </div>
       {typedError && <p className="route-error">{typedError}</p>}
+      <div className="route-hazards">
+        <h3>Saved routes</h3>
+        <p className="route-hazards-note">
+          Save this route by name to return to it later. Loading a saved route replaces the
+          current route.
+        </p>
+        <div className="route-typed">
+          <input
+            type="text"
+            placeholder="Route name"
+            value={saveName}
+            onChange={(event) => setSaveName(event.target.value)}
+            aria-label="Saved route name"
+          />
+          <button
+            type="button"
+            disabled={props.waypoints.length < 2}
+            onClick={() => {
+              props.onSaveRoute(saveName.trim() || `Route ${props.savedRoutes.length + 1}`);
+              setSaveName('');
+            }}
+          >
+            Save
+          </button>
+        </div>
+        {props.savedRoutes.length === 0 ? (
+          <p className="route-hazards-note">No saved routes yet.</p>
+        ) : (
+          <ol className="route-waypoints">
+            {props.savedRoutes.map((route) => (
+              <li key={route.id}>
+                <button type="button" onClick={() => props.onLoadRoute(route)}>
+                  {route.name} · {route.waypoints.length} waypoints
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Delete saved route ${route.name}`}
+                  onClick={() => props.onDeleteSavedRoute(route.id)}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
       {props.waypoints.length > 0 && (
         <button type="button" className="route-clear" onClick={props.onClear}>
           Clear route

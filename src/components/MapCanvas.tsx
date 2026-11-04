@@ -5,6 +5,7 @@ import { SHIP_REPORTING_SYSTEMS } from '../lib/shipReportingSystems';
 import type { Pin } from '../lib/pins';
 import type { Track } from '../lib/tracks';
 import type { RouteWaypoint } from '../lib/routes';
+import type { MobRecord } from '../lib/mob';
 import type { NotmarWarning } from '../lib/notmars';
 import { notmarAreaName } from '../lib/notmars';
 import { escapeXml } from '../lib/gpx';
@@ -200,6 +201,8 @@ export interface MapCanvasProps {
   routeWaypoints?: RouteWaypoint[];
   /** A route waypoint was dragged to a new position. */
   onRouteWaypointMove?: (index: number, lat: number, lon: number) => void;
+  /** Man overboard position, drawn as a red marker with a line from own ship. */
+  mob?: MobRecord | null;
   /** In-force NGA broadcast warnings; one marker per parsed position. */
   warnings?: NotmarWarning[] | null;
   /** Anchor circle and course to steer, set from the menu. */
@@ -1659,6 +1662,40 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       marker.addTo(group);
     });
   }, [props.routeWaypoints, props.onRouteWaypointMove]);
+
+  // Man overboard: a red marker on the recorded position, with a dashed line
+  // back from own ship while a GPS fix exists. No fix, no line — the marker
+  // alone is still the position to steer for.
+  const mobGroupRef = useRef<L.LayerGroup | null>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!mobGroupRef.current) {
+      mobGroupRef.current = L.layerGroup().addTo(map);
+    }
+    const group = mobGroupRef.current;
+    group.clearLayers();
+    const mob = props.mob ?? null;
+    if (!mob) return;
+    L.circleMarker([mob.lat, mob.lon], {
+      radius: 10,
+      color: '#ff6b5e',
+      weight: 3,
+      fillColor: '#ff6b5e',
+      fillOpacity: 0.5,
+    }).bindTooltip('MOB', { sticky: true, className: 'marnav-tip', direction: 'top' }).addTo(group);
+    const fix = props.fix;
+    if (fix) {
+      L.polyline(
+        [
+          [fix.lat, fix.lon],
+          [mob.lat, mob.lon],
+        ],
+        { color: '#ff6b5e', weight: 2, opacity: 0.9, dashArray: '6 4' },
+      ).addTo(group);
+    }
+  }, [props.mob, props.fix]);
 
   // NAVAREA warnings: one marker per parsed position, all markers of a
   // warning opening the same full text. Position-less warnings have no

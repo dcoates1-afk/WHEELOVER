@@ -11,6 +11,7 @@ import { DestinationSearch } from './components/DestinationSearch';
 import { PinsPanel } from './components/PinsPanel';
 import { BoatPanel } from './components/BoatPanel';
 import RoutePanel from './components/RoutePanel';
+import MobPanel from './components/MobPanel';
 import type { DestinationResult } from './lib/destinationSearch';
 import { createPin, loadPins, removePin, updatePin, writePins, type Pin } from './lib/pins';
 import {
@@ -20,6 +21,20 @@ import {
   writeRouteSpeed,
   type RouteWaypoint,
 } from './lib/routes';
+import {
+  createSavedRoute,
+  loadSavedRoutes,
+  writeSavedRoutes,
+  type SavedRoute,
+} from './lib/savedRoutes';
+import {
+  clearMob,
+  createMobRecord,
+  loadMob,
+  mobRangeFromFix,
+  writeMob,
+  type MobRecord,
+} from './lib/mob';
 import {
   loadChecklist,
   loadFuel,
@@ -167,6 +182,12 @@ export default function App() {
   const [routeOpen, setRouteOpen] = useState(false);
   const [routeAdding, setRouteAdding] = useState(false);
   const [speedKnots, setSpeedKnots] = useState<number>(() => loadRouteSpeed(safeStorage()));
+  // Named saved routes, kept on this device only. Loading one replaces the
+  // active route; the builder always works on a single route.
+  const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>(() => loadSavedRoutes(safeStorage()));
+  // Man overboard: at most one recorded position, kept on this device only.
+  const [mob, setMob] = useState<MobRecord | null>(() => loadMob(safeStorage()));
+  const [mobOpen, setMobOpen] = useState(false);
   // In-force NGA broadcast warnings, fetched through the app's own relay
   // (the NGA API sends no CORS headers). Kept after first load so toggling
   // the layer back on is instant; toggle off/on refetches on next mount.
@@ -289,7 +310,7 @@ export default function App() {
     preferences.showPosition;
   // The pins and boat panels cover the bottom-left corner, so the other
   // chart controls step aside while either is open; the panel buttons stay.
-  const chartControlsHiddenWithPanels = chartControlsHidden || pinsOpen || boatOpen || routeOpen;
+  const chartControlsHiddenWithPanels = chartControlsHidden || pinsOpen || boatOpen || routeOpen || mobOpen;
 
   const locateMe = useCallback(() => {
     if (gpsMode === 'off') {
@@ -363,6 +384,15 @@ export default function App() {
   useEffect(() => {
     writeRouteSpeed(storage, speedKnots);
   }, [speedKnots, storage]);
+
+  useEffect(() => {
+    writeSavedRoutes(storage, savedRoutes);
+  }, [savedRoutes, storage]);
+
+  useEffect(() => {
+    if (mob) writeMob(storage, mob);
+    else clearMob(storage);
+  }, [mob, storage]);
 
   // Sample the GPS fix into the live track. appendPoint drops fixes within
   // 25 m of the last point, so the effect is quiet while at anchor.
@@ -845,6 +875,7 @@ export default function App() {
         activeTrack={recording}
         shownTrack={tracks.find((track) => track.id === shownTrackId) ?? null}
         routeWaypoints={routeWaypoints}
+        mob={mob}
         onRouteWaypointMove={(index, lat, lon) =>
           setRouteWaypoints((current) => current.map((point, i) => (i === index ? { lat, lon } : point)))
         }
@@ -906,6 +937,7 @@ export default function App() {
           setPinsOpen((open) => !open);
           setBoatOpen(false);
           setRouteOpen(false);
+          setMobOpen(false);
         }}
         aria-label="Place pins"
       >
@@ -928,6 +960,7 @@ export default function App() {
           setBoatOpen((open) => !open);
           setPinsOpen(false);
           setRouteOpen(false);
+          setMobOpen(false);
         }}
         aria-label="Boat log"
       >
@@ -948,6 +981,7 @@ export default function App() {
           setRouteOpen((open) => !open);
           setPinsOpen(false);
           setBoatOpen(false);
+          setMobOpen(false);
         }}
         aria-label="Route builder"
       >
@@ -963,6 +997,33 @@ export default function App() {
           <circle cx="20" cy="4" r="2.5" fill="#3dd6ff" />
         </svg>
         <span>Route{routeWaypoints.length > 0 ? ` (${routeWaypoints.length})` : ''}</span>
+      </button>
+
+      <button
+        type="button"
+        className={`mob-button ${chartControlsHidden ? 'is-hidden' : ''}`}
+        onClick={() => {
+          if (!mob) {
+            const fix = geo.fix;
+            const record = fix
+              ? createMobRecord(fix.lat, fix.lon, true)
+              : createMobRecord(view.center[0], view.center[1], false);
+            setMob(record);
+            setMobOpen(true);
+          } else {
+            setMobOpen((open) => !open);
+          }
+          setPinsOpen(false);
+          setBoatOpen(false);
+          setRouteOpen(false);
+        }}
+        aria-label="Man overboard"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="#ff6b5e" strokeWidth="2.4" />
+          <circle cx="12" cy="12" r="3" fill="#ff6b5e" />
+        </svg>
+        <span>MOB</span>
       </button>
 
       {pinsOpen && (
@@ -1060,6 +1121,23 @@ export default function App() {
             const parsed = Number(settings.boat.draughtM);
             return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
           })()}
+          savedRoutes={savedRoutes}
+          onSaveRoute={(name) => {
+            if (routeWaypoints.length < 2) return;
+            setSavedRoutes((current) => {
+              const next = [createSavedRoute(name, routeWaypoints, speedKnots), ...current];
+              return next.sort((a, b) => b.createdAt - a.createdAt);
+            });
+          }}
+          onLoadRoute={(route) => {
+            setRouteWaypoints(route.waypoints.map((point) => ({ ...point })));
+            setSpeedKnots(route.speedKnots);
+            setRouteAdding(false);
+            if (route.waypoints.length > 0) {
+              centreOn(route.waypoints[0].lat, route.waypoints[0].lon, 14);
+            }
+          }}
+          onDeleteSavedRoute={(id) => setSavedRoutes((current) => current.filter((route) => route.id !== id))}
           onClose={() => {
             setRouteOpen(false);
             setRouteAdding(false);
@@ -1073,6 +1151,27 @@ export default function App() {
           }
           onCentreWaypoint={(waypoint) => centreOn(waypoint.lat, waypoint.lon, 14)}
           onAddTyped={(lat, lon) => setRouteWaypoints((current) => [...current, { lat, lon }])}
+        />
+      )}
+
+      {mobOpen && mob && (
+        <MobPanel
+          mob={mob}
+          fix={geo.fix}
+          range={mobRangeFromFix(geo.fix, mob)}
+          onUpdate={() => {
+            const fix = geo.fix;
+            setMob(
+              fix
+                ? createMobRecord(fix.lat, fix.lon, true)
+                : createMobRecord(view.center[0], view.center[1], false),
+            );
+          }}
+          onClear={() => {
+            setMob(null);
+            setMobOpen(false);
+          }}
+          onClose={() => setMobOpen(false)}
         />
       )}
 

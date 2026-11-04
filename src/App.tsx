@@ -215,8 +215,9 @@ export default function App() {
   // Fuel tank capacity in litres, kept on this device only.
   const [tankCapacityL, setTankCapacityL] = useState<number | null>(() => loadFuelTankCapacity(safeStorage()));
   // In-force NGA broadcast warnings, fetched through the app's own relay
-  // (the NGA API sends no CORS headers). Kept after first load so toggling
-  // the layer back on is instant; toggle off/on refetches on next mount.
+  // (the NGA API sends no CORS headers). Refreshed while the layer is on
+  // (see below), so a long session picks up warnings issued after
+  // switch-on; the held copy still shows while a refresh is in flight.
   const [warnings, setWarnings] = useState<NotmarWarning[] | null>(null);
   const [warningsError, setWarningsError] = useState<string | null>(null);
   const [warningsStale, setWarningsStale] = useState(false);
@@ -479,23 +480,34 @@ export default function App() {
     }
   }, [preferences.overlays.warnings, warningsError, warningsStale]);
 
+  // NAVAREA warnings load on switch-on and refetch every 15 minutes while
+  // the layer stays on, matching the relay's cache, so warnings issued
+  // mid-session appear without a reload. A failed refresh leaves the held
+  // copy in place and shows the menu note; the next tick retries, so
+  // recovery from an NGA outage is automatic. Switching the layer off
+  // clears the timer (and, via the effect above, the error/stale notes).
   useEffect(() => {
-    if (!preferences.overlays.warnings || warnings !== null || warningsError !== null) return;
+    if (!preferences.overlays.warnings) return;
     let cancelled = false;
-    fetchNotmarWarnings()
-      .then((loaded) => {
-        if (!cancelled) {
+    const load = () => {
+      fetchNotmarWarnings()
+        .then((loaded) => {
+          if (cancelled) return;
           setWarnings(loaded.warnings);
           setWarningsStale(loaded.stale);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setWarningsError('NGA warnings could not be loaded — try switching the layer off and on again.');
-      });
+          setWarningsError(null);
+        })
+        .catch(() => {
+          if (!cancelled) setWarningsError('NGA warnings could not be loaded — try switching the layer off and on again.');
+        });
+    };
+    load();
+    const timer = setInterval(load, 15 * 60 * 1000);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
-  }, [preferences.overlays.warnings, warnings, warningsError]);
+  }, [preferences.overlays.warnings]);
 
   // Load USCG local notices for the current view when the layer is on. A
   // failure leaves a note in the menu instead of a broken layer; switching

@@ -954,6 +954,12 @@ export function LayerControl({
                   checked={preferences.overlays.warnings}
                   onChange={(value) => setOverlay('warnings', value)}
                 />
+                <LegendRow
+                  label="Tide stations"
+                  hint="NOAA harmonic stations · tap a station for its forecast"
+                  checked={preferences.overlays.tideStations}
+                  onChange={(value) => setOverlay('tideStations', value)}
+                />
                 {preferences.overlays.warnings && warningsError && (
                   <p className="inline-warning">{warningsError}</p>
                 )}
@@ -1292,6 +1298,13 @@ export function LayerControl({
                     toUnit={(metres) => convertDepth(metres, settings.units.depth)}
                     fromUnitText={(text) => parseDepth(text, settings.units.depth)}
                     onChangeMetres={(value) => setBoat('draughtM', value)}
+                  />
+                  <TextField
+                    label="Fuel burn"
+                    hint="Litres per hour, for route fuel estimates"
+                    placeholder="e.g. 8"
+                    value={settings.boat.fuelBurnLph}
+                    onChange={(value) => setBoat('fuelBurnLph', value)}
                   />
                 </div>
                 <TextField

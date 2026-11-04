@@ -6,6 +6,7 @@ import type { Pin } from '../lib/pins';
 import type { Track } from '../lib/tracks';
 import type { RouteWaypoint } from '../lib/routes';
 import type { MobRecord } from '../lib/mob';
+import type { TideStation } from '../lib/tides';
 import type { NotmarWarning } from '../lib/notmars';
 import { notmarAreaName } from '../lib/notmars';
 import { escapeXml } from '../lib/gpx';
@@ -203,6 +204,10 @@ export interface MapCanvasProps {
   onRouteWaypointMove?: (index: number, lat: number, lon: number) => void;
   /** Man overboard position, drawn as a red marker with a line from own ship. */
   mob?: MobRecord | null;
+  /** NOAA harmonic stations for the tide layer; null when the layer is off. */
+  tideStations?: TideStation[] | null;
+  /** A tide station marker was tapped. */
+  onSelectTideStation?: (station: TideStation) => void;
   /** In-force NGA broadcast warnings; one marker per parsed position. */
   warnings?: NotmarWarning[] | null;
   /** Anchor circle and course to steer, set from the menu. */
@@ -442,6 +447,8 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   const [cursor, setCursor] = useState<{ lat: number; lon: number } | null>(null);
   const [liveZoom, setLiveZoom] = useState(props.initialZoom ?? 11);
   const [clearanceDatasets, setClearanceDatasets] = useState<ClearanceDatasets | null>(null);
+  /** Current view bounds, tracked so the tide layer draws only visible stations. */
+  const [tideBounds, setTideBounds] = useState<[number, number, number, number] | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -577,6 +584,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       ];
       handlers.current.onViewChange(bbox, map.getZoom(), [centre.lat, centre.lng]);
       handlers.current.onNoaaCoverageChange(isUsWaters(centre.lat, centre.lng));
+      setTideBounds(bbox);
     };
 
     map.on('moveend', emitView);
@@ -1696,6 +1704,39 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       ).addTo(group);
     }
   }, [props.mob, props.fix]);
+
+  // Tide stations: small markers for the stations in the current view, at
+  // harbour zoom and above. Drawing all 3,500 worldwide would swamp the
+  // chart, so the layer stays empty until the view is tight enough.
+  const tideGroupRef = useRef<L.LayerGroup | null>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!tideGroupRef.current) {
+      tideGroupRef.current = L.layerGroup().addTo(map);
+    }
+    const group = tideGroupRef.current;
+    group.clearLayers();
+    const stations = props.tideStations ?? null;
+    if (!stations || !tideBounds || props.zoom < 8) return;
+    const [south, west, north, east] = tideBounds;
+    for (const station of stations) {
+      if (station.lat < south || station.lat > north || station.lon < west || station.lon > east) continue;
+      const marker = L.circleMarker([station.lat, station.lon], {
+        radius: 4,
+        color: '#7be0a3',
+        weight: 2,
+        fillColor: '#7be0a3',
+        fillOpacity: 0.6,
+      });
+      marker.bindTooltip(station.name, { sticky: true, className: 'marnav-tip', direction: 'top' });
+      marker.on('click', () => {
+        handlers.current.onSelectTideStation?.(station);
+      });
+      marker.addTo(group);
+    }
+  }, [props.tideStations, tideBounds, props.zoom]);
 
   // NAVAREA warnings: one marker per parsed position, all markers of a
   // warning opening the same full text. Position-less warnings have no

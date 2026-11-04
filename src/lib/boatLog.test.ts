@@ -6,15 +6,20 @@ import {
   createMaintenanceTask,
   daysUntilDue,
   fuelTotals,
+  lastRecordedLevel,
   loadChecklist,
   loadFuel,
+  loadFuelTankCapacity,
   loadLogbook,
   loadMaintenance,
   maintenanceStatus,
+  tankPercent,
   writeChecklist,
   writeFuel,
+  writeFuelTankCapacity,
   writeLogbook,
   writeMaintenance,
+  type FuelFill,
   type MaintenanceTask,
 } from './boatLog';
 
@@ -118,6 +123,37 @@ describe('fuel', () => {
     ]);
     const loaded = loadFuel(storage);
     expect(loaded.map((fill) => fill.litres)).toEqual([25, 40]);
-    expect(fuelTotals(loaded)).toEqual({ litres: 65, cost: 80, pricedFills: 1 });
+    expect(fuelTotals(loaded)).toEqual({
+      litres: 65,
+      cost: 80,
+      pricedFills: 1,
+      pricedLitres: 40,
+      avgCostPerLitre: 2,
+    });
+  });
+
+  it('keeps old fills without a recorded level, and reports the latest level', () => {
+    const storage = memoryStorage();
+    const legacy = { id: 'fuel-old', date: '2026-10-01', litres: 30, totalCost: null, note: '' };
+    writeFuel(storage, [
+      legacy as FuelFill,
+      createFuelFill('2026-11-03', 25, null, '', 120),
+    ]);
+    const loaded = loadFuel(storage);
+    expect(loaded).toHaveLength(2);
+    expect(lastRecordedLevel(loaded)).toBe(120);
+    expect(lastRecordedLevel([])).toBeNull();
+  });
+
+  it('stores tank capacity and computes percent only when both are known', () => {
+    const storage = memoryStorage();
+    expect(loadFuelTankCapacity(storage)).toBeNull();
+    writeFuelTankCapacity(storage, 200);
+    expect(loadFuelTankCapacity(storage)).toBe(200);
+    expect(tankPercent(120, 200)).toBe(60);
+    expect(tankPercent(null, 200)).toBeNull();
+    expect(tankPercent(120, null)).toBeNull();
+    writeFuelTankCapacity(storage, null);
+    expect(loadFuelTankCapacity(storage)).toBeNull();
   });
 });

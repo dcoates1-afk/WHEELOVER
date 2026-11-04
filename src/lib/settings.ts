@@ -62,6 +62,8 @@ export interface BoatSettings {
   lengthM: string;
   beamM: string;
   draughtM: string;
+  /** Fuel burn in litres per hour, as typed; empty means unknown. */
+  fuelBurnLph: string;
   mmsi: string;
   callSign: string;
 }
@@ -213,6 +215,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     lengthM: '',
     beamM: '',
     draughtM: '',
+    fuelBurnLph: '',
     mmsi: '',
     callSign: '',
   },
@@ -272,6 +275,7 @@ export function sanitizeSettings(value: unknown): AppSettings {
       lengthM: text(boat.lengthM),
       beamM: text(boat.beamM),
       draughtM: text(boat.draughtM),
+      fuelBurnLph: text(boat.fuelBurnLph),
       mmsi: text(boat.mmsi),
       callSign: text(boat.callSign),
     },

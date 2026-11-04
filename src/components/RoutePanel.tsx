@@ -12,6 +12,7 @@ import {
 import type { ChartFeature } from '../lib/overpass';
 import type { ProtectedAreaFeature } from '../lib/protectedAreas';
 import type { MarineFeature } from '../lib/marineDb';
+import type { NavTarget } from '../lib/navigation';
 
 interface RoutePanelProps {
   waypoints: RouteWaypoint[];
@@ -23,6 +24,17 @@ interface RoutePanelProps {
   tss: MarineFeature[];
   /** Boat draught in metres, or null when the navigator has not set one. */
   draughtM: number | null;
+  /** Fuel burn in litres per hour, or null when the navigator has not set one. */
+  fuelBurnLph: number | null;
+  /** Active navigation state, driven by the app's GPS fix. */
+  navigating: boolean;
+  navTarget: NavTarget | null;
+  navComplete: boolean;
+  followPaused: boolean;
+  onStartNavigation: () => void;
+  onStopNavigation: () => void;
+  onResumeFollow: () => void;
+  onNextWaypoint: () => void;
   savedRoutes: SavedRoute[];
   onClose: () => void;
   onAdd: () => void;
@@ -72,7 +84,24 @@ export default function RoutePanel(props: RoutePanelProps) {
   );
   const waypointSignature = JSON.stringify(props.waypoints);
   const draughtM = props.draughtM;
-  const groundingStale = grounding !== null && grounding.signature !== waypointSignature;
+  // The check's inputs: waypoints, draught and margin. When any of them
+  // changes the stored result is stale and the auto-recalc below re-runs it.
+  const groundingSignature = `${waypointSignature}|${draughtM ?? ''}|${marginM}`;
+  const groundingStale = grounding !== null && grounding.signature !== groundingSignature;
+
+  // Auto-recalc: once a grounding result exists, re-run it (debounced) when
+  // its inputs change, so the flags track the route instead of going stale.
+  useEffect(() => {
+    if (grounding === null || grounding.signature === groundingSignature) return;
+    if (props.waypoints.length < 2 || draughtM === null || groundingLoading) return;
+    const timer = setTimeout(() => {
+      void runGroundingCheck();
+    }, 800);
+    return () => clearTimeout(timer);
+    // runGroundingCheck is re-created each render; the values it reads are
+    // the effect's dependencies, so the closure is always current.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grounding, groundingSignature, draughtM, marginM, groundingLoading]);
 
   const runGroundingCheck = async () => {
     const draught = props.draughtM;
@@ -91,7 +120,7 @@ export default function RoutePanel(props: RoutePanelProps) {
       }));
       setGrounding({
         result: evaluateGrounding(samples, draught, marginM),
-        signature: waypointSignature,
+        signature: groundingSignature,
       });
     } finally {
       if (!controller.signal.aborted) setGroundingLoading(false);
@@ -147,6 +176,11 @@ export default function RoutePanel(props: RoutePanelProps) {
         <span>
           ETA <strong>{formatEtaHours(totals.etaHours)}</strong>
         </span>
+        {props.fuelBurnLph !== null && totals.etaHours !== null && (
+          <span>
+            Fuel <strong>~{(totals.etaHours * props.fuelBurnLph).toFixed(1)} L</strong>
+          </span>
+        )}
         <label>
           Speed (kn)
           <input
@@ -174,6 +208,50 @@ export default function RoutePanel(props: RoutePanelProps) {
             </li>
           ))}
         </ol>
+      )}
+      {props.waypoints.length >= 2 && (
+        <div className="route-hazards">
+          <h3>Navigate</h3>
+          {!props.navigating ? (
+            <>
+              <p className="route-hazards-note">
+                Follow your GPS fix along this route: the chart recentres as you sail and the
+                panel reports the next waypoint. Nothing here steers the boat.
+              </p>
+              <button type="button" className="route-clear" onClick={props.onStartNavigation}>
+                Start navigating
+              </button>
+            </>
+          ) : (
+            <>
+              {props.navComplete ? (
+                <p>Route complete — you have arrived at the last waypoint.</p>
+              ) : props.navTarget !== null ? (
+                <p>
+                  Next: <strong>W{props.navTarget.index + 1}</strong> ·{' '}
+                  <strong>{props.navTarget.distanceNm.toFixed(1)} NM</strong> · bearing{' '}
+                  <strong>{Math.round(props.navTarget.bearingDeg)}°</strong>
+                </p>
+              ) : (
+                <p className="route-hazards-note">Waiting for a GPS fix…</p>
+              )}
+              {props.followPaused && (
+                <p className="route-hazards-note">
+                  Follow paused because you moved the chart.{' '}
+                  <button type="button" onClick={props.onResumeFollow}>
+                    Resume follow
+                  </button>
+                </p>
+              )}
+              <button type="button" className="route-clear" onClick={props.onNextWaypoint}>
+                Next waypoint
+              </button>
+              <button type="button" className="route-clear" onClick={props.onStopNavigation}>
+                Stop navigating
+              </button>
+            </>
+          )}
+        </div>
       )}
       {props.waypoints.length >= 2 && (
         <div className="route-hazards">

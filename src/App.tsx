@@ -12,6 +12,8 @@ import { PinsPanel } from './components/PinsPanel';
 import { BoatPanel } from './components/BoatPanel';
 import RoutePanel from './components/RoutePanel';
 import MobPanel from './components/MobPanel';
+import NavStrip from './components/NavStrip';
+import TideStationPanel from './components/TideStationPanel';
 import type { DestinationResult } from './lib/destinationSearch';
 import { createPin, loadPins, removePin, updatePin, writePins, type Pin } from './lib/pins';
 import {
@@ -38,16 +40,24 @@ import {
 import {
   loadChecklist,
   loadFuel,
+  loadFuelTankCapacity,
   loadLogbook,
   loadMaintenance,
   writeChecklist,
   writeFuel,
+  writeFuelTankCapacity,
   writeLogbook,
   writeMaintenance,
   type FuelFill,
   type LogEntry,
   type MaintenanceTask,
 } from './lib/boatLog';
+import {
+  advanceNavTarget,
+  navTarget,
+  shouldFollowPan,
+} from './lib/navigation';
+import { loadTideStations, type TideStation } from './lib/tides';
 import {
   appendPoint,
   createTrack,
@@ -188,6 +198,17 @@ export default function App() {
   // Man overboard: at most one recorded position, kept on this device only.
   const [mob, setMob] = useState<MobRecord | null>(() => loadMob(safeStorage()));
   const [mobOpen, setMobOpen] = useState(false);
+  // Active navigation along the route, driven by the GPS fix. navIndex is
+  // the waypoint being aimed at (starting at the second waypoint); follow
+  // pauses when the navigator moves the chart by hand.
+  const [navigating, setNavigating] = useState(false);
+  const [navIndex, setNavIndex] = useState(1);
+  const [followPaused, setFollowPaused] = useState(false);
+  // Tide stations for the layer, loaded once when the layer is switched on.
+  const [tideStations, setTideStations] = useState<TideStation[] | null>(null);
+  const [selectedTideStation, setSelectedTideStation] = useState<TideStation | null>(null);
+  // Fuel tank capacity in litres, kept on this device only.
+  const [tankCapacityL, setTankCapacityL] = useState<number | null>(() => loadFuelTankCapacity(safeStorage()));
   // In-force NGA broadcast warnings, fetched through the app's own relay
   // (the NGA API sends no CORS headers). Kept after first load so toggling
   // the layer back on is instant; toggle off/on refetches on next mount.
@@ -310,7 +331,7 @@ export default function App() {
     preferences.showPosition;
   // The pins and boat panels cover the bottom-left corner, so the other
   // chart controls step aside while either is open; the panel buttons stay.
-  const chartControlsHiddenWithPanels = chartControlsHidden || pinsOpen || boatOpen || routeOpen || mobOpen;
+  const chartControlsHiddenWithPanels = chartControlsHidden || pinsOpen || boatOpen || routeOpen || mobOpen || selectedTideStation !== null;
 
   const locateMe = useCallback(() => {
     if (gpsMode === 'off') {
@@ -393,6 +414,41 @@ export default function App() {
     if (mob) writeMob(storage, mob);
     else clearMob(storage);
   }, [mob, storage]);
+
+  useEffect(() => {
+    writeFuelTankCapacity(storage, tankCapacityL);
+  }, [tankCapacityL, storage]);
+
+  // Tide stations load once, when the layer is switched on.
+  useEffect(() => {
+    if (!preferences.overlays.tideStations || tideStations !== null) return;
+    let cancelled = false;
+    loadTideStations().then((stations) => {
+      if (!cancelled) setTideStations(stations);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [preferences.overlays.tideStations, tideStations]);
+
+  // Navigation target from the fix, advanced as waypoints are reached.
+  const navTargetValue = useMemo(
+    () => (navigating ? navTarget(geo.fix, routeWaypoints, navIndex) : null),
+    [navigating, geo.fix, routeWaypoints, navIndex],
+  );
+  const navCompleteValue = useMemo(() => {
+    if (!navigating) return false;
+    return advanceNavTarget(geo.fix, routeWaypoints, navIndex).complete;
+  }, [navigating, geo.fix, routeWaypoints, navIndex]);
+  useEffect(() => {
+    if (!navigating || !geo.fix) return;
+    const next = advanceNavTarget(geo.fix, routeWaypoints, navIndex);
+    if (next.index !== navIndex) setNavIndex(next.index);
+  }, [navigating, geo.fix, routeWaypoints, navIndex]);
+  useEffect(() => {
+    if (navigating && routeWaypoints.length < 2) setNavigating(false);
+  }, [navigating, routeWaypoints]);
+
 
   // Sample the GPS fix into the live track. appendPoint drops fixes within
   // 25 m of the last point, so the effect is quiet while at anchor.
@@ -755,6 +811,16 @@ export default function App() {
     mapRef.current?.flyTo(lat, lon, zoom);
   }, []);
 
+  // Follow: recentre only when the fix nears the edge of the view, so
+  // following does not refetch the overlay on every fix.
+  useEffect(() => {
+    if (!navigating || !geo.fix || followPaused) return;
+    const spanDeg = 360 / 2 ** view.zoom;
+    if (shouldFollowPan(geo.fix.lat, geo.fix.lon, view.center[0], view.center[1], spanDeg)) {
+      centreOn(geo.fix.lat, geo.fix.lon, view.zoom);
+    }
+  }, [navigating, geo.fix, followPaused, view, centreOn]);
+
   const checkForUpdates = useCallback(async () => {
     setChecking(true);
     setCheckMessage('Checking NAVAID database…');
@@ -845,6 +911,8 @@ export default function App() {
         onViewChange={onViewChange}
         onUserMove={() => {
           userMoved.current = true;
+          // Moving the chart by hand pauses follow; the strip offers Resume.
+          if (navigating) setFollowPaused(true);
         }}
         onNoaaCoverageChange={setNoaaCovered}
         onMapClick={(_lat, _lon) => {
@@ -876,6 +944,14 @@ export default function App() {
         shownTrack={tracks.find((track) => track.id === shownTrackId) ?? null}
         routeWaypoints={routeWaypoints}
         mob={mob}
+        tideStations={preferences.overlays.tideStations ? tideStations : null}
+        onSelectTideStation={(station) => {
+          setSelectedTideStation(station);
+          setPinsOpen(false);
+          setBoatOpen(false);
+          setRouteOpen(false);
+          setMobOpen(false);
+        }}
         onRouteWaypointMove={(index, lat, lon) =>
           setRouteWaypoints((current) => current.map((point, i) => (i === index ? { lat, lon } : point)))
         }
@@ -938,6 +1014,7 @@ export default function App() {
           setBoatOpen(false);
           setRouteOpen(false);
           setMobOpen(false);
+          setSelectedTideStation(null);
         }}
         aria-label="Place pins"
       >
@@ -961,6 +1038,7 @@ export default function App() {
           setPinsOpen(false);
           setRouteOpen(false);
           setMobOpen(false);
+          setSelectedTideStation(null);
         }}
         aria-label="Boat log"
       >
@@ -982,6 +1060,7 @@ export default function App() {
           setPinsOpen(false);
           setBoatOpen(false);
           setMobOpen(false);
+          setSelectedTideStation(null);
         }}
         aria-label="Route builder"
       >
@@ -1016,6 +1095,7 @@ export default function App() {
           setPinsOpen(false);
           setBoatOpen(false);
           setRouteOpen(false);
+          setSelectedTideStation(null);
         }}
         aria-label="Man overboard"
       >
@@ -1081,6 +1161,8 @@ export default function App() {
             setFuel((current) => [...current, fill].sort((a, b) => (a.date < b.date ? 1 : -1)))
           }
           onDeleteFuel={(id) => setFuel((current) => current.filter((fill) => fill.id !== id))}
+          tankCapacityL={tankCapacityL}
+          onTankCapacityChange={setTankCapacityL}
           tracks={tracks}
           recording={recording}
           hasFix={Boolean(geo.fix)}
@@ -1121,6 +1203,24 @@ export default function App() {
             const parsed = Number(settings.boat.draughtM);
             return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
           })()}
+          fuelBurnLph={(() => {
+            const parsed = Number(settings.boat.fuelBurnLph);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+          })()}
+          navigating={navigating}
+          navTarget={navTargetValue}
+          navComplete={navCompleteValue}
+          followPaused={followPaused}
+          onStartNavigation={() => {
+            setNavIndex(1);
+            setFollowPaused(false);
+            setNavigating(true);
+          }}
+          onStopNavigation={() => setNavigating(false)}
+          onResumeFollow={() => setFollowPaused(false)}
+          onNextWaypoint={() =>
+            setNavIndex((current) => Math.min(current + 1, Math.max(1, routeWaypoints.length - 1)))
+          }
           savedRoutes={savedRoutes}
           onSaveRoute={(name) => {
             if (routeWaypoints.length < 2) return;
@@ -1170,8 +1270,35 @@ export default function App() {
           onClear={() => {
             setMob(null);
             setMobOpen(false);
+          setSelectedTideStation(null);
           }}
           onClose={() => setMobOpen(false)}
+        />
+      )}
+
+      {selectedTideStation && (
+        <TideStationPanel
+          station={selectedTideStation}
+          onClose={() => setSelectedTideStation(null)}
+        />
+      )}
+
+      {navigating && (
+        <NavStrip
+          fix={geo.fix}
+          target={navTargetValue}
+          complete={navCompleteValue}
+          followPaused={followPaused}
+          units={settings.units}
+          onStop={() => setNavigating(false)}
+          onResumeFollow={() => setFollowPaused(false)}
+          onOpenRoute={() => {
+            setRouteOpen(true);
+            setPinsOpen(false);
+            setBoatOpen(false);
+            setMobOpen(false);
+            setSelectedTideStation(null);
+          }}
         />
       )}
 

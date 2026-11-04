@@ -5,7 +5,9 @@ import {
   createLogEntry,
   createMaintenanceTask,
   fuelTotals,
+  lastRecordedLevel,
   maintenanceStatus,
+  tankPercent,
   type FuelFill,
   type LogEntry,
   type MaintenanceTask,
@@ -33,6 +35,8 @@ interface BoatPanelProps {
   fuel: FuelFill[];
   onAddFuel: (fill: FuelFill) => void;
   onDeleteFuel: (id: string) => void;
+  tankCapacityL: number | null;
+  onTankCapacityChange: (litres: number | null) => void;
   tracks: Track[];
   recording: Track | null;
   hasFix: boolean;
@@ -75,12 +79,15 @@ export function BoatPanel(props: BoatPanelProps) {
   const [fuelDate, setFuelDate] = useState(todayLocal());
   const [fuelLitres, setFuelLitres] = useState('');
   const [fuelCost, setFuelCost] = useState('');
+  const [fuelLevel, setFuelLevel] = useState('');
   const [fuelNote, setFuelNote] = useState('');
   const checkedCount = CHECKLIST.flatMap((group) => group.items).filter(
     (item) => props.checked[item.id],
   ).length;
   const checklistTotal = CHECKLIST.flatMap((group) => group.items).length;
   const totals = fuelTotals(props.fuel);
+  const lastLevel = lastRecordedLevel(props.fuel);
+  const levelPercent = tankPercent(lastLevel, props.tankCapacityL);
   const today = new Date();
 
   return (
@@ -289,7 +296,32 @@ export function BoatPanel(props: BoatPanelProps) {
           <p className="boat-progress">
             {totals.litres.toFixed(1)} L total
             {totals.pricedFills > 0 ? ` · ${totals.cost.toFixed(2)} across ${totals.pricedFills} priced fills` : ''}
+            {totals.avgCostPerLitre !== null ? ` · avg ${totals.avgCostPerLitre.toFixed(2)} per L` : ''}
           </p>
+          <p className="boat-note">
+            {lastLevel !== null ? (
+              <>
+                Last recorded tank level: <strong>{lastLevel.toFixed(1)} L</strong>
+                {levelPercent !== null ? ` (${levelPercent.toFixed(0)}% of tank)` : ''}
+              </>
+            ) : (
+              'Record a tank level with a fill to track it here.'
+            )}
+          </p>
+          <label className="boat-note">
+            Tank capacity (L, optional)
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={props.tankCapacityL ?? ''}
+              onChange={(event) => {
+                const value = event.target.value.trim() === '' ? null : Number(event.target.value);
+                props.onTankCapacityChange(value !== null && Number.isFinite(value) && value > 0 ? value : null);
+              }}
+              placeholder="e.g. 200"
+            />
+          </label>
           <form
             className="boat-form"
             onSubmit={(event) => {
@@ -298,9 +330,12 @@ export function BoatPanel(props: BoatPanelProps) {
               if (!Number.isFinite(litres) || litres <= 0) return;
               const cost = fuelCost.trim() === '' ? null : Number(fuelCost);
               if (cost !== null && (!Number.isFinite(cost) || cost < 0)) return;
-              props.onAddFuel(createFuelFill(fuelDate, litres, cost, fuelNote.trim()));
+              const level = fuelLevel.trim() === '' ? null : Number(fuelLevel);
+              if (level !== null && (!Number.isFinite(level) || level < 0)) return;
+              props.onAddFuel(createFuelFill(fuelDate, litres, cost, fuelNote.trim(), level));
               setFuelLitres('');
               setFuelCost('');
+              setFuelLevel('');
               setFuelNote('');
             }}
           >
@@ -331,6 +366,17 @@ export function BoatPanel(props: BoatPanelProps) {
               />
             </label>
             <label>
+              Tank level after fill (L, optional)
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={fuelLevel}
+                onChange={(event) => setFuelLevel(event.target.value)}
+                placeholder="e.g. 120"
+              />
+            </label>
+            <label>
               Note
               <input
                 value={fuelNote}
@@ -354,6 +400,7 @@ export function BoatPanel(props: BoatPanelProps) {
                     </strong>
                     <span>
                       {fill.totalCost !== null ? `Cost ${fill.totalCost.toFixed(2)}` : 'Cost unknown'}
+                      {fill.levelAfterL !== null && fill.levelAfterL !== undefined ? ` · Tank ${fill.levelAfterL} L` : ''}
                       {fill.note ? ` · ${fill.note}` : ''}
                     </span>
                   </div>

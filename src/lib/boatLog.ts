@@ -29,6 +29,8 @@ export interface FuelFill {
   litres: number;
   /** Total cost in the navigator's currency; null when unknown. */
   totalCost: number | null;
+  /** Tank level in litres just after this fill; null when not recorded. */
+  levelAfterL: number | null;
   note: string;
 }
 
@@ -153,6 +155,9 @@ function isFuelFill(value: unknown): value is FuelFill {
     Number.isFinite(fill.litres) &&
     fill.litres > 0 &&
     (fill.totalCost === null || (typeof fill.totalCost === 'number' && Number.isFinite(fill.totalCost))) &&
+    (fill.levelAfterL === null ||
+      fill.levelAfterL === undefined ||
+      (typeof fill.levelAfterL === 'number' && Number.isFinite(fill.levelAfterL) && fill.levelAfterL >= 0)) &&
     typeof fill.note === 'string'
   );
 }
@@ -233,8 +238,9 @@ export function createFuelFill(
   litres: number,
   totalCost: number | null,
   note: string,
+  levelAfterL: number | null = null,
 ): FuelFill {
-  return { id: makeId('fuel'), date, litres, totalCost, note };
+  return { id: makeId('fuel'), date, litres, totalCost, levelAfterL, note };
 }
 
 export function loadFuel(storage: Storage | null): FuelFill[] {
@@ -245,16 +251,70 @@ export function writeFuel(storage: Storage | null, fills: FuelFill[]): void {
   writeArray(storage, FUEL_KEY, fills);
 }
 
-export function fuelTotals(fills: FuelFill[]): { litres: number; cost: number; pricedFills: number } {
+export function fuelTotals(fills: FuelFill[]): {
+  litres: number;
+  cost: number;
+  pricedFills: number;
+  pricedLitres: number;
+  avgCostPerLitre: number | null;
+} {
   let litres = 0;
   let cost = 0;
   let pricedFills = 0;
+  let pricedLitres = 0;
   for (const fill of fills) {
     litres += fill.litres;
     if (fill.totalCost !== null) {
       cost += fill.totalCost;
       pricedFills += 1;
+      pricedLitres += fill.litres;
     }
   }
-  return { litres, cost, pricedFills };
+  return {
+    litres,
+    cost,
+    pricedFills,
+    pricedLitres,
+    avgCostPerLitre: pricedLitres > 0 ? cost / pricedLitres : null,
+  };
+}
+
+/** Tank capacity in litres, stored on its own; null when never set. */
+export const FUEL_TANK_KEY = 'wheel-over:fuel-tank-capacity';
+
+export function loadFuelTankCapacity(storage: Storage | null): number | null {
+  if (!storage) return null;
+  try {
+    const parsed = Number(storage.getItem(FUEL_TANK_KEY));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeFuelTankCapacity(storage: Storage | null, litres: number | null): void {
+  if (!storage) return;
+  try {
+    if (litres === null) storage.removeItem(FUEL_TANK_KEY);
+    else storage.setItem(FUEL_TANK_KEY, String(litres));
+  } catch {
+    // A full or unavailable store must not break the log.
+  }
+}
+
+/**
+ * Latest recorded tank level: fills load newest first, so the first fill
+ * carrying a level wins. Null when no fill recorded one.
+ */
+export function lastRecordedLevel(fills: FuelFill[]): number | null {
+  for (const fill of fills) {
+    if (fill.levelAfterL !== null) return fill.levelAfterL;
+  }
+  return null;
+}
+
+/** Tank level as a percent of capacity; null when either is unknown. */
+export function tankPercent(levelL: number | null, capacityL: number | null): number | null {
+  if (levelL === null || capacityL === null || capacityL <= 0) return null;
+  return (levelL / capacityL) * 100;
 }

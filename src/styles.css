@@ -1190,6 +1190,53 @@ ul {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
 }
 
+/* Tide station panel, same slot as the MOB panel (never open together). */
+.tide-panel {
+  position: fixed;
+  z-index: 1250;
+  left: 12px;
+  bottom: calc(var(--safe-bottom) + 270px);
+  width: min(380px, calc(100vw - 24px));
+  max-height: 52vh;
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid rgba(123, 224, 163, 0.65);
+  border-radius: 20px;
+  background: rgba(6, 28, 41, 0.97);
+  color: var(--ink);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* Navigation heading strip, under the centred brand. */
+.nav-strip {
+  position: fixed;
+  z-index: 1250;
+  top: calc(var(--safe-top) + 44px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  border: 1px solid rgba(61, 214, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(6, 28, 41, 0.92);
+  color: var(--ink);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.nav-strip button {
+  border: 1px solid rgba(61, 214, 255, 0.45);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 10px;
+}
+
 .route-panel {
   position: fixed;
   z-index: 1250;

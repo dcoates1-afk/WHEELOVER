@@ -1049,12 +1049,6 @@ export function LayerControl({
               </Section>
 
               <Section title="Chart detail" id="menu-chart-detail">
-                <ToggleRow
-                  label="Show all marks"
-                  hint="Ignore zoom declutter (can look crowded)"
-                  checked={preferences.showAllMarks}
-                  onChange={(value) => onChange({ ...preferences, showAllMarks: value })}
-                />
                 <p className="menu-note" data-testid="mark-stats">
                   {markStats.shown} of {markStats.total} aids in view ·{' '}
                   {markStats.live ? 'live Overpass query' : markStats.cached ? 'device cache' : 'mark database'}

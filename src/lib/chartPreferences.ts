@@ -21,7 +21,6 @@ export interface OverlayPreferences {
 export interface ChartPreferences {
   base: BaseLayerId;
   overlays: OverlayPreferences;
-  showAllMarks: boolean;
   showPosition: boolean;
   theme: ThemeId;
   /** NAVAID legend groups the user switched off. */
@@ -61,7 +60,6 @@ export const DEFAULT_PREFERENCES: ChartPreferences = {
     // the current view at harbour zoom and above, on the same say-so.
     tideStations: false,
   },
-  showAllMarks: false,
   showPosition: false,
   theme: 'day',
   hiddenGroups: [],
@@ -97,7 +95,6 @@ export function sanitizePreferences(value: unknown): ChartPreferences {
   return {
     base,
     overlays,
-    showAllMarks: input.showAllMarks === true,
     showPosition: input.showPosition === true,
     theme,
     hiddenGroups: sanitizeHiddenGroups(input.hiddenGroups),

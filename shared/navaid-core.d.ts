@@ -195,7 +195,6 @@ export function selectVisibleNavaids(
   options: {
     zoom: number;
     bounds: [number, number, number, number];
-    showAll?: boolean;
     limit?: number;
     center?: [number, number];
   },

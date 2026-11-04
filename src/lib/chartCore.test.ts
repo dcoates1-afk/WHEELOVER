@@ -723,16 +723,14 @@ describe('cells', () => {
   });
 });
 
-describe('zoom declutter', () => {
+describe('visible marks', () => {
   const bounds: [number, number, number, number] = [50.5, -1.8, 51.0, -0.7];
 
-  it('hides low-priority marks at low zoom unless Show all marks is on', () => {
+  it('shows every in-view mark regardless of zoom — the legend alone governs classes', () => {
     const light = mark({ category: 'major_light', lat: 50.8, lon: -1.2 });
     const mooring = mark({ category: 'mooring', lat: 50.81, lon: -1.21 });
     const zoomedOut = selectVisibleNavaids([light, mooring], { zoom: 10, bounds }) as Navaid[];
-    expect(zoomedOut.map((entry) => entry.category)).toEqual(['major_light']);
-    const all = selectVisibleNavaids([light, mooring], { zoom: 10, bounds, showAll: true }) as Navaid[];
-    expect(all).toHaveLength(2);
+    expect(zoomedOut).toHaveLength(2);
   });
 
   it('filters marks outside the viewport but includes a reporting area whose boundary crosses it', () => {
@@ -744,7 +742,7 @@ describe('zoom declutter', () => {
       lon: -1.2,
       paths: [[[50.7, -1.7], [50.7, -1.6], [51.3, -1.6], [51.3, -1.7]]],
     });
-    const visible = selectVisibleNavaids([inside, outside, area], { zoom: 14, bounds, showAll: true }) as Navaid[];
+    const visible = selectVisibleNavaids([inside, outside, area], { zoom: 14, bounds }) as Navaid[];
     expect(visible.map(({ id }) => id)).toContain(area.id);
     expect(visible.map(({ id }) => id)).toContain(inside.id);
     expect(visible.map(({ id }) => id)).not.toContain(outside.id);
@@ -759,7 +757,6 @@ describe('zoom declutter', () => {
     const visible = selectVisibleNavaids(dense, {
       zoom: 15,
       bounds: [50.5, -1.8, 51.0, -0.7],
-      showAll: true,
       limit: 10,
     }) as Navaid[];
     expect(visible).toHaveLength(10);

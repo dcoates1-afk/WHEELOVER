@@ -972,12 +972,13 @@ export function priorityFor(category) {
 }
 
 /**
- * Zoom declutter. Honours "Show all marks", filters to the viewport, then caps
- * the result by priority and proximity to the chart centre.
+ * Visible marks: filters to the viewport, then caps the result by priority
+ * and proximity to the chart centre. Mark classes are governed solely by the
+ * Legend & mark filters — there is no zoom declutter any more.
  */
 export function selectVisibleNavaids(navaids, options) {
-  const { zoom, bounds, showAll = false } = options;
-  const limit = options.limit ?? (showAll ? SHOW_ALL_LIMIT : DEFAULT_MARK_LIMIT);
+  const { bounds } = options;
+  const limit = options.limit ?? SHOW_ALL_LIMIT;
   const [south, west, north, east] = bounds;
   const centre = options.center ?? [(south + north) / 2, (west + east) / 2];
 
@@ -991,7 +992,7 @@ export function selectVisibleNavaids(navaids, options) {
     }
     return n.lat >= south && n.lat <= north && n.lon >= west && n.lon <= east;
   });
-  const visible = showAll ? inView : inView.filter((n) => zoom >= minZoomFor(n.category));
+  const visible = inView;
   if (visible.length <= limit) return visible;
 
   const scored = visible.map((n) => ({

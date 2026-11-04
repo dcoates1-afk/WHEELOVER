@@ -126,14 +126,12 @@ describe('chart preferences', () => {
     const sanitized = sanitizePreferences({
       base: 'satellite',
       overlays: { tss: true },
-      showAllMarks: true,
       showPosition: true,
       theme: 'red',
     });
     expect(sanitized.base).toBe('satellite');
     expect(sanitized.overlays.tss).toBe(true);
     expect(sanitized.overlays.ferries).toBe(true);
-    expect(sanitized.showAllMarks).toBe(true);
     expect(sanitized.theme).toBe('red');
 
     const storage = fakeStorage();

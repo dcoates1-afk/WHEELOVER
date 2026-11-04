@@ -780,10 +780,9 @@ export default function App() {
       selectVisibleNavaids(chartedMarks, {
         zoom: view.zoom,
         bounds: view.bounds,
-        showAll: preferences.showAllMarks,
         center: view.center,
       }),
-    [chartedMarks, view, preferences.showAllMarks],
+    [chartedMarks, view],
   );
 
   const dbInfo: DbInfo | null = useMemo(() => {

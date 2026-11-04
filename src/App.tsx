@@ -111,6 +111,7 @@ import { navaidDatabase, regionForPoint } from './lib/navaidDb';
 import { ialaRegion } from './lib/navaids';
 import type { NavaidManifest } from './lib/navaidDb';
 import { queryChartFeaturePart, queryNavaids, type ChartFeature, type ChartFeaturePart } from './lib/overpass';
+import { loadCcgLights, ccgRecordToNavaid } from './lib/ccgLights';
 import { loadMarineData, type MarineFeature } from './lib/marineDb';
 import {
   applyLightSectorIndex,
@@ -269,6 +270,8 @@ export default function App() {
   const [noaaCovered, setNoaaCovered] = useState(false);
   const [marks, setMarks] = useState<Navaid[]>([]);
   const [worldwideNavaids, setWorldwideNavaids] = useState<Navaid[] | null>(null);
+  // CCG List of Lights supplement, loaded once; filtered to the view in chartedMarks.
+  const [ccgLights, setCcgLights] = useState<Navaid[] | null>(null);
   // Sector bearings for the worldwide archive marks, loaded by viewport.
   const [lightSectorIndex, setLightSectorIndex] = useState<Map<string, LightSectorEntry>>(new Map());
   // Sound signals and racons, which the archive snapshot did not carry.
@@ -607,8 +610,19 @@ export default function App() {
     };
   }, [view, db.manifest, reloadKey]);
 
-  // Ferry routes and TSS load from the versioned archive by visible bounds.
-  // Retain the last successful set while the next viewport is fetched, so a
+  // CCG lights load once; a failed load just means no supplement, marks still work.
+  useEffect(() => {
+    let cancelled = false;
+    loadCcgLights().then((records) => {
+      if (cancelled) return;
+      setCcgLights(records.map(ccgRecordToNavaid));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Ferry routes and TSS load from the versioned archive by visible bounds.  // Retain the last successful set while the next viewport is fetched, so a
   // slow shard request cannot blank the overlay and make lanes appear missing.
   const marineRequestId = useRef(0);
   useEffect(() => {
@@ -816,8 +830,14 @@ export default function App() {
     }
     // Collapse same-aid records across sources first (official light onto the
     // OSM position), then the remaining close duplicates, before sectors
-    // attach by id.
-    const crossMerged = mergeNavaidSources([...merged.values()]).navaids;
+    // attach by id. CCG lights join the merge with a small bounds pad, so a
+    // CCG aid just outside the view still merges onto its in-view OSM twin.
+    const [south, west, north, east] = view.bounds;
+    const pad = 0.01;
+    const ccgInView = (ccgLights ?? []).filter(
+      (mark) => mark.lat >= south - pad && mark.lat <= north + pad && mark.lon >= west - pad && mark.lon <= east + pad,
+    );
+    const crossMerged = mergeNavaidSources([...merged.values(), ...ccgInView]).navaids;
     const deduped = dedupeNavaids(crossMerged).navaids;
     // Attach worldwide sector bearings last, so a regional record that already
     // carries checked sectors keeps them.
@@ -830,7 +850,7 @@ export default function App() {
     // Charted detail fills whatever the mark still has blank.
     const withDetails = applyMarkDetailIndex(withSignals, markDetailIndex);
     return annotateTransits(filterNavaidsByGroups(withDetails, preferences.hiddenGroups));
-  }, [marks, worldwideNavaids, lightSectorIndex, markSignalIndex, markDetailIndex, preferences.hiddenGroups]);
+  }, [marks, worldwideNavaids, ccgLights, view.bounds, lightSectorIndex, markSignalIndex, markDetailIndex, preferences.hiddenGroups]);
 
   const marksInView = useMemo(() => {
     const [south, west, north, east] = view.bounds;

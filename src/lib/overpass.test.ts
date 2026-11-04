@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { bridgeCrossesWater, chartFeatureProperties, chartFeaturesFromElements, coalesceBridges, isTidalWater, queryChartFeaturePart, type ChartFeature } from './overpass';
+import { bridgeCrossesWater, chartFeatureCacheKey, chartFeatureProperties, chartFeaturesFromElements, CHART_FEATURE_FILTER_VERSION, coalesceBridges, isTidalWater, queryChartFeaturePart, type ChartFeature } from './overpass';
 
 describe('water-crossing bridge detection', () => {
   it('does not treat a charted bridge over untidal water as a tidal bridge', () => {
@@ -167,6 +167,61 @@ describe('water-crossing bridge detection', () => {
       geometry: [{ lat: 51, lon: -1.0003 }, { lat: 51.001, lon: -1.0003 }],
     };
     expect(bridgeCrossesWater(bridgeAt(51), [untidalReach, harbour(51.015, -1)])).toBe(false);
+  });
+
+  it('does not let a big sea polygon\'s bounding box make inland reaches tidal', () => {
+    // A U-shaped bay: water along the west, north and east edges, land in
+    // the south-centre pocket. The pocket sits inside the bay's bounding
+    // box, so a box test read every reach there as tidal — Haro Strait's
+    // box covers the whole Colquitz valley the same way. The reach must be
+    // judged by its distance to actual water, not to the box.
+    const bay = {
+      type: 'way' as const,
+      tags: { natural: 'water', water: 'bay' },
+      geometry: [
+        { lat: 51.0, lon: -1.0 }, { lat: 52.0, lon: -1.0 }, { lat: 52.0, lon: 0.0 },
+        { lat: 51.5, lon: 0.0 }, { lat: 51.5, lon: -0.5 }, { lat: 51.0, lon: -0.5 },
+        { lat: 51.0, lon: -1.0 },
+      ],
+    };
+    // Reach in the middle of the pocket, ~14 km from the nearest water.
+    const pocketReach = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 51.25, lon: -0.30 }, { lat: 51.25, lon: -0.20 }],
+    };
+    const pocketBridge = {
+      type: 'way' as const,
+      tags: { bridge: 'yes', highway: 'secondary' },
+      geometry: [{ lat: 51.24, lon: -0.25 }, { lat: 51.26, lon: -0.25 }],
+    };
+    expect(bridgeCrossesWater(pocketBridge, [pocketReach, bay])).toBe(false);
+    // Same pocket, but the reach runs 700 m from the bay's edge: within the
+    // two-kilometre reach, so its bridge stays.
+    const nearReach = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 51.25, lon: -0.49 }, { lat: 51.25, lon: -0.40 }],
+    };
+    const nearBridge = {
+      type: 'way' as const,
+      tags: { bridge: 'yes', highway: 'secondary' },
+      geometry: [{ lat: 51.24, lon: -0.45 }, { lat: 51.26, lon: -0.45 }],
+    };
+    expect(bridgeCrossesWater(nearBridge, [nearReach, bay])).toBe(true);
+    // And a reach inside the bay itself stays tidal, however far it runs
+    // from the boundary.
+    const insideReach = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 51.25, lon: -0.60 }, { lat: 51.25, lon: -0.55 }],
+    };
+    const insideBridge = {
+      type: 'way' as const,
+      tags: { bridge: 'yes', highway: 'secondary' },
+      geometry: [{ lat: 51.24, lon: -0.575 }, { lat: 51.26, lon: -0.575 }],
+    };
+    expect(bridgeCrossesWater(insideBridge, [insideReach, bay])).toBe(true);
   });
 
   it('does not treat a river far from any tidal water as tidal', () => {
@@ -826,6 +881,15 @@ describe('chart feature popup data', () => {
 });
 
 describe('chart feature fetching', () => {
+  it('versions the cache key with the filter version', () => {
+    // A rule change must make old device cells miss, not serve bridges
+    // drawn under older rules.
+    const key = chartFeatureCacheKey('bridges', [51, -1, 52, 0]);
+    expect(key).toContain(`v${CHART_FEATURE_FILTER_VERSION}`);
+    expect(key).toContain('bridges');
+    expect(chartFeatureCacheKey('areas', [51, -1, 52, 0])).not.toBe(key);
+  });
+
   it('retries a failed part fetch before giving up', async () => {
     const fetchMock = vi.fn(async () => {
       if (fetchMock.mock.calls.length === 1) {

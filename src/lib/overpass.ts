@@ -44,6 +44,13 @@ export interface LiveChartFeaturesResult {
 const memory = new Map<string, { navaids: Navaid[]; at: number }>();
 const TTL_MS = 5 * 60 * 1000;
 const CHART_FEATURE_CACHE_MS = 10 * 60 * 1000;
+/**
+ * Bump this whenever the bridge/area matching rules change (span rule, tidal
+ * reach, ...). The device cache outlives deploys, so without a version in the
+ * key a device keeps serving cells drawn under older rules for up to thirty
+ * days. Cells stored under older keys simply stop matching and age out.
+ */
+export const CHART_FEATURE_FILTER_VERSION = 2;
 const chartFeatureMemory = new Map<string, { features: ChartFeature[]; at: number }>();
 
 export type RawChartElement = {
@@ -145,7 +152,16 @@ function segmentsWithinTolerance(
   return segmentsIntersect(a, b, c, d) || segmentsNear(a, b, c, d);
 }
 
-/** Whether two segments pass within the water-crossing tolerance. */
+/** Whether two segments come within the given metres of each other. */
+function segmentsWithinMeters(
+  a: Point, b: Point, c: Point, d: Point, meters: number,
+): boolean {
+  if (segmentsIntersect(a, b, c, d)) return true;
+  return pointToSegmentMeters(a, c, d) <= meters ||
+    pointToSegmentMeters(b, c, d) <= meters ||
+    pointToSegmentMeters(c, a, b) <= meters ||
+    pointToSegmentMeters(d, a, b) <= meters;
+}
 function segmentsNear(
   a: { lat: number; lon: number }, b: { lat: number; lon: number },
   c: { lat: number; lon: number }, d: { lat: number; lon: number },
@@ -255,16 +271,16 @@ export function isTidalWater(tags: Record<string, string> | undefined): boolean 
  * How far up a river the tide is taken to reach, when nothing in the map says.
  *
  * A tidal river is usually mapped as nothing more than `water=river` or a river
- * centreline, so a reach is treated as tidal when it lies within this distance
- * of water that is unambiguously tidal — the sea, an estuary, a harbour basin
- * or a bay. Two kilometres covers the mouth reaches of untagged rivers, where
- * a boat from the sea can actually be, without pretending the tide runs the
- * whole length of every short coastal river: at twelve kilometres the
- * Colquitz read as tidal end to end, and its trail bridges with it. Rivers
- * whose tide genuinely runs further carry `tidal=yes` on those reaches, or are
- * mapped as water areas, so they do not depend on this inference.
+ * centreline, so a reach is treated as tidal when its mapped line comes within
+ * this distance of water that is unambiguously tidal — the sea, an estuary, a
+ * harbour basin or a bay — or lies inside such a water area. Two kilometres
+ * covers the mouth reaches of untagged rivers, where a boat from the sea can
+ * actually be. The distance is measured path to path, in metres, not box to
+ * box: a big sea polygon's bounding box covers whole inland valleys (Haro
+ * Strait's box covers the entire Colquitz valley), so a box test let every
+ * reach inside the box read as tidal no matter how far the actual water was.
  */
-export const TIDAL_REACH_DEGREES = 0.018;
+export const TIDAL_REACH_METERS = 2000;
 
 /**
  * River water, whose tidal reach has to be inferred from position.
@@ -398,14 +414,62 @@ function prepareWater(water: RawChartElement): PreparedWater | null {
  * bridges keep the lenient rule, where touching water or passing within
  * tolerance of it counts.
  */
+/**
+ * Whether a non-tidal water body lies within tidal reach of tidal water.
+ *
+ * Measured path to path, in metres — never box to box, which let every river
+ * reach inside a big sea polygon's bounding box read as tidal. A reach inside
+ * a tidal area counts too: its line may run well inside a bay's boundary and
+ * still be tidal water. Segment pairs far apart are pruned by their bounding
+ * boxes first, so a strait with a thousand segments costs comparisons, not
+ * distances.
+ */
+function waterWithinTidalReach(water: PreparedWater, seeds: PreparedWater[]): boolean {
+  for (const seed of seeds) {
+    for (const seedLine of seed.paths) {
+      const seedPoints = seedLine.map(([lat, lon]) => ({ lat, lon }));
+      const first = seedPoints[0];
+      const last = seedPoints[seedPoints.length - 1];
+      const closedRing = seedPoints.length >= 4 && first !== undefined && last !== undefined &&
+        Math.abs(first.lat - last.lat) < 1e-9 && Math.abs(first.lon - last.lon) < 1e-9;
+      if (seed.surface || closedRing) {
+        const ring = seedPoints.map(({ lat, lon }) => [lon, lat]);
+        const [seedSouth, seedWest, seedNorth, seedEast] = boundsOfPaths([seedLine]);
+        for (const waterLine of water.paths) {
+          for (const [lat, lon] of waterLine) {
+            if (lat < seedSouth || lat > seedNorth || lon < seedWest || lon > seedEast) continue;
+            if (pointInRing(lon, lat, ring)) return true;
+          }
+        }
+      }
+      for (const waterLine of water.paths) {
+        for (let waterIndex = 1; waterIndex < waterLine.length; waterIndex += 1) {
+          const a = { lat: waterLine[waterIndex - 1][0], lon: waterLine[waterIndex - 1][1] };
+          const b = { lat: waterLine[waterIndex][0], lon: waterLine[waterIndex][1] };
+          for (let seedIndex = 1; seedIndex < seedLine.length; seedIndex += 1) {
+            const c = { lat: seedLine[seedIndex - 1][0], lon: seedLine[seedIndex - 1][1] };
+            const d = { lat: seedLine[seedIndex][0], lon: seedLine[seedIndex][1] };
+            // Prune in degrees at the pair's mean latitude; the prune is
+            // wider than the reach, so it never drops a real near miss.
+            const meanLat = ((a.lat + b.lat + c.lat + d.lat) / 4) * Math.PI / 180;
+            const latTol = TIDAL_REACH_METERS / 110_574;
+            const lonTol = TIDAL_REACH_METERS / (111_320 * Math.cos(meanLat));
+            if (Math.min(c.lat, d.lat) > Math.max(a.lat, b.lat) + latTol ||
+              Math.max(c.lat, d.lat) < Math.min(a.lat, b.lat) - latTol ||
+              Math.min(c.lon, d.lon) > Math.max(a.lon, b.lon) + lonTol ||
+              Math.max(c.lon, d.lon) < Math.min(a.lon, b.lon) - lonTol) continue;
+            if (segmentsWithinMeters(a, b, c, d, TIDAL_REACH_METERS)) return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area, waters: PreparedWater[], strict: boolean): string | null {
   const reach = padArea(bridgeBounds, WATER_CROSSING_TOLERANCE_DEGREES);
-  // Bounds of water that is tidal on its own terms, padded by the tidal reach,
-  // so each river reach can be accepted or skipped without walking every water
-  // body's geometry.
-  const tidalReach = waters
-    .filter((water) => water.seed)
-    .map((water) => padArea(water.bounds, TIDAL_REACH_DEGREES));
+  const seeds = waters.filter((water) => water.seed);
   // A bridge can meet several bodies at once — the river, an unnamed dock beside
   // it, and a marina basin alongside. The card should say "River Itchen", so an
   // unnamed match is only a fallback and open tidal water beats a marina.
@@ -424,7 +488,7 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
   };
   for (const water of waters) {
     if (!areasOverlap(reach, water.bounds)) continue;
-    if (!water.seed && !tidalReach.some((area) => areasOverlap(water.bounds, area))) continue;
+    if (!water.seed && !waterWithinTidalReach(water, seeds)) continue;
     // Once a named body has matched, only open tidal water can improve on it.
     if (namedMatch !== null && !water.seed) continue;
     // Once any crossing is found, an unnamed body can add nothing.
@@ -588,12 +652,21 @@ export async function queryNavaids(
  */
 export type ChartFeaturePart = 'bridges' | 'areas';
 
+/**
+ * The device-cache key for one fetched cell. The filter version is part of
+ * the key, so a rule change (see CHART_FEATURE_FILTER_VERSION) makes old
+ * cells miss instead of serving bridges drawn under older rules.
+ */
+export function chartFeatureCacheKey(part: ChartFeaturePart, bounds: Bounds): string {
+  return `${part}:v${CHART_FEATURE_FILTER_VERSION}:${keyFor(snapCellBounds(bounds))}`;
+}
+
 export async function queryChartFeaturePart(
   bounds: Bounds,
   part: ChartFeaturePart,
   options: { signal?: AbortSignal; force?: boolean } = {},
 ): Promise<LiveChartFeaturesResult> {
-  const key = `${part}:${keyFor(snapCellBounds(bounds))}`;
+  const key = chartFeatureCacheKey(part, bounds);
   const cached = chartFeatureMemory.get(key);
   if (!options.force && cached && Date.now() - cached.at < CHART_FEATURE_CACHE_MS) {
     return { features: cached.features, cached: true, fetchedAt: cached.at };

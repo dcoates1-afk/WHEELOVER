@@ -21,6 +21,7 @@ import {
   normalizeElement,
   distanceMeters,
   dedupeNavaids,
+  mergeNavaidSources,
   cellKey,
   cellBounds,
   DEFAULT_CELL_SIZE,
@@ -207,7 +208,8 @@ async function main() {
       supplementalCount += additions.length;
       console.log(`[db] ${region.id}: added ${additions.length} distinct NOAA ENC Direct wreck features`);
     }
-    const { navaids: uniqueNavaids, removed } = dedupeNavaids(navaids);
+    const { navaids: sourceMerged } = mergeNavaidSources(navaids);
+    const { navaids: uniqueNavaids, removed } = dedupeNavaids(sourceMerged);
     navaids = uniqueNavaids;
     if (navaids.length === 0) {
       throw new Error(`refusing to publish an empty database for ${region.id}`);

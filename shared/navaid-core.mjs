@@ -994,6 +994,197 @@ export function dedupeNavaids(items, options = {}) {
   return { navaids: accepted, removed };
 }
 
+/** Sources treated as official light lists / ENC, outranking OSM seamarks. */
+const OFFICIAL_NAVAID_SOURCES = new Set([
+  'uscg',
+  'ccg',
+  'nga',
+  'noaa',
+  'noaa-enc',
+  'usace',
+  'chs',
+  'enc',
+]);
+
+function authorityOf(navaid) {
+  const source = String(navaid.source ?? '').toLowerCase();
+  if (OFFICIAL_NAVAID_SOURCES.has(source)) return 3;
+  if (source === 'ais' || source === 'ais-aton') return 1;
+  return 2;
+}
+
+function normLightCharacter(navaid) {
+  const raw = navaid.lightCharacter ?? navaid.light ?? null;
+  if (raw === null || raw === undefined || raw === '') return null;
+  return String(raw).toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function isWreckLike(navaid) {
+  return navaid.category === 'wreck' || navaid.category === 'hazard_danger';
+}
+
+function farmBbox(navaid) {
+  const rings = [];
+  if (Array.isArray(navaid.path) && navaid.path.length) rings.push(navaid.path);
+  if (Array.isArray(navaid.paths)) {
+    for (const ring of navaid.paths) if (Array.isArray(ring) && ring.length) rings.push(ring);
+  }
+  if (!rings.length) return null;
+  let south = Infinity;
+  let west = Infinity;
+  let north = -Infinity;
+  let east = -Infinity;
+  for (const ring of rings) {
+    for (const [lat, lon] of ring) {
+      if (lat < south) south = lat;
+      if (lon < west) west = lon;
+      if (lat > north) north = lat;
+      if (lon > east) east = lon;
+    }
+  }
+  return [south, west, north, east];
+}
+
+function bboxesOverlap(a, b) {
+  return a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3];
+}
+
+/** Scalar light fields, where the official record wins over OSM. */
+const LIGHT_FIELDS = [
+  'light',
+  'lightCharacter',
+  'lightColour',
+  'lightCategory',
+  'lightGroup',
+  'lightPeriod',
+  'lightSequence',
+];
+
+/** Fields the merge never takes from another record: position and identity. */
+const POSITION_FIELDS = new Set(['lat', 'lon', 'path', 'paths', 'id', 'category', 'form', 'source', 'sources']);
+
+/**
+ * Cross-source merge for records describing the same physical aid, run in
+ * addition to the 40 m dedupeNavaids pass. Match rules: same normalised
+ * name within 250 m with a compatible light (equal, or one side unlit);
+ * same family within 200 m with an equal light character; wind farms by
+ * overlapping area. Never merges across families on position alone, and
+ * wrecks merge only on the same name. The OSM record wins the position
+ * (official positions are ~185 m); the official record wins each light
+ * field it carries. Unmatched records are kept, never dropped, so an
+ * official-only aid is added, not lost. A merged aid carries every
+ * contributing source in `sources` for the card.
+ */
+export function mergeNavaidSources(items, options = {}) {
+  const nameDistanceM = options.nameDistanceM ?? 250;
+  const familyDistanceM = options.familyDistanceM ?? 200;
+  const accepted = [];
+  const groups = [];
+  const grid = new Map();
+  const cellSize = 0.01; // ~1.1 km latitude; a 3x3 search covers a 250 m pair to ~80 deg
+  const keyOf = (lat, lon) => `${Math.floor(lat / cellSize)}:${Math.floor(lon / cellSize)}`;
+
+  const matches = (item, other) => {
+    const sameName =
+      normName(item.name) !== '' && normName(item.name) === normName(other.name);
+    const metres = distanceMeters(item.lat, item.lon, other.lat, other.lon);
+    if (isWreckLike(item) || isWreckLike(other)) {
+      return isWreckLike(item) && isWreckLike(other) && sameName && metres <= nameDistanceM;
+    }
+    if (item.category === 'wind_farm' && other.category === 'wind_farm') {
+      const aBox = farmBbox(item);
+      const bBox = farmBbox(other);
+      if (aBox && bBox) {
+        return bboxesOverlap(aBox, bBox) && (sameName || !item.name || !other.name);
+      }
+      return sameName && metres <= nameDistanceM;
+    }
+    if (sameName && metres <= nameDistanceM) {
+      const aLight = normLightCharacter(item);
+      const bLight = normLightCharacter(other);
+      if (!aLight || !bLight || aLight === bLight) return true;
+    }
+    if (metres <= familyDistanceM && familyOf(item.category) === familyOf(other.category)) {
+      const aLight = normLightCharacter(item);
+      const bLight = normLightCharacter(other);
+      if (aLight && bLight && aLight === bLight) return true;
+    }
+    return false;
+  };
+
+  for (const item of items) {
+    const key = keyOf(item.lat, item.lon);
+    const latCell = Math.floor(item.lat / cellSize);
+    const lonCell = Math.floor(item.lon / cellSize);
+    let groupOf = -1;
+
+    for (let dy = -1; dy <= 1 && groupOf < 0; dy += 1) {
+      for (let dx = -1; dx <= 1 && groupOf < 0; dx += 1) {
+        const bucket = grid.get(`${latCell + dy}:${lonCell + dx}`);
+        if (!bucket) continue;
+        for (const index of bucket) {
+          if (matches(item, accepted[index])) {
+            groupOf = index;
+            break;
+          }
+        }
+      }
+    }
+
+    if (groupOf < 0) {
+      accepted.push(item);
+      groups.push([item]);
+      const bucket = grid.get(key);
+      if (bucket) bucket.push(accepted.length - 1);
+      else grid.set(key, [accepted.length - 1]);
+      continue;
+    }
+    groups[groupOf].push(item);
+  }
+
+  const navaids = accepted.map((first, index) => {
+    const members = groups[index];
+    if (members.length === 1) return first;
+    const byAuthority = [...members].sort((a, b) => authorityOf(b) - authorityOf(a));
+    const base = members.find((m) => m.source === 'osm') ?? byAuthority[0];
+    const merged = { ...base };
+    for (const field of LIGHT_FIELDS) {
+      for (const member of byAuthority) {
+        if (member[field] !== null && member[field] !== undefined && member[field] !== '') {
+          merged[field] = member[field];
+          break;
+        }
+      }
+    }
+    let sectors = base.lightSectors ?? [];
+    for (const member of members) {
+      if (member === base) continue;
+      sectors = mergeLightSectors(sectors, member.lightSectors ?? []);
+    }
+    merged.lightSectors = sectors;
+    if (members.some((m) => m.fogSignal)) merged.fogSignal = true;
+    if (members.some((m) => m.radarReflector)) merged.radarReflector = true;
+    for (const member of byAuthority) {
+      if (member === base) continue;
+      for (const [key, value] of Object.entries(member)) {
+        if (POSITION_FIELDS.has(key) || LIGHT_FIELDS.includes(key)) continue;
+        const current = merged[key];
+        if ((current === null || current === undefined || current === '') &&
+          value !== null && value !== undefined && value !== '') {
+          merged[key] = value;
+        }
+      }
+    }
+    if (merged.light || merged.lightCharacter || (merged.lightSectors?.length ?? 0) > 0) {
+      merged.lit = true;
+    }
+    merged.sources = [...new Set(members.map((m) => m.source).filter(Boolean))];
+    return merged;
+  });
+
+  return { navaids, removed: items.length - navaids.length };
+}
+
 export function cellKey(lat, lon, size = DEFAULT_CELL_SIZE) {
   return `${Math.floor(lat / size)}:${Math.floor(lon / size)}`;
 }

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { selectVisibleNavaids } from '../shared/navaid-core.mjs';
+import { dedupeNavaids, mergeNavaidSources, selectVisibleNavaids } from '../shared/navaid-core.mjs';
 import type { Navaid } from './lib/navaidTypes';
 import type { SeedExtract } from './lib/navaidDb';
 import { isUsWaters } from './components/MapCanvas';
@@ -814,9 +814,14 @@ export default function App() {
       // keeps the archive's unlit rank and stays hidden at low zoom.
       merged.set(local.id, reconcileLightRank(enriched, local));
     }
+    // Collapse same-aid records across sources first (official light onto the
+    // OSM position), then the remaining close duplicates, before sectors
+    // attach by id.
+    const crossMerged = mergeNavaidSources([...merged.values()]).navaids;
+    const deduped = dedupeNavaids(crossMerged).navaids;
     // Attach worldwide sector bearings last, so a regional record that already
     // carries checked sectors keeps them.
-    const withSectors = applyLightSectorIndex([...merged.values()], lightSectorIndex);
+    const withSectors = applyLightSectorIndex(deduped, lightSectorIndex);
     // A few charted lights have no archive mark at all; their sectors come in
     // with the index, so the mark is drawn from the index too.
     const withStandalone = [...withSectors, ...standaloneLightMarks(lightSectorIndex, withSectors)];

@@ -140,6 +140,8 @@ export interface Navaid {
   lit: boolean | null;
   priority: number;
   source: string;
+  /** Every source merged into this aid, when more than one record contributed. */
+  sources?: string[];
   updated: string | null;
   region: string | null;
 }
@@ -185,6 +187,10 @@ export function annotateTransits(
 export function dedupeNavaids(
   items: Navaid[],
   options?: { distanceM?: number },
+): { navaids: Navaid[]; removed: number };
+export function mergeNavaidSources(
+  items: Navaid[],
+  options?: { nameDistanceM?: number; familyDistanceM?: number },
 ): { navaids: Navaid[]; removed: number };
 export function cellKey(lat: number, lon: number, size?: number): string;
 export function cellBounds(key: string, size?: number): [number, number, number, number];

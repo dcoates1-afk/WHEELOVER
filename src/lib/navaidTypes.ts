@@ -140,6 +140,8 @@ export interface Navaid {
   lit: boolean | null;
   priority: number;
   source: string;
+  /** Every source merged into this aid, when more than one record contributed. */
+  sources?: string[];
   updated: string | null;
   region: string | null;
 }

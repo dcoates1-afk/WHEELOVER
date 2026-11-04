@@ -13,6 +13,7 @@ import {
   lightSectorsFromTags,
   mirrorLightSectorBearings,
   mergeLightSectors,
+  mergeNavaidSources,
   minZoomFor,
   normalizeElement,
   selectVisibleNavaids,
@@ -28,6 +29,8 @@ function mark(overrides: Partial<Navaid> & { category: NavaidCategory }): Navaid
     form: overrides.form ?? 'buoy',
     name: overrides.name ?? null,
     light: overrides.light ?? null,
+    lightCharacter: overrides.lightCharacter ?? null,
+    lightColour: overrides.lightColour ?? null,
     colour: overrides.colour ?? null,
     shape: overrides.shape ?? null,
     height: overrides.height ?? null,
@@ -761,6 +764,98 @@ describe('dedupe', () => {
     const { navaids, removed } = dedupeNavaids([first, second]) as { navaids: Navaid[]; removed: number };
     expect(removed).toBe(0);
     expect(navaids).toHaveLength(2);
+  });
+});
+
+describe('cross-source merge', () => {
+  it('merges an official light onto the OSM position for the same named aid', () => {
+    const osm = mark({ id: 'osm:node/1', category: 'light', lat: 50.7, lon: -1.2, name: 'Harbour Light', light: null, source: 'osm' });
+    const official = mark({ id: 'uscg:1', category: 'light', lat: 50.7005, lon: -1.2, name: 'Harbour Light', light: 'Fl W 6s', lightCharacter: 'Fl', source: 'uscg' });
+    const { navaids, removed } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(1);
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].id).toBe('osm:node/1');
+    expect(navaids[0].lat).toBe(50.7);
+    expect(navaids[0].light).toBe('Fl W 6s');
+    expect(navaids[0].sources).toEqual(['osm', 'uscg']);
+  });
+
+  it('merges same-family aids within 200 m on an equal light, names aside', () => {
+    const osm = mark({ category: 'lateral_port', lat: 50.7, name: 'A', light: 'Fl R 4s' });
+    const official = mark({ category: 'lateral_port', lat: 50.701, name: 'B', light: 'Fl R 4s', source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+  });
+
+  it('does not merge across families on position alone', () => {
+    const buoy = mark({ category: 'lateral_port', lat: 50.7, name: 'A' });
+    const beacon = mark({ category: 'cardinal_north', lat: 50.7005, name: 'B' });
+    const { navaids, removed } = mergeNavaidSources([buoy, beacon]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(0);
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not merge same-named aids with different light characters', () => {
+    const first = mark({ category: 'light', lat: 50.7, name: 'Pier Light', light: 'Fl R 4s' });
+    const second = mark({ category: 'light', lat: 50.7009, name: 'Pier Light', light: 'Fl G 4s', source: 'uscg' });
+    const { navaids, removed } = mergeNavaidSources([first, second]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(0);
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('fills an unlit OSM aid with the official light and marks it lit', () => {
+    const osm = mark({ category: 'light', lat: 50.7, name: 'Pierhead', light: null, lit: false });
+    const official = mark({ category: 'light', lat: 50.7005, name: 'Pierhead', light: 'F W', source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].light).toBe('F W');
+    expect(navaids[0].lit).toBe(true);
+  });
+
+  it('keeps an unmatched official aid instead of dropping it', () => {
+    const osm = mark({ category: 'light', lat: 50.7, name: 'A' });
+    const official = mark({ id: 'uscg:far', category: 'light', lat: 51.0, name: 'Far Light', light: 'Fl W 6s', source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+    expect(navaids.some((n) => n.id === 'uscg:far')).toBe(true);
+  });
+
+  it('merges wrecks only on the same name', () => {
+    const first = mark({ id: 'osm:node/1', category: 'wreck', lat: 50.7, name: 'Mary' });
+    const second = mark({ id: 'uscg:2', category: 'wreck', lat: 50.7009, name: 'Mary', source: 'uscg' });
+    const other = mark({ id: 'osm:node/3', category: 'wreck', lat: 50.7018, name: 'John' });
+    const { navaids } = mergeNavaidSources([first, second, other]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+    expect(navaids.some((n) => n.id === 'osm:node/1')).toBe(true);
+    expect(navaids.some((n) => n.id === 'osm:node/3')).toBe(true);
+  });
+
+  it('merges same-named farms with overlapping areas even when centres are far apart', () => {
+    const first = mark({ category: 'wind_farm', lat: 50.71, lon: -1.2, name: 'Rampion', path: [[50.70, -1.22], [50.72, -1.22], [50.72, -1.18], [50.70, -1.18]] });
+    const second = mark({ category: 'wind_farm', lat: 50.72, lon: -1.2, name: 'Rampion', source: 'uscg', path: [[50.71, -1.22], [50.73, -1.22], [50.73, -1.18], [50.71, -1.18]] });
+    const { navaids } = mergeNavaidSources([first, second]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+  });
+
+  it('keeps differently named farms with overlapping areas', () => {
+    const first = mark({ category: 'wind_farm', lat: 50.71, lon: -1.2, name: 'Rampion', path: [[50.70, -1.22], [50.72, -1.22], [50.72, -1.18], [50.70, -1.18]] });
+    const second = mark({ category: 'wind_farm', lat: 50.72, lon: -1.2, name: 'Other Farm', path: [[50.71, -1.22], [50.73, -1.22], [50.73, -1.18], [50.71, -1.18]] });
+    const { navaids, removed } = mergeNavaidSources([first, second]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(0);
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('applies light-field authority per field, not per record', () => {
+    const osm = mark({ category: 'light', lat: 50.7, name: 'Harbour Light', light: null, lightColour: 'red' });
+    const official = mark({ category: 'light', lat: 50.7005, name: 'Harbour Light', light: 'Fl W 6s', source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].light).toBe('Fl W 6s');
+    expect(navaids[0].lightColour).toBe('red');
+    const osm2 = mark({ category: 'light', lat: 50.7, name: 'Harbour Light', light: null, lightColour: 'red' });
+    const official2 = mark({ category: 'light', lat: 50.7005, name: 'Harbour Light', light: 'Fl W 6s', lightColour: 'white', source: 'uscg' });
+    const merged2 = mergeNavaidSources([osm2, official2]).navaids as Navaid[];
+    expect(merged2[0].lightColour).toBe('white');
   });
 });
 

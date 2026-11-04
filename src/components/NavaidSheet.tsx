@@ -319,6 +319,21 @@ export function NavaidSheet({
           {mark.wreckChartSourceUrl && <Row label="NOAA ENC Direct GIS guidance" value={mark.wreckChartSourceUrl} />}
           <Row label="Source date" value={mark.sourceDate} />
           <Row label="Source" value={mark.source === 'osm' ? 'OpenStreetMap seamarks (ODbL)' : mark.source === 'noaa-enc' ? 'NOAA ENC Direct to GIS' : mark.source} />
+          {mark.sources && mark.sources.length > 1 && (
+            <Row
+              label="Sources"
+              value={mark.sources
+                .map((s) =>
+                  s === 'osm' ? 'OpenStreetMap seamarks (ODbL)'
+                  : s === 'noaa-enc' ? 'NOAA ENC Direct to GIS'
+                  : s === 'uscg' ? 'USCG Light List'
+                  : s === 'ccg' ? 'CCG List of Lights'
+                  : s === 'nga' ? 'NGA List of Lights'
+                  : s === 'ais' ? 'AIS AtoN'
+                  : s)
+                .join(', ')}
+            />
+          )}
           {mark.sourceUrl && <Row label="Source feature" value={mark.sourceUrl} />}
           <Row label="Last mapped" value={mark.updated ? new Date(mark.updated).toLocaleDateString() : null} />
           <Row label="Reference" value={mark.id} />

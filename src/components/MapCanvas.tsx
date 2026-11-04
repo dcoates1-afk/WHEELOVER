@@ -9,6 +9,8 @@ import type { MobRecord } from '../lib/mob';
 import type { TideStation } from '../lib/tides';
 import type { NotmarWarning } from '../lib/notmars';
 import { notmarAreaName } from '../lib/notmars';
+import type { LnmFeature } from '../lib/lnm';
+import { lnmDateLabel } from '../lib/lnm';
 import { escapeXml } from '../lib/gpx';
 import { describeTssFeature, tssGeometryParts, TSS_SOURCE_ATTRIBUTION, type MarineFeature } from '../lib/marineDb';
 import { describeBridge, type BridgeRow } from '../lib/bridges';
@@ -210,6 +212,8 @@ export interface MapCanvasProps {
   onSelectTideStation?: (station: TideStation) => void;
   /** In-force NGA broadcast warnings; one marker per parsed position. */
   warnings?: NotmarWarning[] | null;
+  /** USCG Local Notices to Mariners in the current view; null when the layer is off. */
+  lnm?: LnmFeature[] | null;
   /** Anchor circle and course to steer, set from the menu. */
   watch: VoyageWatch;
   /** Grid the cursor readout is written in. */
@@ -1769,6 +1773,67 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       }
     }
   }, [props.warnings]);
+
+  // USCG Local Notices: points, lines and polygons from the NAVCEN files,
+  // drawn in amber so they read apart from the salmon NAVAREA warnings.
+  const lnmGroupRef = useRef<L.LayerGroup | null>(null);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!lnmGroupRef.current) {
+      lnmGroupRef.current = L.layerGroup().addTo(map);
+    }
+    const group = lnmGroupRef.current;
+    group.clearLayers();
+    const features = props.lnm ?? [];
+    if (features.length === 0) return;
+    const collection = {
+      type: 'FeatureCollection',
+      features: features.map((feature) => ({
+        type: 'Feature',
+        id: feature.id,
+        geometry: feature.geometry,
+        properties: {
+          title: feature.title,
+          waterway: feature.waterway,
+          beginMs: feature.beginMs,
+          endMs: feature.endMs,
+          description: feature.description,
+        },
+      })),
+    } as GeoJSON.FeatureCollection;
+    const layer = L.geoJSON(collection, {
+      style: { color: '#f5b942', weight: 2, fillColor: '#f5b942', fillOpacity: 0.25 },
+      pointToLayer: (_feature, latlng) =>
+        L.circleMarker(latlng, {
+          radius: 6,
+          color: '#f5b942',
+          weight: 2,
+          fillColor: '#f5b942',
+          fillOpacity: 0.4,
+        }),
+      onEachFeature: (geoFeature, sublayer) => {
+        const properties = (geoFeature.properties ?? {}) as Record<string, unknown>;
+        const title = typeof properties.title === 'string' ? properties.title : 'Local notice';
+        const waterway = typeof properties.waterway === 'string' ? properties.waterway : null;
+        const beginMs = typeof properties.beginMs === 'number' ? properties.beginMs : null;
+        const endMs = typeof properties.endMs === 'number' ? properties.endMs : null;
+        const description =
+          typeof properties.description === 'string' ? properties.description : '';
+        const dates =
+          beginMs !== null || endMs !== null
+            ? ` · ${lnmDateLabel(beginMs) ?? '—'} — ${lnmDateLabel(endMs) ?? 'open'}`
+            : '';
+        sublayer.bindTooltip(title, { sticky: true, className: 'marnav-tip', direction: 'top' });
+        sublayer.bindPopup(
+          `<div style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;"><strong>${escapeXml(title)}</strong>${waterway ? ` · ${escapeXml(waterway)}` : ''}${escapeXml(dates)}\n\n${escapeXml(description)}</div>`,
+          { maxWidth: 360 },
+        );
+      },
+    });
+    layer.addTo(group);
+  }, [props.lnm]);
 
   // Anchor swing circle and course to steer. Both are set by the navigator on
   // this device, so they are drawn whatever the overlay switches are doing. The

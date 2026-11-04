@@ -69,6 +69,11 @@ import {
   fetchNotmarWarnings,
   type NotmarWarning,
 } from './lib/notmars';
+import {
+  fetchLnmFeatures,
+  lnmRepresentativePoint,
+  type LnmFeature,
+} from './lib/lnm';
 import { ZoomControls } from './components/ZoomControls';
 
 const MapCanvas = lazy(() => import('./components/MapCanvas').then((module) => ({ default: module.MapCanvas })));
@@ -214,6 +219,11 @@ export default function App() {
   // the layer back on is instant; toggle off/on refetches on next mount.
   const [warnings, setWarnings] = useState<NotmarWarning[] | null>(null);
   const [warningsError, setWarningsError] = useState<string | null>(null);
+  // USCG Local Notices for the current view, fetched through the app's own
+  // relay (NAVCEN sends no CORS headers). Refetched when the view settles,
+  // so panning to new water loads that water's notices.
+  const [lnm, setLnm] = useState<LnmFeature[] | null>(null);
+  const [lnmError, setLnmError] = useState<string | null>(null);
   // Tracking info keeps the target it was given and follows the live snapshot,
   // so a page left open keeps reading as the transponder reports again.
   const [trackingVessel, setTrackingVessel] = useState<AisVessel | null>(null);
@@ -481,6 +491,38 @@ export default function App() {
       cancelled = true;
     };
   }, [preferences.overlays.warnings, warnings, warningsError]);
+
+  // Load USCG local notices for the current view when the layer is on. A
+  // failure leaves a note in the menu instead of a broken layer; switching
+  // the layer off clears the error so switching it back on retries. The
+  // short debounce keeps a pan across water to one fetch per settled view.
+  useEffect(() => {
+    if (!preferences.overlays.localNotices && lnmError !== null) {
+      setLnmError(null);
+    }
+  }, [preferences.overlays.localNotices, lnmError]);
+
+  useEffect(() => {
+    if (!preferences.overlays.localNotices) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetchLnmFeatures(view.bounds, controller.signal)
+        .then((loaded) => {
+          if (!cancelled) setLnm(loaded.features);
+        })
+        .catch((error) => {
+          if (!cancelled && error?.name !== 'AbortError') {
+            setLnmError('USCG local notices could not be loaded — try switching the layer off and on again.');
+          }
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [preferences.overlays.localNotices, view]);
 
   // Manifest + weekly revalidation, once per session.
   useEffect(() => {
@@ -955,6 +997,7 @@ export default function App() {
           setRouteWaypoints((current) => current.map((point, i) => (i === index ? { lat, lon } : point)))
         }
         warnings={preferences.overlays.warnings ? warnings : null}
+        lnm={preferences.overlays.localNotices ? lnm : null}
         fix={geo.fix}
         aisVessels={ais.vessels}
         selectedVesselMmsi={highlightedVessel}
@@ -1348,6 +1391,12 @@ export default function App() {
         onSelectWarning={(warning) => {
           const first = warning.positions[0];
           if (first) centreOn(first.lat, first.lon, 10);
+        }}
+        lnm={lnm}
+        lnmError={lnmError}
+        onSelectLnm={(feature) => {
+          const point = lnmRepresentativePoint(feature);
+          if (point) centreOn(point[0], point[1], 12);
         }}
         hidden={Boolean(station || selectedMark || selectedVessel)}
       />

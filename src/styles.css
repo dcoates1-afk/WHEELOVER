@@ -1128,6 +1128,54 @@ ul {
   padding: 4px 0;
 }
 
+.lnm-details {
+  margin-top: 6px;
+}
+
+.lnm-details > summary {
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+.lnm-list {
+  max-height: 40vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.lnm-row {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(245, 185, 66, 0.1);
+}
+
+.lnm-row > summary {
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.lnm-text {
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.lnm-row button {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
 /* Route builder button and panel, mirroring the pins and boat controls. */
 .route-button {
   position: fixed;

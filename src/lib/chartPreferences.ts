@@ -15,6 +15,7 @@ export interface OverlayPreferences {
   pois: boolean;
   bridges: boolean;
   warnings: boolean;
+  localNotices: boolean;
   tideStations: boolean;
 }
 
@@ -56,6 +57,9 @@ export const DEFAULT_PREFERENCES: ChartPreferences = {
     // Warnings start off: the feed is ~200 KB and draws hundreds of
     // markers, so it loads on the navigator's say-so, not on first paint.
     warnings: false,
+    // Local notices start off for the same reason: the relay fetches
+    // dozens of NAVCEN files, so the layer loads on the navigator's say-so.
+    localNotices: false,
     // Tide stations start off: 3,500 stations worldwide, drawn only for
     // the current view at harbour zoom and above, on the same say-so.
     tideStations: false,

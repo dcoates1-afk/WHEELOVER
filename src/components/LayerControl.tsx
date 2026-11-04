@@ -30,6 +30,8 @@ import { poiIconSvg } from '../lib/pois';
 import { formatBytes } from '../lib/noaaChart';
 import type { NotmarWarning } from '../lib/notmars';
 import { notmarAreaName } from '../lib/notmars';
+import type { LnmFeature } from '../lib/lnm';
+import { lnmDateLabel } from '../lib/lnm';
 import {
   BEARING_MODES,
   BOAT_TYPES,
@@ -98,6 +100,9 @@ interface LayerControlProps {
   warnings: NotmarWarning[] | null;
   warningsError: string | null;
   onSelectWarning: (warning: NotmarWarning) => void;
+  lnm: LnmFeature[] | null;
+  lnmError: string | null;
+  onSelectLnm: (feature: LnmFeature) => void;
   hidden?: boolean;
 }
 
@@ -610,6 +615,9 @@ export function LayerControl({
   warnings,
   warningsError,
   onSelectWarning,
+  lnm,
+  lnmError,
+  onSelectLnm,
   hidden = false,
 }: LayerControlProps) {
   const setBase = (base: BaseLayerId) => onChange({ ...preferences, base });
@@ -954,6 +962,12 @@ export function LayerControl({
                   onChange={(value) => setOverlay('warnings', value)}
                 />
                 <LegendRow
+                  label="Local Notices"
+                  hint="USCG Local Notices to Mariners · current items · US Government public domain"
+                  checked={preferences.overlays.localNotices}
+                  onChange={(value) => setOverlay('localNotices', value)}
+                />
+                <LegendRow
                   label="Tide stations"
                   hint="NOAA harmonic stations · tap a station for its forecast"
                   checked={preferences.overlays.tideStations}
@@ -984,6 +998,42 @@ export function LayerControl({
                           )}
                         </details>
                       ))}
+                    </div>
+                  </details>
+                )}
+                {preferences.overlays.localNotices && lnmError && (
+                  <p className="inline-warning">{lnmError}</p>
+                )}
+                {preferences.overlays.localNotices && lnm && (
+                  <details className="lnm-details">
+                    <summary>
+                      {lnm.length} local notices in view
+                    </summary>
+                    <div className="lnm-list">
+                      {lnm.slice(0, 50).map((feature) => (
+                        <details key={feature.id} className="lnm-row">
+                          <summary>
+                            <strong>{feature.categoryLabel}</strong> ·{' '}
+                            {feature.title.slice(0, 90)}
+                          </summary>
+                          {feature.waterway && <p className="lnm-text">{feature.waterway}</p>}
+                          {(feature.beginMs !== null || feature.endMs !== null) && (
+                            <p className="lnm-text">
+                              {lnmDateLabel(feature.beginMs) ?? '—'} —{' '}
+                              {lnmDateLabel(feature.endMs) ?? 'open'}
+                            </p>
+                          )}
+                          {feature.description && (
+                            <p className="lnm-text">{feature.description}</p>
+                          )}
+                          <button type="button" onClick={() => onSelectLnm(feature)}>
+                            Centre on chart
+                          </button>
+                        </details>
+                      ))}
+                      {lnm.length > 50 && (
+                        <p className="lnm-text">+{lnm.length - 50} more in view — zoom in to narrow the list.</p>
+                      )}
                     </div>
                   </details>
                 )}

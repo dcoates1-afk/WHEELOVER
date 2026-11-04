@@ -8,6 +8,7 @@ import { createAisRelay } from './aisRelay';
 import { createDepthHandler } from './depthProxy';
 import { createOverpassHandler } from './overpassProxy';
 import { createNatura2000Handler } from './natura2000Proxy';
+import { createLnmHandler } from './lnmProxy';
 import { createNotmarHandler } from './notmarProxy';
 
 const root = resolve(process.cwd(), 'dist');
@@ -21,6 +22,7 @@ const overpassHandler = createOverpassHandler(log);
 const depthHandler = createDepthHandler(log);
 const natura2000Handler = createNatura2000Handler();
 const notmarHandler = createNotmarHandler(log);
+const lnmHandler = createLnmHandler(log);
 const contourDir = process.env.WHEELOVER_CONTOUR_DATA_DIR ? resolve(process.env.WHEELOVER_CONTOUR_DATA_DIR) : resolve(root, 'contours');
 const marineDir = process.env.WHEELOVER_MARINE_DATA_DIR ? resolve(process.env.WHEELOVER_MARINE_DATA_DIR) : null;
 
@@ -129,6 +131,10 @@ async function handleHttp(req: IncomingMessage, res: ServerResponse) {
   }
   if (url.pathname === '/api/notmars') {
     await notmarHandler(req, res);
+    return;
+  }
+  if (url.pathname === '/api/lnm') {
+    await lnmHandler(req, res);
     return;
   }
   if (url.pathname.startsWith('/contours/') && contourDir) {

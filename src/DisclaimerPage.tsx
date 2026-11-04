@@ -71,6 +71,7 @@ const sources = [
   { name: 'NOAA CO-OPS', detail: 'Tide and current predictions are station-based and datum-dependent. Station distance and local conditions affect how representative they are.', href: 'https://tidesandcurrents.noaa.gov/' },
   { name: 'Open-Meteo / Météo-France SMOC', detail: 'Weather and ocean-current model output is guidance rather than a local observation or guaranteed forecast. Modelled surface drift is not a harmonic tidal-current prediction.', href: 'https://open-meteo.com/en/docs/marine-weather-api' },
   { name: 'OpenSeaMap', detail: 'Seamark raster overlay (© OpenSeaMap, CC-BY-SA) and related community resources. Its credit is carried here rather than on the chart.', href: 'https://www.openseamap.org/' },
+  { name: 'USCG Navigation Center — Local Notices to Mariners', detail: 'Current Local Notice items (aid discrepancies, hazards, construction, safety zones, marine events and more) as published GeoJSON files, shown by category with their waterway, validity dates and full text. The app fetches the files through its own relay and shows only the items overlapping the current view. US Government public domain; LNM data refreshes every 15 minutes.', href: 'https://navcen.uscg.gov/msi' },
   { name: 'AISStream', detail: 'Live vessel positions depend on upstream reception, relay connectivity, reporting intervals, and feed coverage. Demo-mode traffic is simulated, not received over AIS.', href: 'https://aisstream.io/' },
 ];
 

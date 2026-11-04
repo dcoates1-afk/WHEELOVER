@@ -7,6 +7,13 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
  * Referer (required by the service) and caches the feed for 15 minutes,
  * matching the feed's own refresh rhythm. Only the warnings array is
  * relayed, unchanged, with a fetchedAt stamp.
+ *
+ * When a refresh fails — NGA takes the whole MSI portal down for
+ * maintenance from time to time, serving an outage page instead of JSON —
+ * the relay serves the last good copy with stale: true rather than
+ * failing, so the layer keeps showing warnings through the outage. The
+ * next request retries the refresh, so recovery is automatic. Only when
+ * no good copy exists at all does the relay return 502.
  */
 
 const NGA_URL = 'https://msi.nga.mil/api/publications/broadcast-warn?status=active&output=json';
@@ -44,6 +51,10 @@ export function createNotmarHandler(log: (message: string) => void = () => {}) {
       sendJson(res, 200, body);
     } catch (error) {
       log(`notmar proxy: ${error instanceof Error ? error.message : 'fetch failed'}`);
+      if (cached) {
+        sendJson(res, 200, { ...cached.body, stale: true });
+        return;
+      }
       sendJson(res, 502, { error: 'NGA warnings unavailable' });
     }
   };

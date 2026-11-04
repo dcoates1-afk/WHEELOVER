@@ -219,6 +219,7 @@ export default function App() {
   // the layer back on is instant; toggle off/on refetches on next mount.
   const [warnings, setWarnings] = useState<NotmarWarning[] | null>(null);
   const [warningsError, setWarningsError] = useState<string | null>(null);
+  const [warningsStale, setWarningsStale] = useState(false);
   // USCG Local Notices for the current view, fetched through the app's own
   // relay (NAVCEN sends no CORS headers). Refetched when the view settles,
   // so panning to new water loads that water's notices.
@@ -472,17 +473,21 @@ export default function App() {
   // note in the menu instead of a broken layer; switching the layer off
   // clears the error so switching it back on retries.
   useEffect(() => {
-    if (!preferences.overlays.warnings && warningsError !== null) {
-      setWarningsError(null);
+    if (!preferences.overlays.warnings) {
+      if (warningsError !== null) setWarningsError(null);
+      if (warningsStale) setWarningsStale(false);
     }
-  }, [preferences.overlays.warnings, warningsError]);
+  }, [preferences.overlays.warnings, warningsError, warningsStale]);
 
   useEffect(() => {
     if (!preferences.overlays.warnings || warnings !== null || warningsError !== null) return;
     let cancelled = false;
     fetchNotmarWarnings()
       .then((loaded) => {
-        if (!cancelled) setWarnings(loaded);
+        if (!cancelled) {
+          setWarnings(loaded.warnings);
+          setWarningsStale(loaded.stale);
+        }
       })
       .catch(() => {
         if (!cancelled) setWarningsError('NGA warnings could not be loaded — try switching the layer off and on again.');
@@ -1388,6 +1393,7 @@ export default function App() {
         onWatch={setWatch}
         warnings={warnings}
         warningsError={warningsError}
+        warningsStale={warningsStale}
         onSelectWarning={(warning) => {
           const first = warning.positions[0];
           if (first) centreOn(first.lat, first.lon, 10);

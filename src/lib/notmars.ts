@@ -100,8 +100,20 @@ export function parseNotmarWarnings(payload: unknown): NotmarWarning[] {
   return warnings;
 }
 
-export async function fetchNotmarWarnings(signal?: AbortSignal): Promise<NotmarWarning[]> {
+export interface NotmarWarningsResult {
+  warnings: NotmarWarning[];
+  /** True when the relay served its last good copy because NGA could not be reached. */
+  stale: boolean;
+  fetchedAt: string | null;
+}
+
+export async function fetchNotmarWarnings(signal?: AbortSignal): Promise<NotmarWarningsResult> {
   const response = await fetch('/api/notmars', { signal });
   if (!response.ok) throw new Error(`NOTMARs HTTP ${response.status}`);
-  return parseNotmarWarnings(await response.json());
+  const payload = (await response.json()) as { fetchedAt?: unknown; stale?: unknown };
+  return {
+    warnings: parseNotmarWarnings(payload),
+    stale: payload.stale === true,
+    fetchedAt: typeof payload.fetchedAt === 'string' ? payload.fetchedAt : null,
+  };
 }

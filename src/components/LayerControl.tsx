@@ -99,6 +99,7 @@ interface LayerControlProps {
   onWatch: (next: VoyageWatch) => void;
   warnings: NotmarWarning[] | null;
   warningsError: string | null;
+  warningsStale: boolean;
   onSelectWarning: (warning: NotmarWarning) => void;
   lnm: LnmFeature[] | null;
   lnmError: string | null;
@@ -614,6 +615,7 @@ export function LayerControl({
   onWatch,
   warnings,
   warningsError,
+  warningsStale,
   onSelectWarning,
   lnm,
   lnmError,
@@ -975,6 +977,9 @@ export function LayerControl({
                 />
                 {preferences.overlays.warnings && warningsError && (
                   <p className="inline-warning">{warningsError}</p>
+                )}
+                {preferences.overlays.warnings && warningsStale && warnings && (
+                  <p className="inline-warning">Showing last good warnings — fresh data could not be loaded.</p>
                 )}
                 {preferences.overlays.warnings && warnings && (
                   <details className="notmar-details">

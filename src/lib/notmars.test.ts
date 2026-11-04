@@ -87,8 +87,25 @@ describe('fetchNotmarWarnings', () => {
       json: async () => FEED,
     })) as unknown as typeof fetch;
     try {
-      const warnings = await fetchNotmarWarnings();
-      expect(warnings).toHaveLength(2);
+      const result = await fetchNotmarWarnings();
+      expect(result.warnings).toHaveLength(2);
+      expect(result.stale).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('reports a stale relay response', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => ({
+      ok: true,
+      json: async () => ({ ...FEED, stale: true, fetchedAt: '2026-11-03T00:00:00.000Z' }),
+    })) as unknown as typeof fetch;
+    try {
+      const result = await fetchNotmarWarnings();
+      expect(result.warnings).toHaveLength(2);
+      expect(result.stale).toBe(true);
+      expect(result.fetchedAt).toBe('2026-11-03T00:00:00.000Z');
     } finally {
       globalThis.fetch = originalFetch;
     }

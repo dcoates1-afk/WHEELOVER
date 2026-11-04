@@ -238,6 +238,9 @@ const TIDAL_WATER_VALUES = {
 
 export function isTidalWater(tags: Record<string, string> | undefined): boolean {
   if (!tags) return false;
+  // An explicit `tidal=no` beats every inference below: a mapper who marked
+  // a reach non-tidal has said more than its type ever can.
+  if (tags.tidal?.toLowerCase() === 'no') return false;
   if (tags.tidal?.toLowerCase() === 'yes') return true;
   if (tags['tidal:range'] !== undefined) return true;
   if (tags.harbour !== undefined && tags.harbour !== 'no') return true;
@@ -252,14 +255,16 @@ export function isTidalWater(tags: Record<string, string> | undefined): boolean 
  * How far up a river the tide is taken to reach, when nothing in the map says.
  *
  * A tidal river is usually mapped as nothing more than `water=river` or a river
- * centreline: the Itchen above Cobden Bridge, the Gorge, the reaches behind half
- * the world's harbours. Their tidal limit is not tagged, so a reach is treated
- * as tidal when it lies within this distance of water that is unambiguously
- * tidal — the sea, an estuary, a harbour basin or a bay. Twelve kilometres
- * covers the mapped tidal reach of rivers like the Itchen and the Gorge while
- * leaving genuinely inland rivers, lakes and canals alone.
+ * centreline, so a reach is treated as tidal when it lies within this distance
+ * of water that is unambiguously tidal — the sea, an estuary, a harbour basin
+ * or a bay. Two kilometres covers the mouth reaches of untagged rivers, where
+ * a boat from the sea can actually be, without pretending the tide runs the
+ * whole length of every short coastal river: at twelve kilometres the
+ * Colquitz read as tidal end to end, and its trail bridges with it. Rivers
+ * whose tide genuinely runs further carry `tidal=yes` on those reaches, or are
+ * mapped as water areas, so they do not depend on this inference.
  */
-export const TIDAL_REACH_DEGREES = 0.11;
+export const TIDAL_REACH_DEGREES = 0.018;
 
 /**
  * River water, whose tidal reach has to be inferred from position.
@@ -356,6 +361,10 @@ interface PreparedWater {
 
 function prepareWater(water: RawChartElement): PreparedWater | null {
   const tags = water.tags ?? {};
+  // A reach the mapper marked `tidal=no` is never a tidal candidate, even
+  // within reach of tidal water — this is what keeps the Itchen's upper
+  // bridges, and every river like it, off the chart.
+  if (tags.tidal?.toLowerCase() === 'no') return null;
   const tidal = isTidalWater(tags);
   const seed = isTidalSeed(tags);
   // A marina is water a bridge can cross, but it cannot make the river it sits

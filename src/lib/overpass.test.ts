@@ -60,6 +60,7 @@ describe('water-crossing bridge detection', () => {
     expect(isTidalWater({ harbour: 'yes' })).toBe(true);
     expect(isTidalWater({ waterway: 'river' })).toBe(false);
     expect(isTidalWater({ natural: 'water', water: 'lake' })).toBe(false);
+    expect(isTidalWater({ water: 'estuary', tidal: 'no' })).toBe(false);
     expect(isTidalWater(undefined)).toBe(false);
   });
 
@@ -150,7 +151,22 @@ describe('water-crossing bridge detection', () => {
   });
 
   it('keeps a tidal river reach that carries no tidal tag but sits near open tidal water', () => {
-    expect(bridgeCrossesWater(bridgeAt(51), [riverReach(51), harbour(51.06, -1)])).toBe(true);
+    expect(bridgeCrossesWater(bridgeAt(51), [riverReach(51), harbour(51.015, -1)])).toBe(true);
+  });
+
+  it('does not treat an untagged river reach 7 km from tidal water as tidal', () => {
+    // The old twelve-kilometre inference kept reaches like this — and with
+    // them whole creek chains like the Colquitz. Two kilometres does not.
+    expect(bridgeCrossesWater(bridgeAt(51), [riverReach(51), harbour(51.06, -1)])).toBe(false);
+  });
+
+  it('does not let a river reach tagged tidal=no count even within tidal reach', () => {
+    const untidalReach = {
+      type: 'way' as const,
+      tags: { water: 'river', natural: 'water', tidal: 'no' },
+      geometry: [{ lat: 51, lon: -1.0003 }, { lat: 51.001, lon: -1.0003 }],
+    };
+    expect(bridgeCrossesWater(bridgeAt(51), [untidalReach, harbour(51.015, -1)])).toBe(false);
   });
 
   it('does not treat a river far from any tidal water as tidal', () => {

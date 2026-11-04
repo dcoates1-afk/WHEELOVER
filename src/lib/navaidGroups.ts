@@ -83,6 +83,12 @@ export const NAVAID_GROUPS: NavaidGroup[] = [
     categories: ['communication_area'],
   },
   { id: 'wreck', label: 'Wreck', symbol: 'wreck', categories: ['wreck'] },
+  {
+    id: 'offshore',
+    label: 'Offshore structures',
+    symbol: 'wind_turbine',
+    categories: ['wind_farm', 'wind_turbine', 'oil_rig'],
+  },
   { id: 'hazard', label: 'Hazard', symbol: 'hazard', categories: ['hazard'] },
   { id: 'hazard_danger', label: 'Dangerous wreck', symbol: 'hazard_danger', categories: ['hazard_danger'] },
   {

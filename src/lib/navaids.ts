@@ -319,6 +319,53 @@ function minorLightSvg() {
 }
 
 /**
+ * Wind turbine: a yellow three-blade rotor on a tapered mast, following the
+ * IALA practice of marking turbines yellow. The dark outline keeps it legible
+ * on the dark chart at 32 px.
+ */
+function windTurbineSvg() {
+  return `${outline('<path d="M13.5 28 L15 11 L17 11 L18.5 28 Z" fill="{fill}"/>', YELLOW)}
+    <rect x="11" y="27" width="10" height="2.4" rx="1" fill="${BLACK}" stroke="#04141f" stroke-width="1"/>
+    <g fill="${YELLOW}" stroke="#04141f" stroke-width="1.1" stroke-linejoin="round">
+      <path d="M14.8 10.5 L16 2.5 L17.2 10.5 Z"/>
+      <path d="M16.6 11 L9.5 13.8 L15.4 9 Z"/>
+      <path d="M15.4 11 L22.5 13.8 L16.6 9 Z"/>
+    </g>
+    <circle cx="16" cy="10" r="2.2" fill="${YELLOW}" stroke="#04141f" stroke-width="1.2"/>`;
+}
+
+/**
+ * Wind farm: a dashed yellow area boundary with two small turbines inside,
+ * following the anchorage pattern of a dashed coloured ground plus pictogram.
+ * On the chart the farm itself draws as this dashed boundary; the turbines
+ * inside it are separate point marks.
+ */
+function windFarmSvg() {
+  const mini = (cx: number) => `
+    <path d="M${cx} 22 V13" stroke="#04141f" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M${cx} 22 V13" stroke="${YELLOW}" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M${cx} 13 L${cx} 9.5 M${cx} 13 L${cx - 3} 14.8 M${cx} 13 L${cx + 3} 14.8" stroke="#04141f" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M${cx} 13 L${cx} 9.5 M${cx} 13 L${cx - 3} 14.8 M${cx} 13 L${cx + 3} 14.8" stroke="${YELLOW}" stroke-width="1.2" stroke-linecap="round"/>`;
+  return `<rect x="4" y="4" width="24" height="24" rx="4" fill="rgba(244,197,49,.10)" stroke="${YELLOW}" stroke-width="1.3" stroke-dasharray="4 2.5"/>
+    ${mini(11)}${mini(21)}`;
+}
+
+/**
+ * Oil rig: a grey platform deck on legs with a derrick, standing in the
+ * water. Grey, not yellow, so it cannot be mistaken for a turbine or a
+ * special mark; a lit rig gets the app's light annotation on top.
+ */
+function oilRigSvg() {
+  const legs = [10, 16, 22].map((x) => `
+    <line x1="${x}" y1="14" x2="${x}" y2="26" stroke="#04141f" stroke-width="3.2" stroke-linecap="round"/>
+    <line x1="${x}" y1="14" x2="${x}" y2="26" stroke="#c7d3da" stroke-width="1.8" stroke-linecap="round"/>`).join('');
+  return `${legs}
+    <rect x="7" y="9" width="18" height="5" rx="1" fill="#c7d3da" stroke="#04141f" stroke-width="1.4"/>
+    <path d="M13.5 9 L16 3 L18.5 9 Z" fill="#c7d3da" stroke="#04141f" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M8 27.5 H13 M19 27.5 H24" stroke="#3dd6ff" stroke-width="1.4" stroke-linecap="round"/>`;
+}
+
+/**
  * The chart symbol for a category. `colour` is the mark's mapped paint list
  * ("red;green"); without it the IALA region supplies the lateral colours, which
  * is what the legend needs.
@@ -421,6 +468,12 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: 
         ),
         label,
       };
+    case 'wind_turbine':
+      return { svg: svgWrap(windTurbineSvg()), label };
+    case 'wind_farm':
+      return { svg: svgWrap(windFarmSvg()), label };
+    case 'oil_rig':
+      return { svg: svgWrap(oilRigSvg()), label };
     default:
       return { svg: svgWrap(outline('<circle cx="16" cy="16" r="6" fill="{fill}"/>', '#7d8f99')), label };
   }

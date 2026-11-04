@@ -291,6 +291,19 @@ describe('classification', () => {
     expect(classifyTags({ 'seamark:light:character': 'Fl' })?.category).toBe('light');
   });
 
+  it('classifies offshore structures', () => {
+    expect(classifyTags({ power: 'generator', 'generator:source': 'wind' })?.category).toBe('wind_turbine');
+    expect(classifyTags({ power: 'plant', 'plant:source': 'wind' })?.category).toBe('wind_farm');
+    expect(classifyTags({ 'man_made': 'offshore_platform' })?.category).toBe('oil_rig');
+    expect(classifyTags({ 'seamark:type': 'platform' })?.category).toBe('oil_rig');
+    expect(classifyTags({ 'seamark:type': 'production_area', 'seamark:production_area:category': 'wind_farm' })?.category).toBe('wind_farm');
+    expect(classifyTags({ 'seamark:type': 'production_area', 'seamark:landmark:production_area': 'wind_farm' })?.category).toBe('wind_farm');
+    expect(classifyTags({ 'seamark:type': 'production_area', 'seamark:production_area:category': 'oil' })).toBeNull();
+    expect(classifyTags({ 'seamark:type': 'landmark', 'seamark:landmark:category': 'windmotor' })?.category).toBe('wind_turbine');
+    // A lit turbine keeps its turbine class, not the generic light class.
+    expect(classifyTags({ power: 'generator', 'generator:source': 'wind', 'seamark:light:character': 'Fl' })?.category).toBe('wind_turbine');
+  });
+
   it('keeps separate observations of one aid while combining their sector attributes', () => {
     const sparse = normalizeElement({ type: 'node', id: 100, lat: 50, lon: -1, tags: {
       'seamark:type': 'light_minor', 'seamark:name': 'Test light',

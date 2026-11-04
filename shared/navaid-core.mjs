@@ -74,6 +74,10 @@ const PRIORITY = {
   mooring: 14,
   gate: 24,
   other: 10,
+  // Offshore structures: farm areas outrank rigs, rigs outrank single turbines.
+  wind_farm: 70,
+  oil_rig: 68,
+  wind_turbine: 62,
 };
 
 const MIN_ZOOM = {
@@ -205,6 +209,19 @@ export function classifyTags(tags) {
     if (tags['man_made'] === 'lighthouse') {
       return { ...base, category: 'major_light', priority: PRIORITY.major_light, lit: true };
     }
+    // Wind turbines, wind farms and offshore platforms carry no seamark:type
+    // in their usual tagging (power=generator/plant, man_made=offshore_platform),
+    // so they are recognised here before the generic light fallback below —
+    // a lit turbine is a turbine, not a generic light.
+    if (tags.power === 'generator' && tags['generator:source'] === 'wind') {
+      return { ...base, category: 'wind_turbine', priority: PRIORITY.wind_turbine };
+    }
+    if (tags.power === 'plant' && tags['plant:source'] === 'wind') {
+      return { ...base, category: 'wind_farm', priority: PRIORITY.wind_farm };
+    }
+    if (tags['man_made'] === 'offshore_platform') {
+      return { ...base, category: 'oil_rig', priority: PRIORITY.oil_rig };
+    }
     if (lightChar) return { ...base, category: 'light', priority: PRIORITY.light };
     // Some wrecks are mapped without the seamark schema at all.
     if (tags['man_made'] === 'wreck' || tags['historic'] === 'wreck') {
@@ -230,7 +247,22 @@ export function classifyTags(tags) {
     return { ...base, category: 'communication_area', priority: PRIORITY.communication_area };
   }
 
+  // A wind-farm production area is a mark, not a dropped area — but only
+  // when it is tagged as a wind farm; other production areas stay dropped.
+  // Both spellings of the wind-farm production tag are accepted (the wiki
+  // pages disagree). This check must sit before the area drop below.
+  if (type === 'production_area' &&
+    (category === 'wind_farm' || tags['seamark:landmark:production_area'] === 'wind_farm')) {
+    return { ...base, category: 'wind_farm', priority: PRIORITY.wind_farm };
+  }
+
   if (AREA_TYPES.has(type)) return null;
+
+  // An offshore turbine mapped as a seamark landmark keeps its turbine
+  // symbol even when it carries a light.
+  if (type === 'landmark' && tags['seamark:landmark:category'] === 'windmotor') {
+    return { ...base, category: 'wind_turbine', priority: PRIORITY.wind_turbine };
+  }
 
   if (type === 'lighthouse' || type === 'landmark' || type === 'mast' || type === 'tower') {
     // A lighthouse is a major light, and so is any of these structures carrying
@@ -297,13 +329,17 @@ export function classifyTags(tags) {
     return { ...base, category: 'marina', priority: PRIORITY.marina };
   }
 
+  // Offshore platforms are production structures, not generic facilities.
+  if (type === 'platform') {
+    return { ...base, category: 'oil_rig', priority: PRIORITY.oil_rig };
+  }
+
   if (
     type === 'small_craft_facility' ||
     type === 'mooring' ||
     type === 'berth' ||
     type === 'bridge' ||
     type === 'causeway' ||
-    type === 'platform' ||
     type === 'crane' ||
     type === 'building' ||
     type === 'rescue_station' ||
@@ -1037,5 +1073,8 @@ export const CATEGORY_LABELS = {
   communication_area: 'Vessel reporting / communication area',
   notice: 'Notice mark',
   gate: 'Gate / start-finish mark',
+  wind_turbine: 'Wind turbine',
+  wind_farm: 'Wind farm',
+  oil_rig: 'Oil rig',
   other: 'Mark',
 };

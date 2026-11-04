@@ -30,6 +30,9 @@ export type NavaidCategory =
   | 'communication_area'
   | 'notice'
   | 'gate'
+  | 'wind_turbine'
+  | 'wind_farm'
+  | 'oil_rig'
   | 'other';
 
 export type NavaidForm = 'buoy' | 'beacon' | 'light' | 'landmark' | 'mark';

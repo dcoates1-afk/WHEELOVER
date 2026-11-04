@@ -41,6 +41,9 @@ const ALL_CATEGORIES: NavaidCategory[] = [
   'communication_area',
   'notice',
   'gate',
+  'wind_turbine',
+  'wind_farm',
+  'oil_rig',
   'other',
 ];
 

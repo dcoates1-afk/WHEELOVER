@@ -9,6 +9,26 @@ import {
 } from './navaids';
 import type { Navaid } from './navaidTypes';
 
+describe('offshore structure symbols', () => {
+  it('draws a turbine, a farm and a rig as three different marks', () => {
+    const turbine = symbolFor('wind_turbine', 'A');
+    const farm = symbolFor('wind_farm', 'A');
+    const rig = symbolFor('oil_rig', 'A');
+
+    expect(turbine.svg).not.toBe(farm.svg);
+    expect(turbine.svg).not.toBe(rig.svg);
+    expect(farm.svg).not.toBe(rig.svg);
+    expect(turbine.label).toBe('Wind turbine');
+    expect(farm.label).toBe('Wind farm');
+    expect(rig.label).toBe('Oil rig');
+    // The turbine is yellow like a special mark; the rig is grey so the two
+    // cannot be confused, and the farm is a dashed area, not a point.
+    expect(turbine.svg).toContain('#f4c531');
+    expect(rig.svg).toContain('#c7d3da');
+    expect(farm.svg).toContain('stroke-dasharray');
+  });
+});
+
 describe('light symbols', () => {
   it('draws major and minor lights as different shapes', () => {
     const major = symbolFor('major_light', 'A').svg;

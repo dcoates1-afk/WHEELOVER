@@ -941,7 +941,6 @@ export function LayerControl({
                   checked={preferences.overlays.bridges}
                   onChange={(value) => setOverlay('bridges', value)}
                 />
-                <a className="menu-row disclaimer-link" href="/disclaimer" onClick={() => onOpen(false)}>Data sources &amp; disclaimer<span className="chevron" aria-hidden="true">›</span></a>
                 <LegendRow
                   label="AIS targets"
                   hint="Live vessel positions on the chart"
@@ -1372,6 +1371,7 @@ export function LayerControl({
                   {checking ? 'Checking for updates…' : 'Check for updates'}
                 </button>
               </Section>
+              <a className="menu-row disclaimer-link" href="/disclaimer" onClick={() => onOpen(false)}>Data sources &amp; disclaimer<span className="chevron" aria-hidden="true">›</span></a>
             </div>
           </section>
         </>

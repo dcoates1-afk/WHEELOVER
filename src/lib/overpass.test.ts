@@ -222,6 +222,127 @@ describe('water-crossing bridge detection', () => {
       }],
     )).toBe(true);
   });
+
+  it('does not count a footway lying inside a water polygon as a span', () => {
+    const basin = {
+      type: 'way' as const,
+      tags: { 'seamark:type': 'harbour_basin', name: 'Inner harbour' },
+      geometry: [
+        { lat: 50.89, lon: -1.41 }, { lat: 50.89, lon: -1.37 },
+        { lat: 50.91, lon: -1.37 }, { lat: 50.91, lon: -1.41 }, { lat: 50.89, lon: -1.41 },
+      ],
+    };
+    // A walkway along the shore inside the basin polygon: it touches water
+    // all along, but never goes from one side to the other.
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 50.9, lon: -1.4 }, { lat: 50.9, lon: -1.38 }] },
+      [basin],
+    )).toBe(false);
+    // The same geometry without a light highway tag keeps the lenient rule.
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 50.9, lon: -1.4 }, { lat: 50.9, lon: -1.38 }] },
+      [basin],
+    )).toBe(true);
+  });
+
+  it('does not count a footway finger that ends inside a water polygon', () => {
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 50.9, lon: -1.42 }, { lat: 50.9, lon: -1.39 }] },
+      [{
+        type: 'way',
+        tags: { 'seamark:type': 'harbour_basin', name: 'Inner harbour' },
+        geometry: [
+          { lat: 50.89, lon: -1.41 }, { lat: 50.89, lon: -1.37 },
+          { lat: 50.91, lon: -1.37 }, { lat: 50.91, lon: -1.41 }, { lat: 50.89, lon: -1.41 },
+        ],
+      }],
+    )).toBe(false);
+  });
+
+  it('keeps a footway that cuts a water polygon twice', () => {
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 50.9, lon: -1.42 }, { lat: 50.9, lon: -1.36 }] },
+      [{
+        type: 'way',
+        tags: { 'seamark:type': 'harbour_basin', name: 'Inner harbour' },
+        geometry: [
+          { lat: 50.89, lon: -1.41 }, { lat: 50.89, lon: -1.37 },
+          { lat: 50.91, lon: -1.37 }, { lat: 50.91, lon: -1.41 }, { lat: 50.89, lon: -1.41 },
+        ],
+      }],
+    )).toBe(true);
+  });
+
+  it('does not count a footway running parallel to a tidal centreline', () => {
+    const channel = {
+      type: 'way' as const,
+      tags: { waterway: 'river', tidal: 'yes', name: 'River Itchen' },
+      geometry: [{ lat: 51, lon: -1 }, { lat: 51.001, lon: -1 }],
+    };
+    // A riverside path about 5 m east of the centreline, running alongside it.
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 51.0002, lon: -1.00008 }, { lat: 51.0008, lon: -1.00008 }] },
+      [channel],
+    )).toBe(false);
+  });
+
+  it('keeps a footway crossing a tidal centreline at an angle despite a small mapping offset', () => {
+    const channel = {
+      type: 'way' as const,
+      tags: { waterway: 'river', tidal: 'yes', name: 'River Itchen' },
+      geometry: [{ lat: 51, lon: -1 }, { lat: 51.001, lon: -1 }],
+    };
+    // The footway runs square to the channel but stops about 5 m short of the
+    // mapped line: a real crossing drawn slightly off, not a parallel path.
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 51.0005, lon: -1.001 }, { lat: 51.0005, lon: -1.00008 }] },
+      [channel],
+    )).toBe(true);
+  });
+
+  it('keeps a road bridge within tolerance of a water polygon under the lenient rule', () => {
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'secondary' }, geometry: [{ lat: 50.9, lon: -1.41008 }, { lat: 50.905, lon: -1.41008 }] },
+      [{
+        type: 'way',
+        tags: { 'seamark:type': 'harbour_basin', name: 'Inner harbour' },
+        geometry: [
+          { lat: 50.89, lon: -1.41 }, { lat: 50.89, lon: -1.37 },
+          { lat: 50.91, lon: -1.37 }, { lat: 50.91, lon: -1.41 }, { lat: 50.89, lon: -1.41 },
+        ],
+      }],
+    )).toBe(true);
+  });
+
+  it('drops real Victoria harbour walkway segments inside the Wharf Street Marina bounds', () => {
+    // Real OSM geometry (Nov 2026): Wharf Street Marina relation bounds, and
+    // two footway bridge segments mapped inside them on the marina walkway.
+    // A seed nearby makes the marina water eligible, as the surrounding
+    // tidal water does on the real chart.
+    const marina = {
+      type: 'way' as const,
+      tags: { leisure: 'marina', 'seamark:type': 'harbour', 'seamark:harbour:category': 'marina', name: 'Wharf Street Marina' },
+      geometry: [
+        { lat: 48.42423, lon: -123.37190 }, { lat: 48.42423, lon: -123.37020 },
+        { lat: 48.42603, lon: -123.37020 }, { lat: 48.42603, lon: -123.37190 }, { lat: 48.42423, lon: -123.37190 },
+      ],
+    };
+    const seed = {
+      type: 'way' as const,
+      tags: { 'seamark:type': 'harbour_basin', name: 'Inner harbour' },
+      geometry: [
+        { lat: 48.42, lon: -123.38 }, { lat: 48.42, lon: -123.36 },
+        { lat: 48.44, lon: -123.36 }, { lat: 48.44, lon: -123.38 }, { lat: 48.42, lon: -123.38 },
+      ],
+    };
+    const walkways = [
+      { type: 'way' as const, tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 48.42432, lon: -123.37084 }, { lat: 48.42432, lon: -123.37095 }] },
+      { type: 'way' as const, tags: { bridge: 'yes', highway: 'footway', name: 'Walk Downtown Victoria' }, geometry: [{ lat: 48.42446, lon: -123.37029 }, { lat: 48.42457, lon: -123.37031 }, { lat: 48.42485, lon: -123.37036 }] },
+    ];
+    for (const walkway of walkways) {
+      expect(bridgeCrossesWater(walkway, [marina, seed])).toBe(false);
+    }
+  });
 });
 
 describe('bridge record merging', () => {

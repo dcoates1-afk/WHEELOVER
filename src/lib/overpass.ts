@@ -72,7 +72,9 @@ function pointInRing(lon: number, lat: number, ring: number[][]): boolean {
  * How far a bridge may sit from mapped water and still count as crossing it.
  * Ten metres covers mapping imprecision; anything further is a bridge over
  * land, not over water, and must not be drawn. (It used to be 100 m, which
- * let road bridges beside a river read as water crossings.)
+ * let road bridges beside a river read as water crossings.) The tolerance
+ * does not apply to light bridges over areas: those must cut the boundary
+ * twice, not merely pass near it.
  */
 const WATER_CROSSING_TOLERANCE_METERS = 10;
 /** The tolerance in degrees, padded so a pruned pair is never a real crossing. */
@@ -140,11 +142,82 @@ function segmentsWithinTolerance(
   a: { lat: number; lon: number }, b: { lat: number; lon: number },
   c: { lat: number; lon: number }, d: { lat: number; lon: number },
 ): boolean {
-  return segmentsIntersect(a, b, c, d) ||
-    pointToSegmentMeters(a, c, d) <= WATER_CROSSING_TOLERANCE_METERS ||
+  return segmentsIntersect(a, b, c, d) || segmentsNear(a, b, c, d);
+}
+
+/** Whether two segments pass within the water-crossing tolerance. */
+function segmentsNear(
+  a: { lat: number; lon: number }, b: { lat: number; lon: number },
+  c: { lat: number; lon: number }, d: { lat: number; lon: number },
+): boolean {
+  return pointToSegmentMeters(a, c, d) <= WATER_CROSSING_TOLERANCE_METERS ||
     pointToSegmentMeters(b, c, d) <= WATER_CROSSING_TOLERANCE_METERS ||
     pointToSegmentMeters(c, a, b) <= WATER_CROSSING_TOLERANCE_METERS ||
     pointToSegmentMeters(d, a, b) <= WATER_CROSSING_TOLERANCE_METERS;
+}
+
+/**
+ * Highway values that carry people, not vehicles. Their bridge-tagged ways are
+ * often just path segments on structures — boardwalks, piers, marina fingers —
+ * rather than crossings, so they must prove a real span (see bridgeMeetsWater).
+ * Road, rail and untagged bridges keep the lenient rule: missing one is a
+ * hazard, while a walkway fragment is clutter.
+ */
+const LIGHT_HIGHWAY_VALUES = new Set(['footway', 'cycleway', 'path', 'bridleway']);
+
+function isLightBridge(tags: Record<string, string> | undefined): boolean {
+  return LIGHT_HIGHWAY_VALUES.has(tags?.highway?.toLowerCase() ?? '');
+}
+
+/**
+ * Whether a bridge path genuinely spans a water area: it must cut the area's
+ * boundary at least twice, in and out again. A path that lies inside the area
+ * (a walkway along the shore, a boardwalk over the water's edge) or enters it
+ * and ends there (a finger out to the floats) does not span, however much
+ * water it touches. A bridge to an island inside one polygon cuts the boundary
+ * only once and is not counted; road bridges to islands are unaffected.
+ */
+function pathSpansArea(path: [number, number][], area: Point[]): boolean {
+  let cuts = 0;
+  for (let index = 1; index < path.length; index += 1) {
+    const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
+    const end = { lat: path[index][0], lon: path[index][1] };
+    for (let waterIndex = 1; waterIndex < area.length; waterIndex += 1) {
+      if (segmentsIntersect(start, end, area[waterIndex - 1], area[waterIndex])) cuts += 1;
+    }
+  }
+  return cuts >= 2;
+}
+
+/**
+ * Whether two segments cross rather than run alongside each other: an exact
+ * intersection, or a near miss at a crossing angle (mapping offset on a real
+ * crossing), but never a parallel path within tolerance of the water line.
+ */
+function segmentsCrossTransversely(
+  a: { lat: number; lon: number }, b: { lat: number; lon: number },
+  c: { lat: number; lon: number }, d: { lat: number; lon: number },
+): boolean {
+  if (segmentsIntersect(a, b, c, d)) return true;
+  if (!segmentsNear(a, b, c, d)) return false;
+  const meanLat = ((a.lat + b.lat + c.lat + d.lat) / 4) * Math.PI / 180;
+  const project = ({ lat, lon }: { lat: number; lon: number }) => ({
+    x: lon * 111_320 * Math.cos(meanLat),
+    y: lat * 110_574,
+  });
+  const pa = project(a);
+  const pb = project(b);
+  const pc = project(c);
+  const pd = project(d);
+  const ux = pb.x - pa.x;
+  const uy = pb.y - pa.y;
+  const vx = pd.x - pc.x;
+  const vy = pd.y - pc.y;
+  const ul = Math.hypot(ux, uy);
+  const vl = Math.hypot(vx, vy);
+  if (ul === 0 || vl === 0) return false;
+  const cos = Math.abs((ux * vx + uy * vy) / (ul * vl));
+  return Math.acos(Math.min(1, cos)) * 180 / Math.PI >= 30;
 }
 
 /**
@@ -308,8 +381,15 @@ function prepareWater(water: RawChartElement): PreparedWater | null {
  * `bridgeBounds` must be the bridge's own extent; it prunes both whole water
  * bodies and individual water segments, and the padding is generous against the
  * 100 m tolerance so a crossing near the bridge's edge is still found.
+ *
+ * A light bridge (footway, cycleway, path, bridleway) must prove a real span:
+ * over an area it has to cut the boundary at least twice, and over a line it
+ * has to cross it, not run alongside it — so marina walkways, boardwalks and
+ * fingers out to the floats do not count, however much water they touch. Other
+ * bridges keep the lenient rule, where touching water or passing within
+ * tolerance of it counts.
  */
-function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area, waters: PreparedWater[]): string | null {
+function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area, waters: PreparedWater[], strict: boolean): string | null {
   const reach = padArea(bridgeBounds, WATER_CROSSING_TOLERANCE_DEGREES);
   // Bounds of water that is tidal on its own terms, padded by the tidal reach,
   // so each river reach can be accepted or skipped without walking every water
@@ -349,6 +429,18 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
       const waterArea = water.surface || closedRing;
       const line: Point[] = waterPoint(rawLine.map(([lat, lon]) => ({ lat, lon })));
       if (waterArea && line.length >= 3) {
+        if (strict) {
+          // A light bridge over an area counts only when it spans it. No
+          // tolerance fallback: a walkway within 10 m of the water's edge, or
+          // lying inside the area, is not a crossing.
+          const spans = bridgePaths.some((path) => pathSpansArea(path, line));
+          if (spans) {
+            lineMatched = true;
+            const settled = recordMatch(water);
+            if (settled) return settled;
+          }
+          continue;
+        }
         const ring = line.map(({ lat, lon }) => [lon, lat]);
         let crossesArea = false;
         for (const path of bridgePaths) {
@@ -387,7 +479,7 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
               Math.min(from.lat, to.lat) > reach[2] || Math.max(from.lat, to.lat) < reach[0] ||
               Math.min(from.lon, to.lon) > reach[3] || Math.max(from.lon, to.lon) < reach[1]
             ) continue;
-            if (!segmentsWithinTolerance(start, end, from, to)) continue;
+            if (strict ? !segmentsCrossTransversely(start, end, from, to) : !segmentsWithinTolerance(start, end, from, to)) continue;
             lineMatched = true;
           }
           if (lineMatched) break;
@@ -416,7 +508,7 @@ export function bridgeCrossesWater(bridge: RawChartElement, waters: RawChartElem
   const bridgePaths = bridgeLines(bridge);
   if (bridgePaths.length === 0) return false;
   const prepared = waters.map(prepareWater).filter((water): water is PreparedWater => water !== null);
-  return bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), prepared) !== null;
+  return bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), prepared, isLightBridge(bridge.tags)) !== null;
 }
 
 function keyFor(bounds: Bounds): string {
@@ -571,8 +663,11 @@ export async function queryChartFeaturePart(
 
 /**
  * The features a chart-feature reply can actually be drawn as: bridges that
- * cross tidal water, and designated marine areas. Shared with the server's
- * coverage line so the disclaimer page counts what the chart draws.
+ * span tidal water, and designated marine areas. A light bridge (footway,
+ * cycleway, path, bridleway) must genuinely span the water — cutting an area's
+ * boundary twice, or crossing a centreline — while other bridges keep the
+ * lenient touching rule. Shared with the server's coverage line so the
+ * disclaimer page counts what the chart draws.
  */
 export function chartFeaturesFromElements(elements: RawChartElement[]): {
   bridges: ChartFeature[];
@@ -591,7 +686,7 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
       ? bridgeLines(element)
       : [];
     const crossedWater = bridgePaths.length > 0
-      ? bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), waterWays)
+      ? bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), waterWays, isLightBridge(tags))
       : null;
     const bridge = crossedWater !== null;
     const area = classifyMarineArea(tags);

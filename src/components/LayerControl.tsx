@@ -1109,7 +1109,7 @@ export function LayerControl({
                   {markStats.live ? 'live Overpass query' : markStats.cached ? 'device cache' : 'mark database'}
                 </p>
                 <details className="legend">
-                  <summary>Legend &amp; mark filters (IALA region {legendRegion})</summary>
+                  <summary>Legend &amp; mark filters (IALA region {legendRegion} at this location)</summary>
                   <p className="legend-hint">
                     Tap a class to show or hide it on the chart. Choices are remembered on this device.
                   </p>

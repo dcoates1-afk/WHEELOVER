@@ -140,7 +140,7 @@ describe('water-crossing bridge detection', () => {
 
   const riverReach = (lat: number) => ({
     type: 'way' as const,
-    tags: { water: 'river', natural: 'water' },
+    tags: { waterway: 'river' },
     geometry: [{ lat, lon: -1.0003 }, { lat: lat + 0.001, lon: -1.0003 }],
   });
 
@@ -150,8 +150,103 @@ describe('water-crossing bridge detection', () => {
     geometry: [{ lat, lon: -1.001 }, { lat: lat + 0.001, lon: -0.999 }],
   });
 
-  it('keeps a tidal river reach that carries no tidal tag but sits near open tidal water', () => {
-    expect(bridgeCrossesWater(bridgeAt(51), [riverReach(51), harbour(51.015, -1)])).toBe(true);
+  it('keeps a tidal river reach that carries no tidal tag but runs into open tidal water', () => {
+    // The reach chains into the harbour: its last segment ends inside the
+    // harbour polygon, so the along-water distance from the crossing to the
+    // tide is the short run down the reach itself.
+    const reach = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 51, lon: -1.0003 }, { lat: 51.006, lon: -1.0003 }],
+    };
+    expect(bridgeCrossesWater(bridgeAt(51), [reach, harbour(51.015, -1)])).toBe(true);
+  });
+
+  it('does not treat a river reach gapped from tidal water as tidal', () => {
+    // The old straight-line rule kept this: the reach sits 440 m from the
+    // harbour, inside the two-kilometre reach. Along the water there is no
+    // connection at all — a gap in the mapping, not a mouth — so it drops.
+    expect(bridgeCrossesWater(bridgeAt(51), [riverReach(51), harbour(51.015, -1)])).toBe(false);
+  });
+
+  it('does not let a bridge past the tidal reach stay when the river runs long', () => {
+    // A river chaining south from the harbour: two 1.1 km reaches, so the
+    // far bridge sits 2.2 km along the water from the tide. The old
+    // straight-line rule kept it too (1.1 km from the harbour's edge as the
+    // crow flies, via the near reach); along the water it is out of reach.
+    const upper = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 51.005, lon: -1.0003 }, { lat: 50.995, lon: -1.0003 }],
+    };
+    const lower = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 50.995, lon: -1.0003 }, { lat: 50.985, lon: -1.0003 }],
+    };
+    const farBridge = {
+      type: 'way' as const,
+      tags: { bridge: 'yes' },
+      geometry: [{ lat: 50.985, lon: -1.001 }, { lat: 50.986, lon: -0.999 }],
+    };
+    expect(bridgeCrossesWater(farBridge, [upper, lower, harbour(51.015, -1)])).toBe(false);
+    // The near bridge, halfway down the same chain, stays.
+    const nearBridge = {
+      type: 'way' as const,
+      tags: { bridge: 'yes' },
+      geometry: [{ lat: 50.995, lon: -1.001 }, { lat: 50.996, lon: -0.999 }],
+    };
+    expect(bridgeCrossesWater(nearBridge, [upper, lower, harbour(51.015, -1)])).toBe(true);
+  });
+
+  it('keeps a tributary bridge within along-water reach of the tide', () => {
+    // The main river is split at the confluence, as OSM splits it: the
+    // tributary joins at a shared node, and the run from its bridge to the
+    // harbour is the tributary plus the main's upper reach, well inside
+    // two kilometres.
+    const mainLower = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 51, lon: -1.0003 }, { lat: 51.0005, lon: -1.0003 }],
+    };
+    const mainUpper = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 51.0005, lon: -1.0003 }, { lat: 51.006, lon: -1.0003 }],
+    };
+    const tributary = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 50.999, lon: -1.002 }, { lat: 51.0005, lon: -1.0003 }],
+    };
+    const tributaryBridge = {
+      type: 'way' as const,
+      tags: { bridge: 'yes' },
+      geometry: [{ lat: 50.9995, lon: -1.0015 }, { lat: 51.0005, lon: -1.0005 }],
+    };
+    expect(bridgeCrossesWater(tributaryBridge, [mainLower, mainUpper, tributary, harbour(51.015, -1)])).toBe(true);
+  });
+
+  it('does not let an intermittent basin make a river tidal', () => {
+    // The reach runs into the basin, so it would be tidal if the basin
+    // counted as a seed — but an intermittent pond says nothing about the
+    // tide, so the bridge drops. The same basin without the intermittent
+    // tag seeds the reach and the bridge stays.
+    const basin = (intermittent: boolean) => ({
+      type: 'way' as const,
+      tags: {
+        natural: 'water', water: 'basin', name: 'Creekside basin',
+        ...(intermittent ? { intermittent: 'yes' } : {}),
+      },
+      geometry: harbour(51.015, -1).geometry,
+    });
+    const reach = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 51, lon: -1.0003 }, { lat: 51.006, lon: -1.0003 }],
+    };
+    expect(bridgeCrossesWater(bridgeAt(51), [reach, basin(true)])).toBe(false);
+    expect(bridgeCrossesWater(bridgeAt(51), [reach, basin(false)])).toBe(true);
   });
 
   it('does not treat an untagged river reach 7 km from tidal water as tidal', () => {
@@ -196,8 +291,10 @@ describe('water-crossing bridge detection', () => {
       geometry: [{ lat: 51.24, lon: -0.25 }, { lat: 51.26, lon: -0.25 }],
     };
     expect(bridgeCrossesWater(pocketBridge, [pocketReach, bay])).toBe(false);
-    // Same pocket, but the reach runs 700 m from the bay's edge: within the
-    // two-kilometre reach, so its bridge stays.
+    // Same pocket, but the reach runs 700 m from the bay's edge. The old
+    // straight-line rule kept it — inside the two-kilometre reach. Along
+    // the water there is no connection: an isolated reach near a bay is not
+    // a mouth, so its bridge drops.
     const nearReach = {
       type: 'way' as const,
       tags: { waterway: 'river' },
@@ -208,7 +305,7 @@ describe('water-crossing bridge detection', () => {
       tags: { bridge: 'yes', highway: 'secondary' },
       geometry: [{ lat: 51.24, lon: -0.45 }, { lat: 51.26, lon: -0.45 }],
     };
-    expect(bridgeCrossesWater(nearBridge, [nearReach, bay])).toBe(true);
+    expect(bridgeCrossesWater(nearBridge, [nearReach, bay])).toBe(false);
     // And a reach inside the bay itself stays tidal, however far it runs
     // from the boundary.
     const insideReach = {
@@ -342,6 +439,61 @@ describe('water-crossing bridge detection', () => {
         ],
       }],
     )).toBe(true);
+  });
+
+  it('does not count a footway weaving along a wobbly shoreline as a span', () => {
+    // The basin's east edge zigzags a few metres either side of the footway,
+    // so the footway cuts the boundary four times — the old cut-count rule
+    // drew it as a bridge. But it never gets more than a few metres inside
+    // the water: it runs along the shore, not across the basin.
+    const basin = {
+      type: 'way' as const,
+      tags: { 'seamark:type': 'harbour_basin', name: 'Inner harbour' },
+      geometry: [
+        { lat: 50.89, lon: -1.41 }, { lat: 50.89, lon: -1.36995 },
+        { lat: 50.895, lon: -1.37005 }, { lat: 50.90, lon: -1.36995 },
+        { lat: 50.905, lon: -1.37005 }, { lat: 50.91, lon: -1.36995 },
+        { lat: 50.91, lon: -1.41 }, { lat: 50.89, lon: -1.41 },
+      ],
+    };
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 50.892, lon: -1.37 }, { lat: 50.908, lon: -1.37 }] },
+      [basin],
+    )).toBe(false);
+  });
+
+  it('does not count a steep crossing of a sliver of mapped water as a span', () => {
+    // A footway crossing a seven-metre strip of mapped harbour water
+    // squarely: the geometry is a crossing, but at that width it is
+    // indistinguishable from the polygon edge jutting across the path, so
+    // the strict rule drops it. The same footway over a fifteen-metre
+    // channel stays. Widths are in degrees of longitude (~70 m per 0.001
+    // at this latitude): 0.0001 is ~7 m, 0.00022 is ~15 m.
+    const narrow = {
+      type: 'way' as const,
+      tags: { 'seamark:type': 'harbour_basin', name: 'Narrow channel' },
+      geometry: [
+        { lat: 50.89, lon: -1.37005 }, { lat: 50.89, lon: -1.36995 },
+        { lat: 50.91, lon: -1.36995 }, { lat: 50.91, lon: -1.37005 },
+        { lat: 50.89, lon: -1.37005 },
+      ],
+    };
+    const wide = {
+      type: 'way' as const,
+      tags: { 'seamark:type': 'harbour_basin', name: 'Wide channel' },
+      geometry: [
+        { lat: 50.89, lon: -1.37011 }, { lat: 50.89, lon: -1.36989 },
+        { lat: 50.91, lon: -1.36989 }, { lat: 50.91, lon: -1.37011 },
+        { lat: 50.89, lon: -1.37011 },
+      ],
+    };
+    const footway = {
+      type: 'way' as const,
+      tags: { bridge: 'yes', highway: 'footway' },
+      geometry: [{ lat: 50.9, lon: -1.371 }, { lat: 50.9, lon: -1.369 }],
+    };
+    expect(bridgeCrossesWater(footway, [narrow])).toBe(false);
+    expect(bridgeCrossesWater(footway, [wide])).toBe(true);
   });
 
   it('does not count a footway running parallel to a tidal centreline', () => {

@@ -50,7 +50,7 @@ const CHART_FEATURE_CACHE_MS = 10 * 60 * 1000;
  * key a device keeps serving cells drawn under older rules for up to thirty
  * days. Cells stored under older keys simply stop matching and age out.
  */
-export const CHART_FEATURE_FILTER_VERSION = 2;
+export const CHART_FEATURE_FILTER_VERSION = 3;
 const chartFeatureMemory = new Map<string, { features: ChartFeature[]; at: number }>();
 
 export type RawChartElement = {
@@ -185,24 +185,153 @@ function isLightBridge(tags: Record<string, string> | undefined): boolean {
   return LIGHT_HIGHWAY_VALUES.has(tags?.highway?.toLowerCase() ?? '');
 }
 
+/** Length of one segment in metres, equirectangular at the segment's latitude. */
+function segmentLengthMeters(a: Point, b: Point): number {
+  const meanLat = ((a.lat + b.lat) / 2) * Math.PI / 180;
+  return Math.hypot((b.lon - a.lon) * 111_320 * Math.cos(meanLat), (b.lat - a.lat) * 110_574);
+}
+
 /**
- * Whether a bridge path genuinely spans a water area: it must cut the area's
- * boundary at least twice, in and out again. A path that lies inside the area
- * (a walkway along the shore, a boardwalk over the water's edge) or enters it
- * and ends there (a finger out to the floats) does not span, however much
- * water it touches. A bridge to an island inside one polygon cuts the boundary
- * only once and is not counted; road bridges to islands are unaffected.
+ * The point where two segments cross, with `t` along the first segment, or
+ * null when they do not cross cleanly. A path running along the boundary
+ * (collinear overlap) is not a crossing: it traces the edge rather than
+ * cutting it, so it registers no cut.
+ */
+function segmentIntersectionPoint(
+  a: Point, b: Point, c: Point, d: Point,
+): { lat: number; lon: number; t: number } | null {
+  const denom = (a.lon - b.lon) * (c.lat - d.lat) - (a.lat - b.lat) * (c.lon - d.lon);
+  if (Math.abs(denom) < 1e-12) return null;
+  const t = ((a.lon - c.lon) * (c.lat - d.lat) - (a.lat - c.lat) * (c.lon - d.lon)) / denom;
+  const u = -((a.lon - b.lon) * (a.lat - c.lat) - (a.lat - b.lat) * (a.lon - c.lon)) / denom;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return { lat: a.lat + t * (b.lat - a.lat), lon: a.lon + t * (b.lon - a.lon), t };
+}
+
+/**
+ * How far inside a water area a path must get for its crossing to count as a
+ * span. Ten metres is the mapping-imprecision scale (the crossing tolerance):
+ * a shoreline walkway weaves in and out within metres of the mapped boundary,
+ * while a real span crosses open water.
+ */
+const MIN_SPAN_PENETRATION_METERS = 10;
+
+/**
+ * How wide a steep crossing must be to count as a span. A walkway can cross
+ * a sliver of mapped water steeply — a seven-metre strip where the polygon
+ * edge juts across the path — and that is indistinguishable from mapping
+ * wobble at the same scale, so below ten metres even a square crossing does
+ * not count. Wider than that, a steep bank-to-bank crossing is a bridge
+ * however narrow the water.
+ */
+const MIN_SPAN_WIDTH_METERS = 10;
+
+/**
+ * Whether a bridge path genuinely spans a water area: it must enter the area
+ * and come out again on a run that is a real crossing, not a shoreline
+ * weave. Cutting the boundary twice is not enough on its own — a walkway
+ * along a wobbly shoreline cuts it twice (or twenty times) without ever
+ * leaving the water's edge, and the old cut-count rule drew every such
+ * walkway as a bridge. A run counts as a crossing when it gets properly
+ * inside (ten metres from the boundary, the mapping-imprecision scale) or
+ * when it cuts the boundary steeply at either end across a run at least ten
+ * metres wide, the way a bridge meets its banks, rather than grazing along
+ * them the way a shoreline path does or nicking a sliver of mapped water.
+ * A path that lies inside the area (a walkway along the shore, a boardwalk
+ * over the water's edge) or enters it and ends there (a finger out to the
+ * floats) does not span, however much water it touches. A bridge to an
+ * island inside one polygon cuts the boundary only once and is not counted;
+ * road bridges to islands are unaffected.
  */
 function pathSpansArea(path: [number, number][], area: Point[]): boolean {
-  let cuts = 0;
+  if (path.length < 2 || area.length < 2) return false;
+  // Cut points along the path where it crosses the area boundary, with the
+  // angle between the path and the boundary there.
+  const cuts: { at: number; lat: number; lon: number; angle: number }[] = [];
+  const cumulative: number[] = [0];
   for (let index = 1; index < path.length; index += 1) {
     const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
     const end = { lat: path[index][0], lon: path[index][1] };
+    const segLen = segmentLengthMeters(start, end);
     for (let waterIndex = 1; waterIndex < area.length; waterIndex += 1) {
-      if (segmentsIntersect(start, end, area[waterIndex - 1], area[waterIndex])) cuts += 1;
+      const hit = segmentIntersectionPoint(start, end, area[waterIndex - 1], area[waterIndex]);
+      if (hit) {
+        const meanLat = hit.lat * Math.PI / 180;
+        const ux = (end.lon - start.lon) * 111_320 * Math.cos(meanLat);
+        const uy = (end.lat - start.lat) * 110_574;
+        const vx = (area[waterIndex].lon - area[waterIndex - 1].lon) * 111_320 * Math.cos(meanLat);
+        const vy = (area[waterIndex].lat - area[waterIndex - 1].lat) * 110_574;
+        const ul = Math.hypot(ux, uy);
+        const vl = Math.hypot(vx, vy);
+        const cos = ul === 0 || vl === 0 ? 1 : Math.abs((ux * vx + uy * vy) / (ul * vl));
+        cuts.push({ at: cumulative[index - 1] + hit.t * segLen, lat: hit.lat, lon: hit.lon, angle: Math.acos(Math.min(1, cos)) * 180 / Math.PI });
+      }
+    }
+    cumulative.push(cumulative[index - 1] + segLen);
+  }
+  cuts.sort((a, b) => a.at - b.at);
+  // One boundary encounter can register twice (a path vertex sitting on the
+  // ring, or a crossing at a ring vertex): cuts within a metre of each other
+  // along the path are the same encounter, keeping the steepest reading.
+  const deduped: typeof cuts = [];
+  for (const cut of cuts) {
+    const last = deduped[deduped.length - 1];
+    if (last !== undefined && cut.at - last.at <= 1) last.angle = Math.max(last.angle, cut.angle);
+    else deduped.push({ ...cut });
+  }
+  if (deduped.length < 2) return false;
+  // Inside-runs between consecutive cuts alternate with outside-runs. Only a
+  // complete inside-run counts: the run from the path start to the first cut
+  // and the run from the last cut to the path end are unbounded on one side
+  // (a finger, or a bridge starting on an island) and never count.
+  const ring = area.map(({ lat, lon }) => [lon, lat]);
+  const startInside = pointInRing(path[0][1], path[0][0], ring);
+  for (let run = 1; run < deduped.length; run += 1) {
+    const inside = startInside ? run % 2 === 0 : run % 2 === 1;
+    if (!inside) continue;
+    const from = deduped[run - 1];
+    const to = deduped[run];
+    // A steep cut at either end proves a crossing only when the run is wide
+    // enough to be one: a bridge meets its banks squarely even over a
+    // channel too narrow for ten metres of penetration, while a shoreline
+    // weave only ever grazes the edge — but a steep cut across a sliver
+    // under ten metres wide is mapping wobble at the same scale, not a span.
+    if (Math.max(from.angle, to.angle) >= 30 &&
+      segmentLengthMeters({ lat: from.lat, lon: from.lon }, { lat: to.lat, lon: to.lon }) >= MIN_SPAN_WIDTH_METERS) return true;
+    // Otherwise the run must get properly inside. Sample the run's vertices
+    // and segment midpoints: the deepest point of the run is its
+    // penetration, and a midpoint catches a two-point bridge whose only
+    // vertex inside is none at all.
+    const samples: Point[] = [];
+    for (let index = 1; index < path.length; index += 1) {
+      const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
+      const end = { lat: path[index][0], lon: path[index][1] };
+      const midAt = cumulative[index - 1] + (cumulative[index] - cumulative[index - 1]) / 2;
+      if (cumulative[index - 1] > from.at && cumulative[index - 1] < to.at) samples.push(start);
+      if (midAt > from.at && midAt < to.at) samples.push({ lat: (start.lat + end.lat) / 2, lon: (start.lon + end.lon) / 2 });
+      if (cumulative[index] > from.at && cumulative[index] < to.at) samples.push(end);
+    }
+    for (const sample of samples) {
+      // Penetration is the distance to the nearest boundary segment. Ring
+      // segments outside a threshold box around the sample cannot be the
+      // nearest, so they are skipped — but the scan must run to the end:
+      // the nearest segment is the minimum over all of them, and stopping
+      // at the first segment ten metres away would read a far segment as
+      // the nearest while a nearer one sits later in the ring.
+      let nearest = Number.POSITIVE_INFINITY;
+      for (let waterIndex = 1; waterIndex < area.length; waterIndex += 1) {
+        const a = area[waterIndex - 1];
+        const b = area[waterIndex];
+        const latTol = MIN_SPAN_PENETRATION_METERS / 110_574;
+        const lonTol = MIN_SPAN_PENETRATION_METERS / (111_320 * Math.cos(sample.lat * Math.PI / 180));
+        if (Math.min(a.lat, b.lat) > sample.lat + latTol || Math.max(a.lat, b.lat) < sample.lat - latTol ||
+          Math.min(a.lon, b.lon) > sample.lon + lonTol || Math.max(a.lon, b.lon) < sample.lon - lonTol) continue;
+        nearest = Math.min(nearest, pointToSegmentMeters(sample, a, b));
+      }
+      if (nearest >= MIN_SPAN_PENETRATION_METERS) return true;
     }
   }
-  return cuts >= 2;
+  return false;
 }
 
 /**
@@ -271,12 +400,16 @@ export function isTidalWater(tags: Record<string, string> | undefined): boolean 
  * How far up a river the tide is taken to reach, when nothing in the map says.
  *
  * A tidal river is usually mapped as nothing more than `water=river` or a river
- * centreline, so a reach is treated as tidal when its mapped line comes within
- * this distance of water that is unambiguously tidal — the sea, an estuary, a
- * harbour basin or a bay — or lies inside such a water area. Two kilometres
- * covers the mouth reaches of untagged rivers, where a boat from the sea can
- * actually be. The distance is measured path to path, in metres, not box to
- * box: a big sea polygon's bounding box covers whole inland valleys (Haro
+ * centreline, so a reach is treated as tidal when a boat following the water
+ * from the crossing can reach water that is unambiguously tidal — the sea, an
+ * estuary, a harbour basin or a bay — within this distance measured ALONG the
+ * waterway, not as the crow flies. Two kilometres covers the mouth reaches of
+ * untagged rivers, where a boat from the sea can actually be. The old
+ * straight-line rule kept whole creek chains: the Colquitz valley is so
+ * compact that every crossing up the creek sits within two kilometres of
+ * Portage Inlet in a straight line, however far the winding creek actually
+ * runs. The distance is measured path to path, in metres, never box to box:
+ * a big sea polygon's bounding box covers whole inland valleys (Haro
  * Strait's box covers the entire Colquitz valley), so a box test let every
  * reach inside the box read as tidal no matter how far the actual water was.
  */
@@ -310,9 +443,13 @@ export function isRiverWater(tags: Record<string, string> | undefined): boolean 
  * mooring pool on the Thames at Henley is not evidence that Henley Bridge sits
  * in tidal water. Only open water — sea, bay, strait, estuary, harbour basin,
  * dock, or a body tagged tidal — is allowed to carry the inference upstream.
+ * An intermittent body is not a seed either: a pond that dries up (the
+ * intermittent basin beside the Colquitz counted as tidal water for a dozen
+ * creek bridges) says nothing about the tide.
  */
 function isTidalSeed(tags: Record<string, string>): boolean {
   if (tags.leisure?.toLowerCase() === 'marina') return false;
+  if (tags.intermittent?.toLowerCase() === 'yes') return false;
   return isTidalWater(tags);
 }
 
@@ -368,6 +505,13 @@ interface PreparedWater {
   paths: [number, number][][];
   /** A mapped water surface rather than a centreline. */
   surface: boolean;
+  /**
+   * An area water even when its geometry arrives fragmented: a multipolygon
+   * relation is an area by type, so its unjoined member lines are pieces of
+   * shoreline, not centrelines — a strict bridge crossing one only meets
+   * the shore, which the span rule on the rings has already failed.
+   */
+  areaLike: boolean;
   bounds: Area;
   /** Tidal by its own tags, so it can make a nearby river reach tidal too. */
   seed: boolean;
@@ -394,6 +538,7 @@ function prepareWater(water: RawChartElement): PreparedWater | null {
   return {
     paths,
     surface: tags.natural === 'water' || tags.waterway?.toLowerCase() === 'riverbank',
+    areaLike: tags.natural === 'water' || tags.waterway?.toLowerCase() === 'riverbank' || tags.type === 'multipolygon',
     bounds: boundsOfPaths(paths),
     seed,
     name: typeof name === 'string' && name.trim() !== '' ? name.trim() : null,
@@ -467,9 +612,223 @@ function waterWithinTidalReach(water: PreparedWater, seeds: PreparedWater[]): bo
   return false;
 }
 
-function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area, waters: PreparedWater[], strict: boolean): string | null {
+/** A graph node is a waterway point, rounded to ~0.1 m: shared OSM nodes have identical coordinates, so they share a key. */
+function nodeKey(lat: number, lon: number): string {
+  return `${lat.toFixed(6)},${lon.toFixed(6)}`;
+}
+
+/** Whether a stitched path closes back on its start: a ring, not a line. */
+function isClosedPath(path: [number, number][]): boolean {
+  return path.length >= 4 &&
+    Math.abs(path[0][0] - path[path.length - 1][0]) < 1e-9 &&
+    Math.abs(path[0][1] - path[path.length - 1][1]) < 1e-9;
+}
+
+/**
+ * How close a waterway point must come to mapped tidal water to count as
+ * connected to it. Twenty-five metres covers the mapping offset between a
+ * centreline end and the shoreline it meets (two mapped features, each with
+ * its own imprecision); anything wider would let a river running alongside a
+ * bay borrow the bay's tide without ever meeting it.
+ */
+const ALONG_WATER_TERMINAL_METERS = 25;
+
+/** Rings too large for a point-in-ring test on every node: their interiors are
+ * reached through boundary proximity instead, which is where a river mouth
+ * actually meets them. */
+const MAX_RING_SEGMENTS_FOR_INSIDE_TEST = 1000;
+
+function segmentWithinAlongWaterReach(
+  bridgeStart: Point, bridgeEnd: Point, from: Point, to: Point, distances: Map<string, number>,
+): boolean {
+  // The crossing point's own along-water distance, interpolated along the
+  // water segment: either endpoint's distance plus the run from the crossing
+  // to that endpoint. Endpoint-only lookup would let one long segment
+  // straddle the reach — a bridge at its far end reading the near end's
+  // distance — so the crossing point itself is what gets measured. A
+  // near-miss match (tolerance, no exact intersection) reads from the nearer
+  // endpoint, the only crossing the mapping supports.
+  const hit = segmentIntersectionPoint(bridgeStart, bridgeEnd, from, to);
+  const crossing = hit !== null
+    ? { lat: hit.lat, lon: hit.lon }
+    : (pointToSegmentMeters(from, bridgeStart, bridgeEnd) <= pointToSegmentMeters(to, bridgeStart, bridgeEnd) ? from : to);
+  const distA = distances.get(nodeKey(from.lat, from.lon));
+  const distB = distances.get(nodeKey(to.lat, to.lon));
+  const viaA = distA === undefined ? Number.POSITIVE_INFINITY : distA + segmentLengthMeters(crossing, from);
+  const viaB = distB === undefined ? Number.POSITIVE_INFINITY : distB + segmentLengthMeters(crossing, to);
+  return Math.min(viaA, viaB) <= TIDAL_REACH_METERS;
+}
+
+/**
+ * Along-water distance from every waterway point to the nearest tidal water,
+ * walking the mapped network: river centrelines chained at shared nodes,
+ * water areas crossed in a straight line (water is open inside a polygon),
+ * and a centreline end that touches tidal water or falls inside it. Only
+ * distances within the tidal reach are kept — the walk stops once every
+ * unsettled point is further than a boat could be from the tide, so a whole
+ * inland network costs no more than its tidal fringe.
+ */
+export function alongWaterDistances(waters: PreparedWater[]): Map<string, number> {
+  const adjacency = new Map<string, { key: string; meters: number }[]>();
+  const nodeCoords = new Map<string, Point>();
+  const addEdge = (a: Point, b: Point, meters: number) => {
+    const ka = nodeKey(a.lat, a.lon);
+    const kb = nodeKey(b.lat, b.lon);
+    if (ka === kb || !(meters > 0)) return;
+    nodeCoords.set(ka, a);
+    nodeCoords.set(kb, b);
+    const fa = adjacency.get(ka) ?? [];
+    fa.push({ key: kb, meters });
+    adjacency.set(ka, fa);
+    const fb = adjacency.get(kb) ?? [];
+    fb.push({ key: ka, meters });
+    adjacency.set(kb, fb);
+  };
+  const seedSegments: { a: Point; b: Point }[] = [];
+  const seedRings: Point[][] = [];
+  const areaRings: Point[][] = [];
+  for (const water of waters) {
+    for (const path of water.paths) {
+      if (path.length < 2) continue;
+      const points = path.map(([lat, lon]) => ({ lat, lon }));
+      if (isClosedPath(path)) {
+        if (water.seed) {
+          seedRings.push(points);
+          for (let i = 1; i < points.length; i++) seedSegments.push({ a: points[i - 1], b: points[i] });
+        } else {
+          areaRings.push(points);
+        }
+        continue;
+      }
+      for (let i = 1; i < points.length; i++) {
+        addEdge(points[i - 1], points[i], segmentLengthMeters(points[i - 1], points[i]));
+        if (water.seed) seedSegments.push({ a: points[i - 1], b: points[i] });
+      }
+    }
+  }
+  // A water area joins the network wherever a centreline enters it: every
+  // line point inside the area (or near its edge) connects to every other
+  // across open water, at the straight-line distance between them.
+  for (const ring of areaRings) {
+    const ringCoords = ring.map(({ lat, lon }) => [lon, lat]);
+    const [south, west, north, east] = boundsOfPaths([ring.map(({ lat, lon }) => [lat, lon] as [number, number])]);
+    const inside: Point[] = [];
+    const testInside = ring.length <= MAX_RING_SEGMENTS_FOR_INSIDE_TEST;
+    for (const point of nodeCoords.values()) {
+      if (point.lat < south || point.lat > north || point.lon < west || point.lon > east) continue;
+      if (testInside && pointInRing(point.lon, point.lat, ringCoords)) {
+        inside.push(point);
+        continue;
+      }
+      for (let i = 1; i < ring.length; i++) {
+        if (pointToSegmentMeters(point, ring[i - 1], ring[i]) <= ALONG_WATER_TERMINAL_METERS) {
+          inside.push(point);
+          break;
+        }
+      }
+    }
+    for (let i = 0; i < inside.length; i++) {
+      for (let j = i + 1; j < inside.length; j++) {
+        addEdge(inside[i], inside[j], segmentLengthMeters(inside[i], inside[j]));
+      }
+    }
+  }
+  // Terminals: waterway points touching tidal water, or inside a tidal area.
+  // Seed segments are indexed by grid cell so the proximity test stays cheap
+  // no matter how many thousand segments a strait boundary holds.
+  const seedGrid = new Map<string, { a: Point; b: Point }[]>();
+  for (const seg of seedSegments) {
+    const sLat = Math.floor(Math.min(seg.a.lat, seg.b.lat) / 0.01);
+    const nLat = Math.floor(Math.max(seg.a.lat, seg.b.lat) / 0.01);
+    const wLon = Math.floor(Math.min(seg.a.lon, seg.b.lon) / 0.01);
+    const eLon = Math.floor(Math.max(seg.a.lon, seg.b.lon) / 0.01);
+    for (let la = sLat; la <= nLat; la++) {
+      for (let lo = wLon; lo <= eLon; lo++) {
+        const k = `${la},${lo}`;
+        const list = seedGrid.get(k) ?? [];
+        list.push(seg);
+        seedGrid.set(k, list);
+      }
+    }
+  }
+  const isTerminal = (point: Point): boolean => {
+    const la = Math.floor(point.lat / 0.01);
+    const lo = Math.floor(point.lon / 0.01);
+    for (let dla = -1; dla <= 1; dla++) {
+      for (let dlo = -1; dlo <= 1; dlo++) {
+        for (const seg of seedGrid.get(`${la + dla},${lo + dlo}`) ?? []) {
+          if (pointToSegmentMeters(point, seg.a, seg.b) <= ALONG_WATER_TERMINAL_METERS) return true;
+        }
+      }
+    }
+    for (const ring of seedRings) {
+      if (ring.length > MAX_RING_SEGMENTS_FOR_INSIDE_TEST) continue;
+      const [south, west, north, east] = boundsOfPaths([ring.map(({ lat, lon }) => [lat, lon] as [number, number])]);
+      if (point.lat < south || point.lat > north || point.lon < west || point.lon > east) continue;
+      if (pointInRing(point.lon, point.lat, ring.map(({ lat, lon }) => [lon, lat]))) return true;
+    }
+    return false;
+  };
+  const distances = new Map<string, number>();
+  const heap: { key: string; dist: number }[] = [];
+  const push = (key: string, dist: number) => {
+    heap.push({ key, dist });
+    let i = heap.length - 1;
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (heap[parent].dist <= heap[i].dist) break;
+      [heap[parent], heap[i]] = [heap[i], heap[parent]];
+      i = parent;
+    }
+  };
+  const pop = (): { key: string; dist: number } | undefined => {
+    if (heap.length === 0) return undefined;
+    const top = heap[0];
+    const last = heap.pop();
+    if (heap.length > 0 && last !== undefined) {
+      heap[0] = last;
+      let i = 0;
+      for (;;) {
+        const left = i * 2 + 1;
+        const right = left + 1;
+        let smallest = i;
+        if (left < heap.length && heap[left].dist < heap[smallest].dist) smallest = left;
+        if (right < heap.length && heap[right].dist < heap[smallest].dist) smallest = right;
+        if (smallest === i) break;
+        [heap[i], heap[smallest]] = [heap[smallest], heap[i]];
+        i = smallest;
+      }
+    }
+    return top;
+  };
+  for (const [key, point] of nodeCoords) {
+    if (isTerminal(point)) {
+      distances.set(key, 0);
+      push(key, 0);
+    }
+  }
+  while (heap.length > 0) {
+    const current = pop();
+    if (current === undefined || current.dist !== distances.get(current.key)) continue;
+    if (current.dist > TIDAL_REACH_METERS) break;
+    for (const edge of adjacency.get(current.key) ?? []) {
+      const next = current.dist + edge.meters;
+      if (next > TIDAL_REACH_METERS) continue;
+      if (next < (distances.get(edge.key) ?? Number.POSITIVE_INFINITY)) {
+        distances.set(edge.key, next);
+        push(edge.key, next);
+      }
+    }
+  }
+  return distances;
+}
+
+function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area, waters: PreparedWater[], strict: boolean, alongWater?: Map<string, number>): string | null {
   const reach = padArea(bridgeBounds, WATER_CROSSING_TOLERANCE_DEGREES);
   const seeds = waters.filter((water) => water.seed);
+  // Along-water distances are built once per view, not once per bridge: the
+  // graph walk is the expensive part, and every bridge in the view shares it.
+  const distances = alongWater ?? alongWaterDistances(waters);
   // A bridge can meet several bodies at once — the river, an unnamed dock beside
   // it, and a marina basin alongside. The card should say "River Itchen", so an
   // unnamed match is only a fallback and open tidal water beats a marina.
@@ -488,7 +847,13 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
   };
   for (const water of waters) {
     if (!areasOverlap(reach, water.bounds)) continue;
-    if (!water.seed && !waterWithinTidalReach(water, seeds)) continue;
+    // A water body mapped as an area (a bay, a riverbank polygon) keeps the
+    // whole-element reach test: an area has no centreline to walk. A river
+    // centreline is judged per matched segment below, along the waterway —
+    // the whole-element test let one segment near the sea make a whole river
+    // tidal, bridges kilometres upstream included.
+    const waterHasArea = water.paths.some((path) => water.areaLike || isClosedPath(path));
+    if (!water.seed && waterHasArea && !waterWithinTidalReach(water, seeds)) continue;
     // Once a named body has matched, only open tidal water can improve on it.
     if (namedMatch !== null && !water.seed) continue;
     // Once any crossing is found, an unnamed body can add nothing.
@@ -540,6 +905,14 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
         }
       }
       if (lineMatched) continue;
+      // A light bridge must not cross on a fragment: an open line of a water
+      // that also has closed rings, or of a multipolygon area, is a piece of
+      // shoreline, not a centreline — a multipolygon's unjoined member — and
+      // crossing it transversely only proves the walkway meets the shore,
+      // which the span rule on the rings has already failed. Road bridges
+      // keep the lenient rule: missing one is a hazard, while a walkway
+      // fragment is clutter.
+      if (strict && !waterArea && (water.areaLike || water.paths.some(isClosedPath))) continue;
       for (const path of bridgePaths) {
         for (let index = 1; index < path.length; index += 1) {
           const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
@@ -553,6 +926,12 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
               Math.min(from.lon, to.lon) > reach[3] || Math.max(from.lon, to.lon) < reach[1]
             ) continue;
             if (strict ? !segmentsCrossTransversely(start, end, from, to) : !segmentsWithinTolerance(start, end, from, to)) continue;
+            // A non-seed centreline counts only where the water at the
+            // crossing is within along-water reach of the tide. Judging the
+            // whole line would let one mouth segment carry bridges far
+            // upstream; judging the crossing keeps the mouth and drops the
+            // headwaters.
+            if (!water.seed && !waterArea && !segmentWithinAlongWaterReach(start, end, from, to, distances)) continue;
             lineMatched = true;
           }
           if (lineMatched) break;
@@ -758,6 +1137,7 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
   const waterWays = elements
     .map(prepareWater)
     .filter((water): water is PreparedWater => water !== null);
+  const alongWater = alongWaterDistances(waterWays);
   const bridges: ChartFeature[] = [];
   const areas: ChartFeature[] = [];
   for (const element of elements) {
@@ -768,7 +1148,7 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
       ? bridgeLines(element)
       : [];
     const crossedWater = bridgePaths.length > 0
-      ? bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), waterWays, isLightBridge(tags))
+      ? bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), waterWays, isLightBridge(tags), alongWater)
       : null;
     const bridge = crossedWater !== null;
     const area = classifyMarineArea(tags);

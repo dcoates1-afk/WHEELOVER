@@ -42,7 +42,10 @@ function query(bounds) {
   const [s, w, n, e] = bounds;
   const box = `${s},${w},${n},${e}`;
   // Include charted seamarks and nearby wrecks; OSM data is community mapped.
-  return `[out:json][timeout:120];(node["seamark:type"](${box});way["seamark:type"](${box})["seamark:type"!="calling-in_point"];node["man_made"="lighthouse"](${box});node["seamark:light:character"](${box});node["historic"="wreck"](${box});way["historic"="wreck"](${box});node["man_made"="wreck"](${box});way["man_made"="wreck"](${box}););out center tags;way["seamark:type"="calling-in_point"](${box});out geom;`;
+  // Offshore structures ride along: turbines (nodes), rigs (nodes or ways)
+  // and farms (centre output only here — the live query fetches farm
+  // boundaries with geometry, the built snapshot stores points).
+  return `[out:json][timeout:120];(node["seamark:type"](${box});way["seamark:type"](${box})["seamark:type"!="calling-in_point"];node["man_made"="lighthouse"](${box});node["seamark:light:character"](${box});node["historic"="wreck"](${box});way["historic"="wreck"](${box});node["man_made"="wreck"](${box});way["man_made"="wreck"](${box});node["power"="generator"]["generator:source"="wind"](${box});nwr["man_made"="offshore_platform"](${box});node["power"="plant"]["plant:source"="wind"](${box});way["power"="plant"]["plant:source"="wind"](${box});relation["power"="plant"]["plant:source"="wind"](${box}););out center tags;way["seamark:type"="calling-in_point"](${box});out geom;`;
 }
 
 async function fetchRegion(region) {

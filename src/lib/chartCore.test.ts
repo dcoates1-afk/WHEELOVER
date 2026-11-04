@@ -281,6 +281,45 @@ describe('classification', () => {
     expect(wreck.id).toBe('noaa-enc:node/610308');
   });
 
+  it('normalises offshore structures from live elements', () => {
+    const turbine = normalizeElement({
+      type: 'node', id: 1, lat: 50.7, lon: -0.2,
+      tags: { power: 'generator', 'generator:source': 'wind', name: 'Rampion T1' },
+    }) as Navaid;
+    expect(turbine.category).toBe('wind_turbine');
+    expect([turbine.lat, turbine.lon]).toEqual([50.7, -0.2]);
+
+    const rig = normalizeElement({
+      type: 'way', id: 2, center: { lat: 58.1, lon: 1.2 },
+      tags: { 'man_made': 'offshore_platform', name: 'Test Rig' },
+    }) as Navaid;
+    expect(rig.category).toBe('oil_rig');
+    expect([rig.lat, rig.lon]).toEqual([58.1, 1.2]);
+
+    // A farm way's point is the bbox centre of its ring, not a boundary vertex.
+    const ring = [
+      { lat: 50.6, lon: -0.4 }, { lat: 50.6, lon: -0.1 }, { lat: 50.8, lon: -0.1 },
+      { lat: 50.8, lon: -0.4 }, { lat: 50.6, lon: -0.4 },
+    ];
+    const farmWay = normalizeElement({
+      type: 'way', id: 3, geometry: ring,
+      tags: { power: 'plant', 'plant:source': 'wind', name: 'Test Farm' },
+    }) as Navaid;
+    expect(farmWay.category).toBe('wind_farm');
+    expect([farmWay.lat, farmWay.lon]).toEqual([50.7, -0.25]);
+    expect(farmWay.path).toHaveLength(5);
+
+    // A farm relation's point is the bbox centre of its member geometry.
+    const farmRelation = normalizeElement({
+      type: 'relation', id: 4,
+      members: [{ type: 'way', geometry: ring }],
+      tags: { power: 'plant', 'plant:source': 'wind', name: 'Test Farm' },
+    }) as Navaid;
+    expect(farmRelation.category).toBe('wind_farm');
+    expect([farmRelation.lat, farmRelation.lon]).toEqual([50.7, -0.25]);
+    expect(farmRelation.paths).toHaveLength(1);
+  });
+
   it('drops areas, cables and unknown shoreline features', () => {
     expect(classifyTags({ 'seamark:type': 'cable_submarine' })).toBeNull();
     expect(classifyTags({ 'seamark:type': 'restricted_area' })).toBeNull();

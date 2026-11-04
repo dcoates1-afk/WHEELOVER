@@ -751,15 +751,19 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
         .filter((part) => part.length > 1)
     : null;
   const allGeometry = paths?.flat() ?? path;
-  const areaMidpoint = allGeometry.length > 0 && type === 'communication_area'
+  // Area marks take their point at the bbox centre of their geometry, not at
+  // a boundary vertex: communication areas and wind-farm areas alike. Other
+  // geometries keep the path midpoint (a line's middle, not an area's).
+  const isAreaMark = type === 'communication_area' || classified.category === 'wind_farm';
+  const areaMidpoint = allGeometry.length > 0 && isAreaMark
     ? [
         (Math.min(...allGeometry.map(([lat]) => lat)) + Math.max(...allGeometry.map(([lat]) => lat))) / 2,
         (Math.min(...allGeometry.map(([, lon]) => lon)) + Math.max(...allGeometry.map(([, lon]) => lon))) / 2,
       ]
     : allGeometry.length > 0 ? allGeometry[Math.floor(allGeometry.length / 2)] : null;
 
-  const lat = element.lat ?? element.center?.lat ?? (type === 'communication_area' ? areaMidpoint?.[0] : midpoint?.[0]);
-  const lon = element.lon ?? element.center?.lon ?? (type === 'communication_area' ? areaMidpoint?.[1] : midpoint?.[1]);
+  const lat = element.lat ?? element.center?.lat ?? (isAreaMark ? areaMidpoint?.[0] : midpoint?.[0]);
+  const lon = element.lon ?? element.center?.lon ?? (isAreaMark ? areaMidpoint?.[1] : midpoint?.[1]);
   if (typeof lat !== 'number' || typeof lon !== 'number') return null;
 
   const kind = element.type || 'node';

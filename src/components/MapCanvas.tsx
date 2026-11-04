@@ -1252,7 +1252,22 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       // Calling-in features may be reporting lines; communication areas may
       // have one or more mapped boundary paths. Keep these as outlines because
       // OSM geometry alone does not certify the official system boundary.
-      if (mark.path && mark.path.length >= 2) {
+      // Wind-farm areas draw their boundary in the farm glyph's yellow, from
+      // the way ring or the relation members alike. The generic line branch
+      // below must not also draw a way farm in calling-line cyan.
+      if (mark.category === 'wind_farm') {
+        for (const boundary of [...(mark.path ? [mark.path] : []), ...(mark.paths ?? [])]) {
+          if (boundary.length < 2) continue;
+          L.polyline(boundary, {
+            className: 'marnav-wind-farm',
+            color: '#f4c531',
+            weight: 2,
+            opacity: 0.85,
+            dashArray: '5 5',
+            interactive: false,
+          }).addTo(group);
+        }
+      } else if (mark.path && mark.path.length >= 2) {
         L.polyline(mark.path, {
           className: 'marnav-calling-line',
           color: '#3dd6ff',

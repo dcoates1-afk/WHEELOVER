@@ -270,12 +270,24 @@ export function buildOverpassQuery([south, west, north, east]: Bounds): string {
     `way["seamark:type"](${box})["seamark:type"!="calling-in_point"];`,
     `node["man_made"="lighthouse"](${box});`,
     `node["seamark:light:character"](${box});`,
+    // Offshore structures: turbines are nodes, rigs are nodes or ways, and
+    // node-mapped farms are points. Way/relation farms are fetched with
+    // geometry below, not here, so each farm appears once.
+    `node["power"="generator"]["generator:source"="wind"](${box});`,
+    `nwr["man_made"="offshore_platform"](${box});`,
+    `node["power"="plant"]["plant:source"="wind"](${box});`,
     ');',
     'out center tags;',
     `way["seamark:type"="calling-in_point"](${box});`,
     'out geom;',
     `way["seamark:type"="communication_area"](${box});`,
     `relation["seamark:type"="communication_area"](${box});`,
+    'out geom;',
+    // Wind-farm areas with geometry: the boundary draws on the chart and the
+    // point sits at the bbox centre (see normalizeElement), so these are not
+    // also fetched in the centre block above.
+    `way["power"="plant"]["plant:source"="wind"](${box});`,
+    `relation["power"="plant"]["plant:source"="wind"](${box});`,
     'out geom;',
   ].join('');
 }
@@ -557,7 +569,9 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
     const cell = queryBounds.map((v) => v.toFixed(3)).join(',');
     // Use a new cache namespace after changing chart-feature semantics so old
     // generic road-bridge results cannot linger as if they were water crossings.
-    const cacheKind = kind === 'chart-features' ? `chart-features-cell-v9-${part}` : kind;
+    // Navaid replies are versioned the same way: the v2 query adds offshore
+    // selectors, so a cached v1 reply must not serve as if it had them.
+    const cacheKind = kind === 'chart-features' ? `chart-features-cell-v9-${part}` : kind === 'navaids' ? 'navaids-v2' : kind;
     const key = createHash('sha1')
       .update(`${cacheKind}:${cell}`)
       .digest('hex')

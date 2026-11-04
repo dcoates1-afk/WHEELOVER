@@ -335,13 +335,17 @@ describe('water-crossing bridge detection', () => {
         { lat: 48.44, lon: -123.36 }, { lat: 48.44, lon: -123.38 }, { lat: 48.42, lon: -123.38 },
       ],
     };
-    const walkways = [
-      { type: 'way' as const, tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 48.42432, lon: -123.37084 }, { lat: 48.42432, lon: -123.37095 }] },
-      { type: 'way' as const, tags: { bridge: 'yes', highway: 'footway', name: 'Walk Downtown Victoria' }, geometry: [{ lat: 48.42446, lon: -123.37029 }, { lat: 48.42457, lon: -123.37031 }, { lat: 48.42485, lon: -123.37036 }] },
-    ];
-    for (const walkway of walkways) {
-      expect(bridgeCrossesWater(walkway, [marina, seed])).toBe(false);
-    }
+    // Each walkway is asserted directly: a mixed-shape array would widen
+    // the first element's tags with `name?: undefined`, which is not a
+    // Record<string, string> and breaks the build's typecheck.
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 48.42432, lon: -123.37084 }, { lat: 48.42432, lon: -123.37095 }] },
+      [marina, seed],
+    )).toBe(false);
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'footway', name: 'Walk Downtown Victoria' }, geometry: [{ lat: 48.42446, lon: -123.37029 }, { lat: 48.42457, lon: -123.37031 }, { lat: 48.42485, lon: -123.37036 }] },
+      [marina, seed],
+    )).toBe(false);
   });
 });
 

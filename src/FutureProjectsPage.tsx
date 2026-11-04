@@ -6,25 +6,25 @@ const projects = [
     number: '01',
     title: 'Sailing data',
     copy: 'Deeper sailing-specific data on the chart — the wind, sea state and tidal information that matters when the sails are up, presented the way sailors actually use it: wind shifts, tide gates and sea state in the terms you plan around, not just raw numbers.',
-    status: 'Exploring',
+    status: 'Exploring · Premium',
   },
   {
     number: '02',
     title: 'Sailing race timer',
     copy: 'A race timer built for the start line: countdown sequences, start signals and timing you can run from the helm without leaving the chart. Five-four-one-minute sequences and rolling starts, signals you can hear over wind and water, and a start-line view that stays readable in sun and spray.',
-    status: 'Exploring',
+    status: 'Exploring · Premium',
   },
   {
     number: '03',
     title: 'Navigation planning',
-    copy: 'A route builder and fuller planning workspace — tap waypoints on the chart or type coordinates, drag them into place, with per-leg distance, bearing and ETA, plus the safety checks a voyage plan needs: a weather verdict for departure, a hazard check against marine areas and traffic schemes, and an anti-grounding flag from depth data — all before you leave the dock.',
-    status: 'Exploring',
+    copy: 'The route builder, hazard check and anti-grounding flag are in the app today. Still to come in planning: a weather verdict for departure, bridge air-draft checks against your boat’s air draft, and a fuller planning workspace — saved routes you can return to, and notes on each route.',
+    status: 'In progress · Premium',
   },
   {
     number: '04',
     title: 'Accounts that link web & app',
     copy: 'Create an account and your planning follows you: build routes and courses on your PC in the web version, then open them in the app on the water — and the other way around. Your pins, logbook and tracks come with you between devices. Accounts also unlock the community features below, which is why they come first.',
-    status: 'Planned',
+    status: 'Planned · Premium',
   },
   {
     number: '05',
@@ -36,13 +36,13 @@ const projects = [
     number: '06',
     title: 'Community Features',
     copy: 'Destination reviews, crowdsourced chart updates, shared pins, community routes and hazards with voting, connecting with other boaters, and sharing routes and experiences — plus private and public groups for clubs, fleets and cruising friends. These need accounts first, so they follow the account project above.',
-    status: 'Planned',
+    status: 'Planned · Premium',
   },
   {
     number: '07',
     title: 'Routes that steer around land and hazards',
     copy: 'Automatic routing that steers your route around land and charted hazards, using your boat’s draft and air draft — and checking bridge clearances along the way. Until this arrives, the route builder stays manual — you plot, the app checks.',
-    status: 'Planned',
+    status: 'Planned · Premium',
   },
 ];
 
@@ -53,7 +53,12 @@ export default function FutureProjectsPage() {
       <section className="page-hero">
         <div className="section-kicker">WHERE {BRAND} IS HEADED <span>—</span> FUTURE PROJECTS</div>
         <h1>What comes<br /><em>next.</em></h1>
-        <p className="page-lead">These are the projects being looked into for future builds. None of them are available yet — this page is where you can see what is on the horizon, and say what you would most like to see first.</p>
+        <p className="page-lead">These are the projects being looked into for future builds. None of them are available yet — this page is where you can see what is on the horizon, and say what you would most like to see first. Some of them will arrive as part of a paid Premium version, marked below; the native Android &amp; iPhone/iPad apps stay free.</p>
+      </section>
+      <section className="page-sections">
+        <div className="section-kicker">PAID VERSION IN THE WORKS <span>—</span> PREMIUM</div>
+        <h2>Premium, coming later.</h2>
+        <p className="page-lead">A paid Premium version is in the works. It will include GPX export &amp; import, a 7-day weather, wind, tide and wave forecast, and most of the projects below: sailing data, the sailing race timer, the remaining navigation planning work, accounts that link web &amp; app, community features, and routes that steer around land and hazards. The native Android &amp; iPhone/iPad apps are not part of Premium — they stay free when they arrive. No price or date yet; the app stays free either way.</p>
       </section>
       <section className="page-sections">
         <div className="detail-grid">

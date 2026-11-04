@@ -1043,13 +1043,6 @@ export default function App() {
             setTracks((current) => current.filter((track) => track.id !== id));
             setShownTrackId((current) => (current === id ? null : current));
           }}
-          pins={pins}
-          onImportPins={(imported) => setPins((current) => [...current, ...imported])}
-          onImportTracks={(imported) =>
-            setTracks((current) =>
-              [...current, ...imported].sort((a, b) => b.startedAt - a.startedAt),
-            )
-          }
           onClose={() => setBoatOpen(false)}
         />
       )}

@@ -26,7 +26,7 @@ const features = [
   {
     number: '04',
     title: 'Made for a day on the water',
-    copy: 'Use GPS location, save chart tiles for offline viewing, and keep COLREGs study notes close at hand.',
+    copy: 'Use GPS location, save your pins, logbook and tracks on this device, and keep COLREGs study notes close at hand.',
     icon: 'compass',
   },
 ];

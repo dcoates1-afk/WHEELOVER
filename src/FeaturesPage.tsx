@@ -58,9 +58,9 @@ const details = [
   },
   {
     number: '10',
-    title: 'GPX export & import',
-    copy: 'Take your pins and tracks with you, or bring some in. Export writes one GPX file — pins as waypoints, tracks as tracks — and import adds new records from any GPX file.',
-    points: ['Export pins and tracks to a single wheel-over-<date>.gpx file', 'Import waypoints and tracks; bad rows are skipped and counted', 'Planned routes are counted but not imported — the route builder is still to come'],
+    title: 'Routes & voyage planning',
+    copy: 'Plot a route by tapping waypoints on the chart or typing coordinates, drag them into place, and check it before you leave the dock: per-leg distance and bearing, total distance and ETA from your cruising speed, mapped hazards on every leg, and an anti-grounding flag from depth data against your boat’s draught.',
+    points: ['Waypoints by tap or typed coordinates, draggable on the chart', 'Per-leg distance and bearing, totals and ETA', 'Hazard check against marine areas, ferry lanes and traffic schemes', 'Anti-grounding flag: sampled depths vs draught plus a safety margin'],
   },
   {
     number: '11',
@@ -101,8 +101,8 @@ const details = [
   {
     number: '17',
     title: 'Own boat database',
-    copy: 'Keep a database of your own boats, each with its measurements, so your vessel details are always at hand on the chart whenever you need them.',
-    points: ['Save multiple boats with their measurements', 'Your vessel details at hand on the chart', 'Switch between your boats as needed'],
+    copy: 'Keep your own boat’s details on the chart whenever you need them — name, type, measurements and identifiers — saved on this device with everything else.',
+    points: ['One boat profile with its measurements', 'Length, beam and draught at hand for clearance and grounding checks', 'MMSI and call sign stored with the boat'],
   },
   {
     number: '18',
@@ -142,6 +142,7 @@ export default function FeaturesPage() {
         <h2>See it on the water.</h2>
         <p>Every feature above is live in the web app today — no account needed.</p>
         <a className="button-primary" href="/app"><span className="button-icon">↗</span> Launch the web app</a>
+        <p className="page-note">A paid Premium version is in the works — GPX export &amp; import, a 7-day forecast, and most of the projects on the Future Projects page. The native Android &amp; iPhone/iPad apps stay free when they arrive. <a href="/future-projects">See what is planned ↗</a></p>
       </section>
       <SiteFooter />
     </main>

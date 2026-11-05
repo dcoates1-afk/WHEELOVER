@@ -18,7 +18,7 @@
       "licence": "CC0 1.0 (NOAA Coast Survey data; verify third-party feature provenance)",
       "redistribution": "allowed",
       "enabled": true,
-      "notes": "One chart-feature wreck in the New York Harbor query bounds, retained as a separate source feature. NOAA states ENC Direct to GIS is not certified for navigation; use current official ENCs for navigation. Retrieval snapshot: data-raw/noaa-ny-harbor-wrecks.geojson."
+      "notes": "Aids to navigation (buoys, beacons, lights with sector bearings, landmarks, platforms, piles) are built into a viewport-sharded dataset (public/noaa-enc-marks/) from the same service; see scripts/build-noaa-enc-marks.mjs. One chart-feature wreck in the New York Harbor query bounds is retained as a separate source feature. NOAA states ENC Direct to GIS is not certified for navigation; use current official ENCs for navigation. Retrieval snapshot: data-raw/noaa-ny-harbor-wrecks.geojson."
     },
     {
       "id": "emodnet-heritage",

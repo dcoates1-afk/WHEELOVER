@@ -113,6 +113,7 @@ import type { NavaidManifest } from './lib/navaidDb';
 import { queryChartFeaturePartWithBackgroundRetry, queryNavaids, type ChartFeature, type ChartFeaturePart } from './lib/overpass';
 import { loadCcgLights, ccgRecordToNavaid } from './lib/ccgLights';
 import { loadUscgLights, uscgRecordToNavaid } from './lib/uscgLights';
+import { loadNoaaEncMarks } from './lib/noaaEnc';
 import { loadMarineData, type MarineFeature } from './lib/marineDb';
 import {
   applyLightSectorIndex,
@@ -275,6 +276,8 @@ export default function App() {
   const [ccgLights, setCcgLights] = useState<Navaid[] | null>(null);
   // USCG Light List supplement, loaded once; filtered to the view in chartedMarks.
   const [uscgLights, setUscgLights] = useState<Navaid[] | null>(null);
+  // NOAA ENC aids, loaded by viewport from the built shard dataset; filtered to the view in chartedMarks.
+  const [noaaEncMarks, setNoaaEncMarks] = useState<Navaid[] | null>(null);
   // Sector bearings for the worldwide archive marks, loaded by viewport.
   const [lightSectorIndex, setLightSectorIndex] = useState<Map<string, LightSectorEntry>>(new Map());
   // Sound signals and racons, which the archive snapshot did not carry.
@@ -637,6 +640,27 @@ export default function App() {
     };
   }, []);
 
+  // NOAA ENC aids load by viewport from the built shard dataset (the manifest
+  // loads on the first call inside the loader). A failed load keeps the last
+  // set, so a slow shard request cannot blank the overlay. Below zoom 7 no
+  // ENC mark can show (lighthouse is the lowest min zoom), so nothing fetches.
+  const noaaEncRequestId = useRef(0);
+  useEffect(() => {
+    let cancelled = false;
+    const id = ++noaaEncRequestId.current;
+    const timer = setTimeout(() => {
+      if (view.zoom < 7) return;
+      void loadNoaaEncMarks(view.bounds).then((marks) => {
+        if (cancelled || id !== noaaEncRequestId.current) return;
+        setNoaaEncMarks(marks);
+      });
+    }, 320);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [view]);
+
   // Ferry routes and TSS load from the versioned archive by visible bounds.  // Retain the last successful set while the next viewport is fetched, so a
   // slow shard request cannot blank the overlay and make lanes appear missing.
   const marineRequestId = useRef(0);
@@ -860,7 +884,10 @@ export default function App() {
     const uscgInView = (uscgLights ?? []).filter(
       (mark) => mark.lat >= south - pad && mark.lat <= north + pad && mark.lon >= west - pad && mark.lon <= east + pad,
     );
-    const crossMerged = mergeNavaidSources([...merged.values(), ...ccgInView, ...uscgInView]).navaids;
+    const noaaEncInView = (noaaEncMarks ?? []).filter(
+      (mark) => mark.lat >= south - pad && mark.lat <= north + pad && mark.lon >= west - pad && mark.lon <= east + pad,
+    );
+    const crossMerged = mergeNavaidSources([...merged.values(), ...ccgInView, ...uscgInView, ...noaaEncInView]).navaids;
     const deduped = dedupeNavaids(crossMerged).navaids;
     // Attach worldwide sector bearings last, so a regional record that already
     // carries checked sectors keeps them.
@@ -873,7 +900,7 @@ export default function App() {
     // Charted detail fills whatever the mark still has blank.
     const withDetails = applyMarkDetailIndex(withSignals, markDetailIndex);
     return annotateTransits(filterNavaidsByGroups(withDetails, preferences.hiddenGroups));
-  }, [marks, worldwideNavaids, ccgLights, uscgLights, view.bounds, lightSectorIndex, markSignalIndex, markDetailIndex, preferences.hiddenGroups]);
+  }, [marks, worldwideNavaids, ccgLights, uscgLights, noaaEncMarks, view.bounds, lightSectorIndex, markSignalIndex, markDetailIndex, preferences.hiddenGroups]);
 
   const marksInView = useMemo(() => {
     const [south, west, north, east] = view.bounds;

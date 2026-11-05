@@ -1239,7 +1239,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           opacity: 0.9,
         },
       );
-      if (mark.transitBearing !== null) {
+      if (mark.transitBearing != null) {
         line.bindTooltip(
           `Leading line ${String(mark.transitBearing).padStart(3, '0')}° · ${formatDistance(mark.transitDistanceM ?? 0, distanceUnit)}`,
           { sticky: true, className: 'marnav-tip', opacity: 1 },

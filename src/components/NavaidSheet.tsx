@@ -147,9 +147,9 @@ export function NavaidSheet({
         ? 'Rear (higher)'
         : null;
   const transitBearing =
-    mark.transitBearing === null ? null : `${String(mark.transitBearing).padStart(3, '0')}° true`;
+    mark.transitBearing == null ? null : `${String(mark.transitBearing).padStart(3, '0')}° true`;
   const transitGap =
-    mark.transitDistanceM === null
+    mark.transitDistanceM == null
       ? null
       : `${formatDistance(mark.transitDistanceM, distanceUnit)} to the paired mark`;
   const partnerAction =

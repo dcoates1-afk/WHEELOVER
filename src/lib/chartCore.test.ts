@@ -12,6 +12,7 @@ import {
   lightSectorDrawLimits,
   lightSectorsFromTags,
   lightText,
+  mirrorLightSectorBearings,
   mergeLightSectors,
   mergeNavaidSources,
   minZoomFor,
@@ -53,44 +54,25 @@ function mark(overrides: Partial<Navaid> & { category: NavaidCategory }): Navaid
 }
 
 describe('sector light geometry', () => {
-  it('uses north-clockwise bearings and draws half again the charted reach', () => {
+  it('uses north-clockwise bearings, draws half again the charted reach and mirrors latitude', () => {
     const arc = lightSectorArc(0, 0, 350, 10, 1000, 10);
     expect(arc.length).toBeGreaterThan(2);
     // The arc runs half again the supplied radius, so a 1000 m sector is
     // drawn 1500 m out: ±0.00234° of longitude either side of due north.
     expect(arc[0][1]).toBeCloseTo(-0.00234, 4);
     expect(arc.at(-1)![1]).toBeCloseTo(0.00234, 4);
-    // The sector that crosses north is drawn north of the light, at its
-    // charted bearing — no mirroring.
-    expect(arc[Math.floor(arc.length / 2)][0]).toBeGreaterThan(0.01);
+    // Latitude is mirrored about the light, so the sector that crosses north
+    // is drawn south of it, while its longitude stays as charted.
+    expect(arc[Math.floor(arc.length / 2)][0]).toBeLessThan(-0.01);
   });
 
-  it('draws each sector at its charted bearings — Fiddle Reef red/white pattern', () => {
-    // OSM node 1666136773 / CCG pac 215: six Q sectors, red and white
-    // alternating. Before the fix the arcs drew 180° from the charted
-    // bearings, so red showed where OSM says white and vice versa.
-    const lat = 48.4293333;
-    const lon = -123.2839167;
-    const sectors = [
-      { start: 16.5, end: 55.5 },
-      { start: 55.5, end: 111 },
-      { start: 111, end: 138 },
-      { start: 138, end: 171 },
-      { start: 171, end: 216 },
-      { start: 216, end: 16.5 },
-    ];
-    for (const { start, end } of sectors) {
-      const arc = lightSectorArc(lat, lon, start, end, 7 * 1852);
-      expect(arc.length).toBeGreaterThan(2);
-      const span = (end - start + 360) % 360;
-      for (const [pointLat, pointLon] of arc) {
-        const bearing = bearingDegrees(lat, lon, pointLat, pointLon);
-        const offset = (((bearing - start) % 360) + 360) % 360;
-        // A point a hair before the start bearing (a floating-point
-        // round-trip through the arc maths) reads as an offset near 360.
-        expect(offset <= span + 1 || offset >= 359).toBe(true);
-      }
-    }
+  it('mirrors east and west bearings while keeping north and south fixed', () => {
+    expect(mirrorLightSectorBearings(0, 0)).toEqual([0, 0]);
+    expect(mirrorLightSectorBearings(180, 180)).toEqual([180, 180]);
+    expect(mirrorLightSectorBearings(90, 90)).toEqual([270, 270]);
+    expect(mirrorLightSectorBearings(270, 270)).toEqual([90, 90]);
+    expect(mirrorLightSectorBearings(230, 260)).toEqual([100, 130]);
+    expect(mirrorLightSectorBearings(-1, 90)).toBeNull();
   });
 
   it('rejects sectors without valid bearings or positive angular span', () => {

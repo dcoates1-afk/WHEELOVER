@@ -1051,22 +1051,58 @@ export function dedupeNavaids(items, options = {}) {
     const previous = accepted[duplicateOf];
     const preferred = richness(item) > richness(previous) ? item : previous;
     const other = preferred === item ? previous : item;
-    accepted[duplicateOf] = {
-      ...preferred,
-      lightSectors: mergeLightSectors(preferred.lightSectors ?? [], other.lightSectors ?? []),
-      // A duplicate record may be the only one carrying the sound or racon
-      // signal; keeping both halves avoids silently dropping a charted aid.
-      fogSignal: preferred.fogSignal || other.fogSignal,
-      fogSignalCategory: preferred.fogSignalCategory ?? other.fogSignalCategory,
-      fogSignalGroup: preferred.fogSignalGroup ?? other.fogSignalGroup,
-      fogSignalPeriod: preferred.fogSignalPeriod ?? other.fogSignalPeriod,
-      fogSignalSequence: preferred.fogSignalSequence ?? other.fogSignalSequence,
-      radarTransponderCategory: preferred.radarTransponderCategory ?? other.radarTransponderCategory,
-      radarTransponderGroup: preferred.radarTransponderGroup ?? other.radarTransponderGroup,
-      radarTransponderPeriod: preferred.radarTransponderPeriod ?? other.radarTransponderPeriod,
-      radarTransponderSequence: preferred.radarTransponderSequence ?? other.radarTransponderSequence,
-      radarReflector: preferred.radarReflector || other.radarReflector,
-    };
+    // A minor light record next to a real aid is that aid's light, not a
+    // replacement for it: the aid keeps its type, position and identity,
+    // and the light only fills light fields the aid does not already
+    // carry. Otherwise the richer record wins wholesale, as before.
+    const lightRecord = [item, previous].find((m) => m.category === 'light');
+    const aidRecord = lightRecord
+      ? [item, previous].find((m) => m !== lightRecord && m.category !== 'light' && m.category !== 'major_light')
+      : undefined;
+    let merged;
+    if (lightRecord && aidRecord) {
+      merged = { ...aidRecord };
+      for (const field of LIGHT_FIELDS) {
+        const current = merged[field];
+        const value = lightRecord[field];
+        if ((current === null || current === undefined || current === '') &&
+          value !== null && value !== undefined && value !== '') {
+          merged[field] = value;
+        }
+      }
+      merged.lightSectors = mergeLightSectors(aidRecord.lightSectors ?? [], lightRecord.lightSectors ?? []);
+      merged.fogSignal = aidRecord.fogSignal || lightRecord.fogSignal;
+      merged.fogSignalCategory = aidRecord.fogSignalCategory ?? lightRecord.fogSignalCategory;
+      merged.fogSignalGroup = aidRecord.fogSignalGroup ?? lightRecord.fogSignalGroup;
+      merged.fogSignalPeriod = aidRecord.fogSignalPeriod ?? lightRecord.fogSignalPeriod;
+      merged.fogSignalSequence = aidRecord.fogSignalSequence ?? lightRecord.fogSignalSequence;
+      merged.radarTransponderCategory = aidRecord.radarTransponderCategory ?? lightRecord.radarTransponderCategory;
+      merged.radarTransponderGroup = aidRecord.radarTransponderGroup ?? lightRecord.radarTransponderGroup;
+      merged.radarTransponderPeriod = aidRecord.radarTransponderPeriod ?? lightRecord.radarTransponderPeriod;
+      merged.radarTransponderSequence = aidRecord.radarTransponderSequence ?? lightRecord.radarTransponderSequence;
+      merged.radarReflector = aidRecord.radarReflector || lightRecord.radarReflector;
+      merged.lit = aidRecord.lit || lightRecord.lit;
+      const sources = [...new Set([...(aidRecord.sources ?? []), aidRecord.source, ...(lightRecord.sources ?? []), lightRecord.source].filter(Boolean))];
+      if (sources.length) merged.sources = sources;
+    } else {
+      merged = {
+        ...preferred,
+        lightSectors: mergeLightSectors(preferred.lightSectors ?? [], other.lightSectors ?? []),
+        // A duplicate record may be the only one carrying the sound or racon
+        // signal; keeping both halves avoids silently dropping a charted aid.
+        fogSignal: preferred.fogSignal || other.fogSignal,
+        fogSignalCategory: preferred.fogSignalCategory ?? other.fogSignalCategory,
+        fogSignalGroup: preferred.fogSignalGroup ?? other.fogSignalGroup,
+        fogSignalPeriod: preferred.fogSignalPeriod ?? other.fogSignalPeriod,
+        fogSignalSequence: preferred.fogSignalSequence ?? other.fogSignalSequence,
+        radarTransponderCategory: preferred.radarTransponderCategory ?? other.radarTransponderCategory,
+        radarTransponderGroup: preferred.radarTransponderGroup ?? other.radarTransponderGroup,
+        radarTransponderPeriod: preferred.radarTransponderPeriod ?? other.radarTransponderPeriod,
+        radarTransponderSequence: preferred.radarTransponderSequence ?? other.radarTransponderSequence,
+        radarReflector: preferred.radarReflector || other.radarReflector,
+      };
+    }
+    accepted[duplicateOf] = merged;
   }
 
   return { navaids: accepted, removed };
@@ -1141,6 +1177,9 @@ const LIGHT_FIELDS = [
 /** Fields the merge never takes from another record: position and identity. */
 const POSITION_FIELDS = new Set(['lat', 'lon', 'path', 'paths', 'id', 'category', 'form', 'source', 'sources']);
 
+/** A minor light record within this distance of an aid is that aid's light. */
+const LIGHT_ATTACH_M = 50;
+
 /**
  * Cross-source merge for records describing the same physical aid, run in
  * addition to the 40 m dedupeNavaids pass. Match rules: same normalised
@@ -1181,6 +1220,20 @@ export function mergeNavaidSources(items, options = {}) {
     // must not merge on a shared name (parallel cable circuits share names).
     // Wind-farm merging above is unaffected: it returns before this guard.
     if ((item.path?.length ?? 0) >= 2 || (other.path?.length ?? 0) >= 2) return false;
+    // A minor light record at an aid's spot is that aid's light, not a
+    // second aid: attach it when the aid carries no light or the same
+    // light. Areas are excluded: a farm or reporting area's centre point
+    // is not a structure a light can stand on. Major lights are structures
+    // in their own right and never attach.
+    const lightSide = [item, other].find((m) => m.category === 'light');
+    const aidSide = lightSide
+      ? [item, other].find((m) => m !== lightSide && m.category !== 'light' && m.category !== 'major_light' && m.category !== 'wind_farm' && m.category !== 'communication_area')
+      : undefined;
+    if (lightSide && aidSide && metres <= LIGHT_ATTACH_M) {
+      const aLight = normLightCharacter(aidSide);
+      const bLight = normLightCharacter(lightSide);
+      if (!aLight || !bLight || aLight === bLight) return true;
+    }
     if (sameName && metres <= nameDistanceM) {
       const aLight = normLightCharacter(item);
       const bLight = normLightCharacter(other);
@@ -1228,7 +1281,10 @@ export function mergeNavaidSources(items, options = {}) {
     const members = groups[index];
     if (members.length === 1) return first;
     const byAuthority = [...members].sort((a, b) => authorityOf(b) - authorityOf(a));
-    const base = members.find((m) => m.source === 'osm') ?? byAuthority[0];
+    // When a group holds a minor light beside a real aid, the aid is the
+    // base: the light belongs on it, not the other way round. Groups of
+    // lights only, or with no OSM member, are unaffected.
+    const base = members.find((m) => m.source === 'osm' && m.category !== 'light') ?? members.find((m) => m.source === 'osm') ?? byAuthority[0];
     const merged = { ...base };
     for (const field of LIGHT_FIELDS) {
       for (const member of byAuthority) {

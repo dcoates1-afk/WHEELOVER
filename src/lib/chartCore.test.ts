@@ -1064,6 +1064,63 @@ describe('cross-source merge', () => {
   });
 });
 
+describe('minor light attach', () => {
+  it('merges a minor light onto a nearby aid even when names differ', () => {
+    const buoy = mark({ category: 'lateral_port', name: 'Harbour Buoy', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'Harbour Light', light: 'Fl G 4s', lightCharacter: 'Fl', lightColour: 'green', lat: 50.70027, lon: -1.2, source: 'uscg' });
+    const { navaids, removed } = mergeNavaidSources([buoy, light]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(1);
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('lateral_port');
+    expect(navaids[0].light).toBe('Fl G 4s');
+    expect(navaids[0].sources).toEqual(['osm', 'uscg']);
+  });
+
+  it('does not attach a light with a conflicting character', () => {
+    const buoy = mark({ category: 'lateral_port', name: 'Harbour Buoy', light: 'Fl R 4s', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'Harbour Light', light: 'Fl G 4s', lat: 50.70007, lon: -1.2, source: 'uscg' });
+    const { navaids } = mergeNavaidSources([buoy, light]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not attach a light beyond 50 m', () => {
+    const buoy = mark({ category: 'lateral_port', name: 'Harbour Buoy', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'Harbour Light', light: 'Fl G 4s', lat: 50.701, lon: -1.2, source: 'uscg' });
+    const { navaids } = mergeNavaidSources([buoy, light]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('keeps the aid as the base when the light record arrives first', () => {
+    const light = mark({ category: 'light', name: 'Harbour Light', light: 'Fl G 4s', lat: 50.7, lon: -1.2 });
+    const buoy = mark({ category: 'lateral_port', name: 'Harbour Buoy', lat: 50.7, lon: -1.2 });
+    const { navaids } = mergeNavaidSources([light, buoy]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('lateral_port');
+    expect(navaids[0].light).toBe('Fl G 4s');
+  });
+
+  it('dedupe keeps the aid, not the richer minor light, when they collapse', () => {
+    const buoy = mark({ category: 'lateral_port', name: 'Harbour Buoy', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'Harbour Light', light: 'Fl G 4s', lightCharacter: 'Fl', lightColour: 'green', range: '5', description: 'Lighted buoy', lat: 50.70007, lon: -1.2, source: 'uscg', lit: true });
+    const { navaids, removed } = dedupeNavaids([buoy, light]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(1);
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('lateral_port');
+    expect(navaids[0].light).toBe('Fl G 4s');
+    expect((navaids[0] as Navaid).sources).toEqual(['osm', 'uscg']);
+  });
+
+  it('dedupe never overwrites an aid\'s own light with a conflicting one', () => {
+    const buoy = mark({ category: 'lateral_port', name: 'Pier', light: 'Fl R 4s', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'Pier', light: 'Fl G 4s', lat: 50.70007, lon: -1.2, source: 'uscg' });
+    const { navaids, removed } = dedupeNavaids([buoy, light]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(1);
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('lateral_port');
+    expect(navaids[0].light).toBe('Fl R 4s');
+  });
+});
+
 describe('cells', () => {
   it('round-trips a cell key to bounds that contain the point', () => {
     const key = cellKey(50.76, -1.2) as string;

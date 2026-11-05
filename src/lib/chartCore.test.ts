@@ -251,6 +251,61 @@ describe('structure-attached lights', () => {
   });
 });
 
+describe('pylon marks', () => {
+  it('charts a pylon as its own mark, lit or not', () => {
+    const unlit = classifyTags({ 'seamark:type': 'pylon', 'power': 'tower' });
+    expect(unlit?.category).toBe('pylon');
+    expect(unlit?.lit).toBe(false);
+    const lit = classifyTags({
+      'seamark:type': 'pylon',
+      'power': 'tower',
+      'seamark:light:character': 'F',
+      'seamark:light:colour': 'R',
+    });
+    expect(lit?.category).toBe('pylon');
+    expect(lit?.lit).toBe(true);
+  });
+
+  it('normalizes a pylon node at its position', () => {
+    const mark = normalizeElement({
+      type: 'node',
+      id: 4242,
+      lat: 50.8,
+      lon: -1.1,
+      tags: { 'seamark:type': 'pylon', 'power': 'tower', 'seamark:pylon:category': 'power' },
+    });
+    expect(mark?.category).toBe('pylon');
+    expect(mark?.lat).toBe(50.8);
+  });
+});
+
+describe('pile marks', () => {
+  it('charts a pile as its own mark, lit or not', () => {
+    const unlit = classifyTags({ 'seamark:type': 'pile' });
+    expect(unlit?.category).toBe('pile');
+    expect(unlit?.lit).toBe(false);
+    const lit = classifyTags({
+      'seamark:type': 'pile',
+      'seamark:light:character': 'F',
+      'seamark:light:colour': 'W',
+    });
+    expect(lit?.category).toBe('pile');
+    expect(lit?.lit).toBe(true);
+  });
+
+  it('normalizes a pile node at its position', () => {
+    const mark = normalizeElement({
+      type: 'node',
+      id: 4243,
+      lat: 45.5838,
+      lon: -122.5139,
+      tags: { 'seamark:type': 'pile' },
+    });
+    expect(mark?.category).toBe('pile');
+    expect(mark?.lat).toBe(45.5838);
+  });
+});
+
 describe('classification', () => {
   it('separates port and starboard lateral marks', () => {
     const port = classifyTags({ 'seamark:type': 'buoy_lateral', 'seamark:buoy_lateral:category': 'port' });

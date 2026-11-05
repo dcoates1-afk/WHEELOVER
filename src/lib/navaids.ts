@@ -366,10 +366,48 @@ function oilRigSvg() {
 }
 
 /**
- * The chart symbol for a category. `colour` is the mark's mapped paint list
- * ("red;green"); without it the IALA region supplies the lateral colours, which
- * is what the legend needs.
+ * Power pylon: a grey steel lattice tower with a wide top arm and a peak.
+ * Every part of the tower is the same grey, so the mark reads on any
+ * background; the dark halo under the open legs is only an edge, the way
+ * the mast's pole carries one. A lit pylon gets the app's light
+ * annotation on top.
  */
+function pylonSvg() {
+  const legs = 'M10 28 L14 10 M22 28 L18 10';
+  const braces = 'M11.5 22 L20.5 16 M20.5 22 L11.5 16 M12 22 H20';
+  return `<path d="${legs}" fill="none" stroke="#04141f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${legs}" fill="none" stroke="#8b9aa3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${braces}" fill="none" stroke="#04141f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${braces}" fill="none" stroke="#8b9aa3" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="5" y="9" width="22" height="2.4" rx="1" fill="#8b9aa3" stroke="#04141f" stroke-width="1"/>
+    <path d="M14 9 L16 4 L18 9 Z" fill="#8b9aa3" stroke="#04141f" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M10 28 H22" stroke="#8b9aa3" stroke-width="1.6" stroke-linecap="round"/>`;
+}
+
+/**
+ * Pile: a wooden post standing in the water, with water ticks at its base
+ * like the rig's. A lit pile keeps this post and gains the light beam;
+ * a pile carrying a lateral beacon is drawn by the beacon board below.
+ */
+function pileSvg() {
+  return `<rect x="13" y="5" width="6" height="22" rx="1" fill="#a67c52" stroke="#04141f" stroke-width="1.4"/>
+    <path d="M8 27.5 H13 M19 27.5 H24" stroke="#3dd6ff" stroke-width="1.4" stroke-linecap="round"/>`;
+}
+
+/**
+ * A fixed lateral beacon as it stands: the IALA topmark board on a post in
+ * the water, green square for port, red triangle for starboard. This is
+ * what a beacon-form lateral mark draws instead of the buoy's can or cone;
+ * floating marks keep their buoy bodies.
+ */
+function beaconBoardSvg(side: 'port' | 'starboard', region: 'A' | 'B', colour?: string | null) {
+  const ink = lateralInk(side, region, colour);
+  const board = side === 'port'
+    ? `<rect x="8" y="3" width="13" height="9" rx="1" fill="${ink.main}" stroke="#04141f" stroke-width="1.2"/>`
+    : `<path d="M16 2 L23.5 12 L8.5 12 Z" fill="${ink.main}" stroke="#04141f" stroke-width="1.2" stroke-linejoin="round"/>`;
+  return `${board}<rect x="13.5" y="12" width="5" height="15" fill="#a67c52" stroke="#04141f" stroke-width="1.2"/>
+    <path d="M8 27.5 H13 M19 27.5 H24" stroke="#3dd6ff" stroke-width="1.4" stroke-linecap="round"/>`;
+}
 export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: string | null): SymbolSpec {
   const label = CATEGORY_LABELS[category] ?? 'Mark';
   switch (category) {
@@ -474,6 +512,10 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: 
       return { svg: svgWrap(windFarmSvg()), label };
     case 'oil_rig':
       return { svg: svgWrap(oilRigSvg()), label };
+    case 'pylon':
+      return { svg: svgWrap(pylonSvg()), label };
+    case 'pile':
+      return { svg: svgWrap(pileSvg()), label };
     default:
       return { svg: svgWrap(outline('<circle cx="16" cy="16" r="6" fill="{fill}"/>', '#7d8f99')), label };
   }
@@ -609,7 +651,17 @@ function raconAnnotation(): string {
  * light, bell/horn or racon is drawn exactly as before.
  */
 export function symbolForMark(mark: Navaid, region: 'A' | 'B'): MarkSymbolSpec {
-  const base = symbolFor(mark.category, region, mark.colour);
+  let base = symbolFor(mark.category, region, mark.colour);
+  // A fixed lateral beacon stands on a post: draw its board on the pile
+  // instead of the buoy's floating body. Buoy-form laterals are untouched,
+  // and the light, sound and racon annotations below still apply.
+  if (
+    (mark.category === 'lateral_port' || mark.category === 'lateral_starboard') &&
+    mark.form === 'beacon'
+  ) {
+    const side = mark.category === 'lateral_port' ? 'port' : 'starboard';
+    base = { svg: svgWrap(beaconBoardSvg(side, region, mark.colour)), label: base.label };
+  }
   const signals = markSignals(mark);
   if (!signals.light && !signals.sound && !signals.racon) {
     return { ...base, units: 32 };

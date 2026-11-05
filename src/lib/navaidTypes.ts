@@ -33,6 +33,8 @@ export type NavaidCategory =
   | 'wind_turbine'
   | 'wind_farm'
   | 'oil_rig'
+  | 'pylon'
+  | 'pile'
   | 'other';
 
 export type NavaidForm = 'buoy' | 'beacon' | 'light' | 'landmark' | 'mark';

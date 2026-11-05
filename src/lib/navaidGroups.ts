@@ -89,6 +89,12 @@ export const NAVAID_GROUPS: NavaidGroup[] = [
     symbol: 'wind_turbine',
     categories: ['wind_farm', 'wind_turbine', 'oil_rig'],
   },
+  {
+    id: 'structures',
+    label: 'Structures',
+    symbol: 'pylon',
+    categories: ['pylon', 'pile'],
+  },
   { id: 'hazard', label: 'Hazard', symbol: 'hazard', categories: ['hazard'] },
   { id: 'hazard_danger', label: 'Dangerous wreck', symbol: 'hazard_danger', categories: ['hazard_danger'] },
   {

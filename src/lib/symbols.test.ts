@@ -29,6 +29,64 @@ describe('offshore structure symbols', () => {
   });
 });
 
+describe('pylon symbol', () => {
+  it('draws a grey tower distinct from the turbine and rig', () => {
+    const pylon = symbolFor('pylon', 'A');
+    const turbine = symbolFor('wind_turbine', 'A');
+    const rig = symbolFor('oil_rig', 'A');
+    expect(pylon.label).toBe('Pylon');
+    expect(pylon.svg).not.toBe(turbine.svg);
+    expect(pylon.svg).not.toBe(rig.svg);
+    expect(pylon.svg).toContain('#8b9aa3');
+  });
+});
+
+describe('pile and beacon-board symbols', () => {
+  it('draws a pile as a brown post distinct from the tower', () => {
+    const pile = symbolFor('pile', 'B');
+    const pylon = symbolFor('pylon', 'A');
+    expect(pile.label).toBe('Pile');
+    expect(pile.svg).toContain('#a67c52');
+    expect(pile.svg).not.toBe(pylon.svg);
+  });
+
+  it('draws the pylon as an open grey lattice, not a solid body', () => {
+    const pylon = symbolFor('pylon', 'A').svg;
+    expect(pylon).toContain('M10 28 L14 10');
+    expect(pylon).toContain('#8b9aa3');
+    expect(pylon).not.toContain('M11 28 L14 10 L18 10 L21 28 Z');
+  });
+
+  it('draws a beacon-form lateral as a board on a post, not a buoy body', () => {
+    const spec = symbolForMark(buoy({ category: 'lateral_port', form: 'beacon' }), 'B');
+    expect(spec.svg).toContain('x="8" y="3" width="13" height="9"');
+    expect(spec.svg).toContain('x="13.5" y="12" width="5" height="15"');
+    expect(spec.svg).toContain('M8 27.5 H13');
+    expect(spec.svg).not.toContain('M12 8 H20 V11 H23 V25 H9 V11 H12 Z');
+  });
+
+  it('leaves a buoy-form lateral as its buoy body', () => {
+    const spec = symbolForMark(buoy({ category: 'lateral_port', form: 'buoy' }), 'B');
+    expect(spec.svg).toContain('M12 8 H20 V11 H23 V25 H9 V11 H12 Z');
+    expect(spec.svg).not.toContain('x="8" y="3" width="13" height="9"');
+  });
+
+  it('gives a lit beacon board and a lit pile the 135-degree beam', () => {
+    const beacon = symbolForMark(
+      buoy({ category: 'lateral_starboard', form: 'beacon', lit: true, light: 'Fl R 4s', lightColour: 'red' }),
+      'B',
+    );
+    expect(beacon.svg).toContain('M16 2 L23.5 12 L8.5 12 Z');
+    expect(beacon.svg).toContain('26.61');
+    const pile = symbolForMark(
+      buoy({ category: 'pile', lit: true, light: 'Fl W 4s', lightColour: 'white' }),
+      'B',
+    );
+    expect(pile.svg).toContain('x="13" y="5" width="6"');
+    expect(pile.svg).toContain('26.61');
+  });
+});
+
 describe('light symbols', () => {
   it('draws major and minor lights as different shapes', () => {
     const major = symbolFor('major_light', 'A').svg;

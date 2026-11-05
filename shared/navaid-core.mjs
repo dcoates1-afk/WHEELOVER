@@ -78,6 +78,12 @@ const PRIORITY = {
   wind_farm: 70,
   oil_rig: 68,
   wind_turbine: 62,
+  // A power pylon is a tall steel structure like a turbine, but it stands
+  // on land or in the shallows rather than offshore.
+  pylon: 61,
+  // A pile is a single post in the water, often carrying a beacon or a
+  // light; it ranks below the tower but above a bare cable crossing.
+  pile: 59,
 };
 
 const MIN_ZOOM = {
@@ -103,6 +109,8 @@ const MIN_ZOOM = {
   special_purpose: 14,
   landmark: 13,
   marina: 13,
+  pylon: 13,
+  pile: 13,
   notice: 14,
   facility: 14,
   calling_in_point: 11,
@@ -327,7 +335,7 @@ export function classifyTags(tags) {
     };
   }
 
-  if (type === 'rock' || type === 'obstruction' || type === 'pile') {
+  if (type === 'rock' || type === 'obstruction') {
     return { ...base, category: 'hazard', priority: PRIORITY.hazard };
   }
 
@@ -338,6 +346,20 @@ export function classifyTags(tags) {
   // Offshore platforms are production structures, not generic facilities.
   if (type === 'platform') {
     return { ...base, category: 'oil_rig', priority: PRIORITY.oil_rig };
+  }
+
+  // A power pylon is a charted structure in its own right, lit or not: a
+  // lit pylon keeps the tower symbol (with the light annotation on top)
+  // instead of collapsing into a generic light.
+  if (type === 'pylon') {
+    return { ...base, category: 'pylon', priority: PRIORITY.pylon };
+  }
+
+  // A pile is a post standing in the water, lit or not: a lit pile keeps
+  // the post symbol (with the light annotation on top) instead of
+  // collapsing into a generic light.
+  if (type === 'pile') {
+    return { ...base, category: 'pile', priority: PRIORITY.pile };
   }
 
   if (
@@ -1313,5 +1335,7 @@ export const CATEGORY_LABELS = {
   wind_turbine: 'Wind turbine',
   wind_farm: 'Wind farm',
   oil_rig: 'Oil rig',
+  pylon: 'Pylon',
+  pile: 'Pile',
   other: 'Mark',
 };

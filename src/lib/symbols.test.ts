@@ -433,6 +433,28 @@ describe('quick info', () => {
       'Minor light · Inner Beacon',
     );
   });
+
+  it('treats a compacted shard record (transit fields absent, not null) as having no transit', () => {
+    // Compacted shards omit null fields, so a record loaded from JSON has
+    // transitBearing/transitDistanceM undefined, not null. The quick info
+    // must not render a bogus "lines up undefined°" for it.
+    const compacted = {
+      id: 'noaa-enc:Light:1',
+      lat: 50.76,
+      lon: -1.2,
+      category: 'light',
+      form: 'light',
+      name: 'Inner Beacon',
+      light: 'Fl red 5s',
+      colour: 'red',
+      lit: true,
+      priority: 62,
+      source: 'noaa-enc',
+    } as Navaid;
+    const info = quickInfo(compacted, 'A');
+    expect(info).not.toContain('lines up');
+    expect(info).not.toContain('undefined');
+  });
 });
 
 function buoy(overrides: Partial<Navaid> = {}): Navaid {
@@ -491,14 +513,18 @@ describe('signal annotations on chart marks', () => {
     expect(spec.svg).toContain('M12 7 H20 L23 11 L18 25 H14 L9 11 Z');
   });
 
-  it('falls back to the first mapped sector colour for the flare', () => {
+  it('draws no generic beam for a mark with mapped sectors — the arcs carry its light', () => {
     const spec = symbolForMark(buoy({
       lit: true,
       lightCharacter: 'Iso',
       lightSectors: [{ sector: 1, colour: 'green' }],
     }), 'A');
-    expect(spec.svg).toContain('data-mark-annotation="light"');
-    expect(spec.svg).toContain('fill="#26a65b"');
+    expect(spec.units).toBe(32);
+    expect(spec.svg).not.toContain('data-mark-annotation="light"');
+    // The same mark without sectors still gets its beam.
+    const plain = symbolForMark(buoy({ lit: true, lightCharacter: 'Iso', lightColour: 'green' }), 'A');
+    expect(plain.units).toBe(56);
+    expect(plain.svg).toContain('data-mark-annotation="light"');
   });
 
   it('gives a major light the same beam, without a second lamp dot', () => {

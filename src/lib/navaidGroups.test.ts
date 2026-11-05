@@ -28,6 +28,8 @@ const ALL_CATEGORIES: NavaidCategory[] = [
   'transit_rear',
   'major_light',
   'light',
+  'lighthouse',
+  'sector_beacon',
   'wreck',
   'hazard',
   'hazard_danger',

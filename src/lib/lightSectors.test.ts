@@ -94,21 +94,21 @@ describe('light sector cell', () => {
 });
 
 describe('attaching sectors to archive marks', () => {
-  it('adds the sectors and reranks an unlit landmark as a major light', () => {
+  it('adds the sectors and reranks an unlit landmark as a sector beacon', () => {
     const next = applyLightSectors(mark(), entry);
     expect(next.lightSectors).toHaveLength(2);
     expect(next.lit).toBe(true);
-    expect(next.category).toBe('major_light');
+    expect(next.category).toBe('sector_beacon');
     expect(next.priority).toBe(100);
     expect(next.lightCharacter).toBe('Fl');
     expect(next.lightColour).toBe('white');
   });
 
-  it('ranks a short-range landmark light as a minor light', () => {
+  it('ranks a short-range landmark light as a sector beacon', () => {
     const next = applyLightSectors(mark(), {
       sectors: [{ sector: 1, character: 'Fl', colour: 'red', start: '10', end: '20', range: '3' }],
     });
-    expect(next.category).toBe('light');
+    expect(next.category).toBe('sector_beacon');
     expect(next.priority).toBe(66);
   });
 
@@ -201,7 +201,7 @@ describe('attaching sectors to archive marks', () => {
       lat: 56.12185,
       lon: 15.2237,
       form: 'light',
-      category: 'major_light',
+      category: 'sector_beacon',
       lit: true,
       lightCharacter: 'Fl',
       lightColour: 'white',
@@ -297,7 +297,7 @@ describe('attaching sectors to archive marks', () => {
       standalone: true,
     };
     const drawn = standaloneLightMarks(new Map([['osm:way/97595085', longRange]]), []);
-    expect(drawn[0].category).toBe('major_light');
+    expect(drawn[0].category).toBe('sector_beacon');
     expect(drawn[0].priority).toBe(100);
   });
 

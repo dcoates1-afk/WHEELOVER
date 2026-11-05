@@ -79,12 +79,59 @@ describe('classifyOfficialMark', () => {
   it('leaves towers, range lights and plain lights as minor lights', () => {
     for (const name of [
       'Koojesse Inlet Front Range Light',
-      'Harbour Lighthouse',
       'Point Light',
     ]) {
       expect(classifyOfficialMark({ name, description: 'Skeleton tower.', lightColour: 'W' }))
         .toMatchObject({ category: 'light', form: 'light', colour: null });
     }
+  });
+
+  it('marks a record named as a lighthouse as the lighthouse tower', () => {
+    for (const name of ['Cockspur Lighthouse', 'Harbour Lighthouse', 'Heceta Head Lighthouse']) {
+      expect(classifyOfficialMark({ name, description: 'Tower.', lightColour: 'W' }))
+        .toMatchObject({ category: 'lighthouse', form: 'landmark', colour: null, shape: null });
+    }
+  });
+
+  it('does not mistake place, channel, wreck or breakwater lights for lighthouses', () => {
+    expect(classifyOfficialMark({
+      name: 'Lighthouse Channel Lighted Buoy 4',
+      description: 'Green can.',
+      lightColour: 'green',
+    })).toMatchObject({ category: 'lateral_other', form: 'buoy' });
+    for (const name of [
+      'Lighthouse Point Light',
+      'PASS MANCHAC LIGHTHOUSE WRECK LIGHT WR8',
+      'Town of Madisonville Tchefuncte River Lighthouse Breakwater Lights (3)',
+    ]) {
+      expect(classifyOfficialMark({ name, description: 'Tower.', lightColour: 'W' }).category).toBe('light');
+    }
+  });
+
+  it('marks named sector and directional lights as sector beacons', () => {
+    expect(classifyOfficialMark({
+      name: 'Mount Pickle Sector Light',
+      description: 'Fixed.',
+      lightColour: 'R W G',
+    })).toMatchObject({ category: 'sector_beacon', form: 'light', colour: 'red' });
+    expect(classifyOfficialMark({
+      name: 'Fisher Point Directional Sector Light',
+      description: 'Fixed.',
+      lightColour: 'white',
+    }).category).toBe('sector_beacon');
+  });
+
+  it('keeps sector buoys as buoys and gate lights as lights', () => {
+    expect(classifyOfficialMark({
+      name: 'Harbour Sector Lighted Buoy 1',
+      description: 'Yellow.',
+      lightColour: 'yellow',
+    })).toMatchObject({ category: 'special_purpose', form: 'buoy' });
+    expect(classifyOfficialMark({
+      name: 'Orleans Levee District ICWW Surge Barrier Sector Gate Light 2',
+      description: 'Fixed.',
+      lightColour: 'red',
+    }).category).toBe('light');
   });
 
   it('does not take a place name for the mark colour', () => {

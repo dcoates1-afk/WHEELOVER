@@ -35,6 +35,7 @@ const AREA_TYPES = new Set([
 
 const PRIORITY = {
   major_light: 100,
+  lighthouse: 98,
   range: 96,
   // Transit (leading) lights define the line to steer; they belong beside the
   // ranges and above every buoy in the declutter order.
@@ -84,6 +85,7 @@ const PRIORITY = {
   // A pile is a single post in the water, often carrying a beacon or a
   // light; it ranks below the tower but above a bare cable crossing.
   pile: 59,
+  sector_beacon: 62,
   // A cable crossing a channel constrains passage (clearance), so it
   // outranks generic special marks.
   cable_overhead: 58,
@@ -91,6 +93,7 @@ const PRIORITY = {
 
 const MIN_ZOOM = {
   major_light: 7,
+  lighthouse: 7,
   range: 9,
   transit_front: 11,
   transit_rear: 11,
@@ -114,6 +117,7 @@ const MIN_ZOOM = {
   marina: 13,
   pylon: 13,
   pile: 13,
+  sector_beacon: 13,
   cable_overhead: 13,
   notice: 14,
   facility: 14,
@@ -206,6 +210,11 @@ function lateralCategory(category) {
 export function classifyTags(tags) {
   const type = (tags['seamark:type'] || '').trim();
   const sectors = lightSectorsFromTags(tags);
+  // A charted sector carries both bearings. An unnumbered light tag creates
+  // a sector record too, and a directional record carries only an
+  // orientation — neither is a sector light, so the sector-beacon class
+  // needs both bearings, not just a non-empty sector list.
+  const hasChartedSectors = sectors.some((sector) => sector.start != null && sector.end != null);
   const lightChar = tags['seamark:light:character'] ?? sectors.find((sector) => sector.character)?.character;
   const category = firstTag(tags, [
     `seamark:${type}:category`,
@@ -220,7 +229,7 @@ export function classifyTags(tags) {
 
   if (!type) {
     if (tags['man_made'] === 'lighthouse') {
-      return { ...base, category: 'major_light', priority: PRIORITY.major_light, lit: true };
+      return { ...base, category: 'lighthouse', priority: PRIORITY.lighthouse, lit: true };
     }
     // Wind turbines, wind farms and offshore platforms carry no seamark:type
     // in their usual tagging (power=generator/plant, man_made=offshore_platform),
@@ -234,6 +243,11 @@ export function classifyTags(tags) {
     }
     if (tags['man_made'] === 'offshore_platform') {
       return { ...base, category: 'oil_rig', priority: PRIORITY.oil_rig };
+    }
+    // A typeless element whose light comes only from numbered sector
+    // records is a sector light, not a generic minor light.
+    if (lightChar && hasChartedSectors) {
+      return { ...base, category: 'sector_beacon', priority: PRIORITY.sector_beacon, lit: true };
     }
     if (lightChar) return { ...base, category: 'light', priority: PRIORITY.light };
     // A colour with no character is still a light: fixed harbour and pier
@@ -283,11 +297,15 @@ export function classifyTags(tags) {
   }
 
   if (type === 'lighthouse' || type === 'landmark' || type === 'mast' || type === 'tower') {
-    // A lighthouse is a major light, and so is any of these structures carrying
-    // a mapped light. `lightChar` also covers lights mapped only as numbered
-    // sector records (Hurst Point, St Catherine's Point), which the unnumbered
-    // tag check used to miss and leave ranked as a plain landmark.
-    if (type === 'lighthouse' || lightChar) {
+    // A lighthouse draws as a lighthouse tower, not the generic
+    // major-light starburst — whether it is typed as a lighthouse or
+    // mapped as a landmark on a lighthouse structure (Hurst Point).
+    // Any of these structures carrying a mapped light is otherwise a major
+    // light, as before.
+    if (type === 'lighthouse' || tags['man_made'] === 'lighthouse') {
+      return { ...base, category: 'lighthouse', priority: PRIORITY.lighthouse, lit: true };
+    }
+    if (lightChar) {
       return { ...base, category: 'major_light', priority: PRIORITY.major_light, lit: true };
     }
     return { ...base, category: 'landmark', priority: PRIORITY.landmark };
@@ -300,6 +318,10 @@ export function classifyTags(tags) {
     }
     if (leading) return { ...base, category: 'range', priority: PRIORITY.range, lit: true };
     if (type === 'light_major') return { ...base, category: 'major_light', priority: PRIORITY.major_light, lit: true };
+    // A light carrying charted sectors is a sector light, drawn as the
+    // sector beacon. Transit and leading lights above keep their roles;
+    // a major light keeps its starburst (its arcs still draw).
+    if (hasChartedSectors) return { ...base, category: 'sector_beacon', priority: PRIORITY.sector_beacon, lit: true };
     return { ...base, category: 'light', priority: PRIORITY.light, lit: true };
   }
 
@@ -347,8 +369,14 @@ export function classifyTags(tags) {
     return { ...base, category: 'marina', priority: PRIORITY.marina };
   }
 
-  // Offshore platforms are production structures, not generic facilities.
+  // Offshore platforms are production structures, not generic facilities —
+  // except an artificial island, which is a visible structure (a pier, a
+  // park, an island), not a rig. Little Island in New York Harbor is
+  // tagged platform/artificial_island and used to draw as an oil rig.
   if (type === 'platform') {
+    if ((tags['seamark:platform:category'] || '').trim() === 'artificial_island') {
+      return { ...base, category: 'landmark', priority: PRIORITY.landmark };
+    }
     return { ...base, category: 'oil_rig', priority: PRIORITY.oil_rig };
   }
 
@@ -974,7 +1002,8 @@ function familyOf(category) {
   if (category.startsWith('lateral')) return 'lateral';
   if (category.startsWith('preferred_channel')) return category;
   if (category.startsWith('cardinal')) return category;
-  if (category === 'light' || category === 'major_light' || category === 'range') return 'light';
+  if (category === 'light' || category === 'major_light' || category === 'range' ||
+    category === 'lighthouse' || category === 'sector_beacon') return 'light';
   if (category === 'hazard' || category === 'hazard_danger') return 'hazard';
   return category;
 }
@@ -1181,6 +1210,13 @@ export function dedupeNavaids(items, options = {}) {
         }
       }
     }
+    // As in the merge stage: a lighthouse or sector light keeps its class
+    // when it collapses with a plain light of the same aid. The priority
+    // follows the class, or the merged aid would draw at the base record's
+    // zoom (a lighthouse carrying a landmark's 44, or a sector beacon's 62).
+    if (item.category === 'lighthouse' || previous.category === 'lighthouse') merged.category = 'lighthouse';
+    else if (item.category === 'sector_beacon' || previous.category === 'sector_beacon') merged.category = 'sector_beacon';
+    merged.priority = priorityFor(merged.category);
     accepted[duplicateOf] = merged;
   }
 
@@ -1674,6 +1710,14 @@ export function mergeNavaidSources(items, options = {}) {
     if (merged.light || merged.lightCharacter || (merged.lightSectors?.length ?? 0) > 0) {
       merged.lit = true;
     }
+    // A lighthouse or sector light keeps its class through the merge even
+    // when the base record is a plain light: the merged aid IS that
+    // structure, and the other members are its listings. The priority
+    // follows the class, or the merged aid would draw at the base
+    // record's zoom.
+    if (members.some((m) => m.category === 'lighthouse')) merged.category = 'lighthouse';
+    else if (members.some((m) => m.category === 'sector_beacon')) merged.category = 'sector_beacon';
+    merged.priority = priorityFor(merged.category);
     merged.sources = [...new Set(members.map((m) => m.source).filter(Boolean))];
     return merged;
   });
@@ -1749,6 +1793,8 @@ export const CATEGORY_LABELS = {
   range: 'Leading / range mark',
   major_light: 'Major light',
   light: 'Minor light',
+  lighthouse: 'Lighthouse',
+  sector_beacon: 'Sector beacon',
   hazard: 'Hazard',
   hazard_danger: 'Dangerous wreck',
   landmark: 'Landmark',

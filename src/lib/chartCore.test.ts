@@ -32,6 +32,7 @@ function mark(overrides: Partial<Navaid> & { category: NavaidCategory }): Navaid
     light: overrides.light ?? null,
     lightCharacter: overrides.lightCharacter ?? null,
     lightColour: overrides.lightColour ?? null,
+    lightSectors: overrides.lightSectors ?? undefined,
     colour: overrides.colour ?? null,
     shape: overrides.shape ?? null,
     height: overrides.height ?? null,
@@ -476,9 +477,10 @@ describe('classification', () => {
     expect(role('leading')).toBe('range');
   });
 
-  it('ranks a landmark carrying a numbered sector light as a major light', () => {
+  it('ranks a landmark carrying a numbered sector light as a lighthouse', () => {
     // Hurst Point is charted as a landmark whose lights are all numbered sector
-    // records, so it has no unnumbered light character to be recognised by.
+    // records, so it has no unnumbered light character to be recognised by —
+    // but it stands on a lighthouse structure, so it draws as the tower.
     const hurst = classifyTags({
       'seamark:type': 'landmark',
       'man_made': 'lighthouse',
@@ -487,10 +489,38 @@ describe('classification', () => {
       'seamark:light:1:sector_start': '080',
       'seamark:light:1:sector_end': '104',
     });
-    expect(hurst?.category).toBe('major_light');
+    expect(hurst?.category).toBe('lighthouse');
     expect(minZoomFor(hurst!.category)).toBeLessThan(13);
     // An unlit landmark keeps its landmark rank.
     expect(classifyTags({ 'seamark:type': 'landmark' })?.category).toBe('landmark');
+  });
+
+  it('ranks typed lighthouses and lighthouse structures as lighthouses', () => {
+    expect(classifyTags({ 'seamark:type': 'lighthouse' })?.category).toBe('lighthouse');
+    expect(classifyTags({ 'man_made': 'lighthouse' })?.category).toBe('lighthouse');
+    expect(classifyTags({ 'seamark:type': 'lighthouse' })?.priority).toBe(98);
+  });
+
+  it('ranks a light carrying mapped sectors as a sector beacon', () => {
+    const sector = classifyTags({
+      'seamark:type': 'light_minor',
+      'seamark:light:1:character': 'Fl',
+      'seamark:light:1:colour': 'white',
+      'seamark:light:1:sector_start': '080',
+      'seamark:light:1:sector_end': '104',
+    });
+    expect(sector?.category).toBe('sector_beacon');
+    // The same light without sectors stays a minor light, and a major
+    // light keeps its starburst even when it carries sectors.
+    expect(classifyTags({ 'seamark:type': 'light_minor', 'seamark:light:character': 'Fl' })?.category).toBe('light');
+    expect(classifyTags({
+      'seamark:type': 'light_major',
+      'seamark:light:1:character': 'Fl',
+      'seamark:light:1:sector_start': '080',
+      'seamark:light:1:sector_end': '104',
+    })?.category).toBe('major_light');
+    // A lit mast or tower that is not a lighthouse stays a major light.
+    expect(classifyTags({ 'seamark:type': 'mast', 'seamark:light:character': 'Fl' })?.category).toBe('major_light');
   });
 
   it('plots wrecks that carry no seamark schema', () => {
@@ -564,6 +594,9 @@ describe('classification', () => {
     expect(classifyTags({ power: 'plant', 'plant:source': 'wind' })?.category).toBe('wind_farm');
     expect(classifyTags({ 'man_made': 'offshore_platform' })?.category).toBe('oil_rig');
     expect(classifyTags({ 'seamark:type': 'platform' })?.category).toBe('oil_rig');
+    // An artificial island platform is a visible structure, not a rig:
+    // Little Island in New York Harbor is a pier and a park.
+    expect(classifyTags({ 'seamark:type': 'platform', 'seamark:platform:category': 'artificial_island' })?.category).toBe('landmark');
     expect(classifyTags({ 'seamark:type': 'production_area', 'seamark:production_area:category': 'wind_farm' })?.category).toBe('wind_farm');
     expect(classifyTags({ 'seamark:type': 'production_area', 'seamark:landmark:production_area': 'wind_farm' })?.category).toBe('wind_farm');
     expect(classifyTags({ 'seamark:type': 'production_area', 'seamark:production_area:category': 'oil' })).toBeNull();
@@ -952,6 +985,21 @@ describe('IALA regions', () => {
 });
 
 describe('dedupe', () => {
+  it('keeps the lighthouse class when a lighthouse collapses with a plain light', () => {
+    // The plain light is the richer record, so it would be the base — the
+    // lighthouse class still has to win, because the aid IS the lighthouse.
+    const light = mark({ category: 'light', name: 'Cockspur Light', lat: 50.66, lon: -1.58, light: 'Fl W 6s', height: '24' });
+    const house = mark({ category: 'lighthouse', name: 'Cockspur Light', lat: 50.6601, lon: -1.5801 });
+    const { navaids, removed } = dedupeNavaids([light, house]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(1);
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('lighthouse');
+    expect(navaids[0].light).toBe('Fl W 6s');
+    // The priority follows the promoted class: the base light's 50 would
+    // draw the lighthouse tower at a plain light's zoom.
+    expect(navaids[0].priority).toBe(98);
+  });
+
   it('merges records with the same name close together and keeps the richer one', () => {
     const sparse = mark({ category: 'major_light', name: 'Needles Light', lat: 50.66, lon: -1.58 });
     const rich = mark({
@@ -994,6 +1042,42 @@ describe('dedupe', () => {
 });
 
 describe('cross-source merge', () => {
+  it('keeps the lighthouse class when an official lighthouse merges with an OSM light', () => {
+    const osm = mark({ id: 'osm:node/1', category: 'light', lat: 50.7, lon: -1.2, name: 'Cockspur Light', light: null, source: 'osm' });
+    const official = mark({ id: 'uscg:1', category: 'lighthouse', lat: 50.7005, lon: -1.2, name: 'Cockspur Light', light: 'Fl W 6s', lightCharacter: 'Fl', source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].id).toBe('osm:node/1');
+    expect(navaids[0].category).toBe('lighthouse');
+    expect(navaids[0].light).toBe('Fl W 6s');
+    expect(navaids[0].priority).toBe(98);
+  });
+
+  it('keeps the sector class when an official sector light merges with an OSM light', () => {
+    const osm = mark({ id: 'osm:node/1', category: 'light', lat: 50.7, lon: -1.2, name: 'Pickle Sector Light', light: null, source: 'osm' });
+    const official = mark({ id: 'ccg:1', category: 'sector_beacon', lat: 50.7005, lon: -1.2, name: 'Pickle Sector Light', light: 'F R W G', source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('sector_beacon');
+    expect(navaids[0].priority).toBe(62);
+  });
+
+  it('merges an NOAA ENC sector light onto its OSM twin, keeping the ENC sectors', () => {
+    const osm = mark({ id: 'osm:node/1', category: 'light', lat: 58.0, lon: -152.0, name: 'Entrance Light', light: null, source: 'osm' });
+    const enc = mark({
+      id: 'noaa-enc:Light:1', category: 'sector_beacon', lat: 58.0005, lon: -152.0, name: 'Entrance Light',
+      light: 'Q R 1s', lightCharacter: 'Q', lightColour: 'red', source: 'noaa-enc',
+      lightSectors: [{ sector: 1, character: 'Q', colour: 'red', start: '338', end: '346' }],
+    });
+    const { navaids } = mergeNavaidSources([osm, enc]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].id).toBe('osm:node/1');
+    expect(navaids[0].category).toBe('sector_beacon');
+    expect(navaids[0].lightSectors).toHaveLength(1);
+    expect(navaids[0].lightSectors?.[0].start).toBe('338');
+    expect(navaids[0].sources).toEqual(['osm', 'noaa-enc']);
+  });
+
   it('merges an official light onto the OSM position for the same named aid', () => {
     const osm = mark({ id: 'osm:node/1', category: 'light', lat: 50.7, lon: -1.2, name: 'Harbour Light', light: null, source: 'osm' });
     const official = mark({ id: 'uscg:1', category: 'light', lat: 50.7005, lon: -1.2, name: 'Harbour Light', light: 'Fl W 6s', lightCharacter: 'Fl', source: 'uscg' });

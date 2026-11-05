@@ -11,6 +11,8 @@ import type { NavaidCategory, NavaidForm } from './navaidTypes';
  * buoy's class, so a green buoy with a green light renders green and a
  * yellow ODAS buoy renders as a special mark. Records that name no
  * structure at all — towers, buildings, range lights — stay minor lights.
+ * A record named as a lighthouse draws as the lighthouse tower, and a
+ * named sector or directional light draws as the sector beacon.
  */
 export interface OfficialMarkInput {
   /** Aid name, e.g. "South Nomad ODAS light buoy 46036". */
@@ -127,6 +129,21 @@ export function classifyOfficialMark(input: OfficialMarkInput): OfficialMarkClas
   const colour = lightWord ?? descColour;
   const shape = shapeIn(description);
 
+  // A named lighthouse is the lighthouse tower, not a minor light. The name
+  // must END with Lighthouse: "Lighthouse Channel" buoys, "Lighthouse Point"
+  // lights and "Lighthouse Beach" are place names, and wreck and breakwater
+  // lights at a lighthouse site are not the lighthouse itself.
+  const trimmedName = name.trim().toLowerCase();
+  if (trimmedName.endsWith('lighthouse') && !text.includes('wreck') && !text.includes('breakwater')) {
+    return { category: 'lighthouse', form: 'landmark', colour: null, shape: null };
+  }
+  // A named sector or directional light is a sector light, drawn as the
+  // sector beacon — unless it is a buoy (a sector buoy stays a buoy) or a
+  // gate light (a barrier light that happens to carry "sector" in its name).
+  if (!hasWord(text, 'buoy') && !text.includes('gate') &&
+    (text.includes('sector') || text.includes('directional'))) {
+    return { category: 'sector_beacon', form: 'light', colour, shape };
+  }
   // A light standing on a pile or a dolphin is the pile, not a minor light.
   if (hasWord(text, 'pile') || hasWord(text, 'dolphin')) {
     return { category: 'pile', form: 'beacon', colour, shape };

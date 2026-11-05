@@ -17,6 +17,7 @@ export interface NavaidGroup {
 
 export const NAVAID_GROUPS: NavaidGroup[] = [
   { id: 'major_light', label: 'Major light', symbol: 'major_light', categories: ['major_light'] },
+  { id: 'lighthouses', label: 'Lighthouses', symbol: 'lighthouse', categories: ['lighthouse'] },
   { id: 'light', label: 'Minor light', symbol: 'light', categories: ['light'] },
   {
     id: 'range',
@@ -93,7 +94,7 @@ export const NAVAID_GROUPS: NavaidGroup[] = [
     id: 'structures',
     label: 'Structures',
     symbol: 'pylon',
-    categories: ['pylon', 'pile', 'cable_overhead'],
+    categories: ['pylon', 'pile', 'sector_beacon', 'cable_overhead'],
   },
   { id: 'hazard', label: 'Hazard', symbol: 'hazard', categories: ['hazard'] },
   { id: 'hazard_danger', label: 'Dangerous wreck', symbol: 'hazard_danger', categories: ['hazard_danger'] },

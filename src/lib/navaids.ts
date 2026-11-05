@@ -410,6 +410,31 @@ function pileSvg() {
 }
 
 /**
+ * A lighthouse tower: white tapered body with red bands, a dark gallery
+ * and a lit lamp room. Drawn for land sector lights and named lighthouses,
+ * which used to render as the generic major-light starburst.
+ */
+function lighthouseSvg() {
+  return `${outline('<path d="M12 28 L13.5 11 L18.5 11 L20 28 Z" fill="{fill}"/>', WHITE)}
+    <path d="M13.15 15 L18.85 15 L19.12 18 L12.88 18 Z" fill="${RED}"/>
+    <path d="M12.62 21 L19.38 21 L19.65 24 L12.35 24 Z" fill="${RED}"/>
+    <rect x="11" y="9.5" width="10" height="2" rx="0.5" fill="${BLACK}" stroke="#04141f" stroke-width="1"/>
+    <rect x="13.8" y="4.5" width="4.4" height="5" fill="#ffd166" stroke="#04141f" stroke-width="1.1"/>
+    <path d="M13.8 4.5 Q16 1.5 18.2 4.5 Z" fill="${BLACK}" stroke="#04141f" stroke-width="1" stroke-linejoin="round"/>`;
+}
+
+/**
+ * A sector light standing in the water or on a rock: just the white
+ * tapered tower with a red top, running down to the waterline. Doug asked
+ * for the rock base to go — the tower alone is the mark.
+ */
+function sectorBeaconSvg() {
+  return `${outline('<path d="M13.5 28 L14.3 10 L17.7 10 L18.5 28 Z" fill="{fill}"/>', WHITE)}
+    <path d="M14.3 10 L17.7 10 L17.9 13 L14.1 13 Z" fill="${RED}"/>
+    <path d="M16 6.5 V10" stroke="#04141f" stroke-width="1.6" stroke-linecap="round"/>`;
+}
+
+/**
  * A fixed lateral beacon as it stands: the IALA topmark board on a post in
  * the water, green square for port, red triangle for starboard. This is
  * what a beacon-form lateral mark draws instead of the buoy's can or cone;
@@ -562,6 +587,10 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: 
       return { svg: svgWrap(pylonSvg()), label };
     case 'pile':
       return { svg: svgWrap(pileSvg()), label };
+    case 'lighthouse':
+      return { svg: svgWrap(lighthouseSvg()), label };
+    case 'sector_beacon':
+      return { svg: svgWrap(sectorBeaconSvg()), label };
     case 'cable_overhead':
       return { svg: svgWrap(cableSvg()), label };
     default:
@@ -647,9 +676,11 @@ export function markSignals(mark: Navaid): MarkSignals {
 const ANNOTATED_VIEWBOX = '-12 -12 56 56';
 const ANNOTATED_UNITS = 56;
 
-// One beam for every lit mark, whatever its class: it leaves at 15 units (clear
-// of even a major light's 14-unit rays) and reaches 33.8, twice the throw the
-// first buoy-only beam used. The tip stays inside the 56-unit annotated box.
+// One beam for every lit mark, whatever its class — except a mark with
+// mapped sectors, whose sector arcs carry its light instead (see
+// symbolForMark). It leaves at 15 units (clear of even a major light's
+// 14-unit rays) and reaches 33.8, twice the throw the first buoy-only beam
+// used. The tip stays inside the 56-unit annotated box.
 const BEAM_START = 15;
 const BEAM_TIP = 33.8;
 const BEAM_HALF_WIDTH = 4.6;
@@ -734,12 +765,16 @@ export function symbolForMark(mark: Navaid, region: 'A' | 'B'): MarkSymbolSpec {
     if (board) base = { svg: svgWrap(board), label: base.label };
   }
   const signals = markSignals(mark);
-  if (!signals.light && !signals.sound && !signals.racon) {
+  // A mark carrying mapped sectors shows its light as those sector arcs on
+  // the chart, not as the generic single beam: the arcs already carry the
+  // colours and bearings, and a beam on top would be a second, wrong light.
+  const lightCue = (mark.lightSectors?.length ?? 0) > 0 ? null : signals.light;
+  if (!lightCue && !signals.sound && !signals.racon) {
     return { ...base, units: 32 };
   }
   const overlay = [
     signals.racon ? raconAnnotation() : '',
-    signals.light ? lightAnnotation(signals.light) : '',
+    lightCue ? lightAnnotation(lightCue) : '',
     signals.sound ? soundAnnotation(signals.sound) : '',
   ].join('');
   const svg = base.svg
@@ -777,7 +812,7 @@ export function quickInfo(navaid: Navaid, region: 'A' | 'B'): string {
   const label = CATEGORY_LABELS[navaid.category] ?? 'Mark';
   const parts = [label];
   if (navaid.name) parts.push(navaid.name);
-  if (navaid.transitBearing !== null && navaid.transitDistanceM !== null) {
+  if (navaid.transitBearing != null && navaid.transitDistanceM != null) {
     parts.push(`lines up ${String(navaid.transitBearing).padStart(3, '0')}°`);
   }
   if (navaid.channel) parts.push(`VHF Ch ${navaid.channel}`);

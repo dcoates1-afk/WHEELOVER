@@ -30,6 +30,7 @@ const ALL_CATEGORIES: NavaidCategory[] = [
   'light',
   'lighthouse',
   'sector_beacon',
+  'sector_light',
   'wreck',
   'hazard',
   'hazard_danger',
@@ -48,6 +49,8 @@ const ALL_CATEGORIES: NavaidCategory[] = [
   'oil_rig',
   'pylon',
   'pile',
+  'pile_lit',
+  'pile_unlit',
   'cable_overhead',
   'other',
 ];
@@ -98,6 +101,29 @@ describe('group filtering', () => {
       'a',
       'b',
       'e',
+    ]);
+  });
+
+  it('hides lighted and unlit piles independently', () => {
+    const piles: { id: string; category: NavaidCategory }[] = [
+      { id: 'lit', category: 'pile_lit' },
+      { id: 'unlit', category: 'pile_unlit' },
+    ];
+    expect(filterNavaidsByGroups(piles, ['pile_lit']).map((mark) => mark.id)).toEqual(['unlit']);
+    expect(filterNavaidsByGroups(piles, ['pile_unlit']).map((mark) => mark.id)).toEqual(['lit']);
+    expect(filterNavaidsByGroups(piles, ['pile_lit', 'pile_unlit'])).toEqual([]);
+  });
+
+  it('hides sector lights on their own toggle', () => {
+    const sector: { id: string; category: NavaidCategory }[] = [
+      { id: 'sector', category: 'sector_light' },
+      { id: 'beacon', category: 'sector_beacon' },
+    ];
+    expect(filterNavaidsByGroups(sector, ['sector_light']).map((mark) => mark.id)).toEqual([
+      'beacon',
+    ]);
+    expect(filterNavaidsByGroups(sector, ['structures']).map((mark) => mark.id)).toEqual([
+      'sector',
     ]);
   });
 

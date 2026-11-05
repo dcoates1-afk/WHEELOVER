@@ -37,6 +37,7 @@ export function ccgRecordToNavaid(record: CcgLightRecord): Navaid {
     name: record.name,
     description: record.description,
     lightColour: record.colour,
+    lit: Boolean(record.colour || record.character || record.light),
   });
   return {
     id: `ccg:${record.volume}:${record.no}`,

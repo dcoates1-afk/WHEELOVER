@@ -197,6 +197,7 @@ export function cellKey(lat: number, lon: number, size?: number): string;
 export function cellBounds(key: string, size?: number): [number, number, number, number];
 export function minZoomFor(category: NavaidCategory): number;
 export function priorityFor(category: NavaidCategory): number;
+export function resolveNavaidCategory(mark: Navaid): NavaidCategory;
 export function selectVisibleNavaids(
   navaids: Navaid[],
   options: {

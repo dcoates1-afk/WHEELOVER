@@ -25,6 +25,13 @@ export interface OfficialMarkInput {
   description: string | null;
   /** Light colour as recorded: CCG single letters (Y, R, G, W, Bu) or USCG words. */
   lightColour: string | null;
+  /**
+   * Whether the record carries a light at all. The loaders pass it from
+   * the record's colour/character/light fields; when it is absent the
+   * pile rule falls back to whether a light colour was recorded.
+   * It decides the pile split: a pile with a light is a lighted pile.
+   */
+  lit?: boolean;
 }
 
 export interface OfficialMarkClass {
@@ -145,8 +152,12 @@ export function classifyOfficialMark(input: OfficialMarkInput): OfficialMarkClas
     return { category: 'sector_beacon', form: 'light', colour, shape };
   }
   // A light standing on a pile or a dolphin is the pile, not a minor light.
+  // The two halves are separate categories so the menu can filter lighted
+  // piles from unlit ones. These lists are lit-aid lists, so a pile here
+  // is lighted unless the record says otherwise.
   if (hasWord(text, 'pile') || hasWord(text, 'dolphin')) {
-    return { category: 'pile', form: 'beacon', colour, shape };
+    const lit = input.lit ?? Boolean(lightWord);
+    return { category: lit ? 'pile_lit' : 'pile_unlit', form: 'beacon', colour, shape };
   }
   // A daybeacon is a fixed board, not a floating mark and not a light.
   if (text.includes('daybeacon') || text.includes('day beacon')) {

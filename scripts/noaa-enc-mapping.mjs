@@ -364,10 +364,10 @@ export function mapFeature({ layer, band, objectId, lat, lon, attrs }) {
         range: fields.range,
       };
       // Sectors are grouped by position in groupLightFeatures; a lone sector
-      // feature is already a sector beacon, a plain feature a minor light.
+      // feature is already a sector light, a plain feature a minor light.
       // Directional lights (ORIENT, no bearings) stay minor lights with the
       // orientation carried on the sector entry.
-      if (sector) return finish(record, 'sector_beacon', 'light');
+      if (sector) return finish(record, 'sector_light', 'light');
       if (clean(attrs.ORIENT) !== null) {
         record.lightSectors = [{
           sector: 1,
@@ -435,6 +435,11 @@ export function mapFeature({ layer, band, objectId, lat, lon, attrs }) {
       return finish({ ...base, colour }, category, 'mark');
     }
     case 'Pile':
+      // Deliberately plain `pile` here: at map time a pile carries no
+      // light fields yet — a co-located light only joins it at the
+      // build-time dedupe (and at runtime in merge/dedupe), and
+      // resolveNavaidCategory splits it into pile_lit / pile_unlit there.
+      // Mapping it here would read a light that is not on the record.
       return finish({ ...base, colour }, 'pile', 'mark');
     default:
       return null;
@@ -444,7 +449,7 @@ export function mapFeature({ layer, band, objectId, lat, lon, attrs }) {
 /**
  * Group Light records by exact position into one record per light, unioning
  * sectors across bands and collapsing exact-duplicate sectors. A position
- * holding any sector becomes a sector beacon; a plain Light feature at the
+ * holding any sector becomes a sector light; a plain Light feature at the
  * same position supplies the top-level light string when one exists.
  */
 export function groupLightFeatures(records) {
@@ -491,9 +496,9 @@ export function groupLightFeatures(records) {
       lightPeriod: group.plain?.lightPeriod ?? sectorSource?.lightPeriod ?? null,
       lightSequence: group.plain?.lightSequence ?? sectorSource?.lightSequence ?? null,
       lightSectors: sectors.length > 0 ? sectors : (group.plain?.lightSectors ?? null),
-      category: sectors.length > 0 ? 'sector_beacon' : 'light',
+      category: sectors.length > 0 ? 'sector_light' : 'light',
       form: 'light',
-      priority: priorityFor(sectors.length > 0 ? 'sector_beacon' : 'light'),
+      priority: priorityFor(sectors.length > 0 ? 'sector_light' : 'light'),
       lit: true,
     });
   }

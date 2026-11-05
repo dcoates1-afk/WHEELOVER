@@ -32,6 +32,7 @@ export function uscgRecordToNavaid(record: UscgLightRecord): Navaid {
     name: record.name,
     description: record.desc,
     lightColour: record.colour,
+    lit: Boolean(record.colour || record.character || record.light),
   });
   return {
     id: `uscg:${record.v}:${record.no}`,

@@ -20,6 +20,12 @@ export const NAVAID_GROUPS: NavaidGroup[] = [
   { id: 'lighthouses', label: 'Lighthouses', symbol: 'lighthouse', categories: ['lighthouse'] },
   { id: 'light', label: 'Minor light', symbol: 'light', categories: ['light'] },
   {
+    id: 'sector_light',
+    label: 'Sector light',
+    symbol: 'sector_light',
+    categories: ['sector_light'],
+  },
+  {
     id: 'range',
     label: 'Transit / leading',
     symbol: 'transit_front',
@@ -94,7 +100,23 @@ export const NAVAID_GROUPS: NavaidGroup[] = [
     id: 'structures',
     label: 'Structures',
     symbol: 'pylon',
+    // 'pile' stays here as the safety net: a legacy record that somehow
+    // reaches the chart still classified as plain pile hides with the
+    // structures, never with no toggle at all. Resolved piles live in
+    // the two pile groups below.
     categories: ['pylon', 'pile', 'sector_beacon', 'cable_overhead'],
+  },
+  {
+    id: 'pile_lit',
+    label: 'Lighted pile',
+    symbol: 'pile_lit',
+    categories: ['pile_lit'],
+  },
+  {
+    id: 'pile_unlit',
+    label: 'Unlit pile',
+    symbol: 'pile_unlit',
+    categories: ['pile_unlit'],
   },
   { id: 'hazard', label: 'Hazard', symbol: 'hazard', categories: ['hazard'] },
   { id: 'hazard_danger', label: 'Dangerous wreck', symbol: 'hazard_danger', categories: ['hazard_danger'] },

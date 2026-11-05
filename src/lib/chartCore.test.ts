@@ -17,6 +17,7 @@ import {
   mergeNavaidSources,
   minZoomFor,
   normalizeElement,
+  resolveNavaidCategory,
   selectVisibleNavaids,
 } from '../../shared/navaid-core.mjs';
 import type { Navaid, NavaidCategory } from './navaidTypes';
@@ -283,14 +284,14 @@ describe('pylon marks', () => {
 describe('pile marks', () => {
   it('charts a pile as its own mark, lit or not', () => {
     const unlit = classifyTags({ 'seamark:type': 'pile' });
-    expect(unlit?.category).toBe('pile');
+    expect(unlit?.category).toBe('pile_unlit');
     expect(unlit?.lit).toBe(false);
     const lit = classifyTags({
       'seamark:type': 'pile',
       'seamark:light:character': 'F',
       'seamark:light:colour': 'W',
     });
-    expect(lit?.category).toBe('pile');
+    expect(lit?.category).toBe('pile_lit');
     expect(lit?.lit).toBe(true);
   });
 
@@ -302,8 +303,212 @@ describe('pile marks', () => {
       lon: -122.5139,
       tags: { 'seamark:type': 'pile' },
     });
-    expect(mark?.category).toBe('pile');
+    expect(mark?.category).toBe('pile_unlit');
     expect(mark?.lat).toBe(45.5838);
+  });
+});
+
+describe('sector light category', () => {
+  const sectorTags = {
+    'seamark:light:1:sector_start': '016.5',
+    'seamark:light:1:sector_end': '055.5',
+    'seamark:light:1:colour': 'red',
+    'seamark:light:2:sector_start': '055.5',
+    'seamark:light:2:sector_end': '111',
+    'seamark:light:2:colour': 'white',
+  };
+
+  it('charts a light with charted sectors as a sector light, not a minor light', () => {
+    const result = classifyTags({
+      'seamark:type': 'light_minor',
+      'seamark:light:character': 'Q',
+      ...sectorTags,
+    });
+    expect(result?.category).toBe('sector_light');
+    expect(result?.lit).toBe(true);
+  });
+
+  it('charts a landmark with charted sectors as a sector light — the Fiddle Reef shape', () => {
+    // OSM node 1666136773: seamark:type=landmark, a tower with a Q light
+    // and six sectors. It used to come out major_light; the sectors are
+    // what make it a sector light.
+    const result = classifyTags({
+      'seamark:type': 'landmark',
+      'seamark:light:character': 'Q',
+      ...sectorTags,
+    });
+    expect(result?.category).toBe('sector_light');
+  });
+
+  it('charts a major light with charted sectors as a sector light', () => {
+    const result = classifyTags({
+      'seamark:type': 'light_major',
+      'seamark:light:character': 'Fl',
+      ...sectorTags,
+    });
+    expect(result?.category).toBe('sector_light');
+  });
+
+  it('keeps a lighthouse a lighthouse even when it carries sectors', () => {
+    const result = classifyTags({
+      'seamark:type': 'lighthouse',
+      'man_made': 'lighthouse',
+      'seamark:light:character': 'Fl',
+      ...sectorTags,
+    });
+    expect(result?.category).toBe('lighthouse');
+  });
+
+  it('keeps a leading light its transit role even when it carries sectors', () => {
+    const result = classifyTags({
+      'seamark:type': 'light_minor',
+      'seamark:light:category': 'leading;front',
+      'seamark:light:character': 'Iso',
+      ...sectorTags,
+    });
+    expect(result?.category).toBe('transit_front');
+  });
+
+  it('leaves a light without sectors a minor light and a major light without sectors a major light', () => {
+    expect(classifyTags({
+      'seamark:type': 'light_minor',
+      'seamark:light:character': 'Fl',
+    })?.category).toBe('light');
+    expect(classifyTags({
+      'seamark:type': 'light_major',
+      'seamark:light:character': 'Fl',
+    })?.category).toBe('major_light');
+  });
+
+  it('ranks a sector light like a sector beacon and an unlit pile like a pile', () => {
+    expect(minZoomFor('sector_light')).toBe(13);
+    expect(minZoomFor('pile_lit')).toBe(13);
+    expect(minZoomFor('pile_unlit')).toBe(13);
+  });
+});
+
+describe('sector light and pile resolution', () => {
+  const sectors = [
+    { sector: 1, start: '016.5', end: '055.5', colour: 'red' },
+    { sector: 2, start: '055.5', end: '111', colour: 'white' },
+  ];
+
+  it('resolves a legacy sector beacon with sectors to a sector light', () => {
+    expect(resolveNavaidCategory(mark({
+      category: 'sector_beacon',
+      lightSectors: sectors,
+    }))).toBe('sector_light');
+  });
+
+  it('resolves a legacy major light with sectors to a sector light', () => {
+    // The built Solent/NY Harbor database still holds major_light
+    // records with sectors; they are sector lights under the new rule.
+    expect(resolveNavaidCategory(mark({
+      category: 'major_light',
+      lightSectors: sectors,
+    }))).toBe('sector_light');
+  });
+
+  it('leaves a sector beacon without sectors a sector beacon', () => {
+    // Official records named "sector" carry no sector bearings; they
+    // stay sector beacons — the category is the fallback for a named
+    // sector light with no mapped pattern.
+    expect(resolveNavaidCategory(mark({ category: 'sector_beacon' }))).toBe('sector_beacon');
+  });
+
+  it('leaves a lighthouse with sectors a lighthouse', () => {
+    expect(resolveNavaidCategory(mark({
+      category: 'lighthouse',
+      lightSectors: sectors,
+    }))).toBe('lighthouse');
+  });
+
+  it('splits a legacy plain pile by whether it carries a light', () => {
+    // The shipped NOAA ENC shards still hold 40,832 piles as plain
+    // `pile`; only 51 carry light fields.
+    expect(resolveNavaidCategory(mark({ category: 'pile' }))).toBe('pile_unlit');
+    expect(resolveNavaidCategory(mark({
+      category: 'pile',
+      lit: true,
+      light: 'F',
+      lightCharacter: 'F',
+    }))).toBe('pile_lit');
+  });
+
+  it('merges Fiddle Reef into a sector light from both paths', () => {
+    // OSM major_light with six sectors + CCG sector_beacon with none:
+    // the merged aid has the sectors, so it is a sector light.
+    const merged = mergeNavaidSources([
+      mark({
+        id: 'osm:1666136773',
+        lat: 48.4293333,
+        lon: -123.2839167,
+        category: 'major_light',
+        name: 'Fiddle Reef',
+        light: 'Q',
+        lightCharacter: 'Q',
+        lightSectors: sectors,
+        source: 'osm',
+      }),
+      mark({
+        id: 'ccg:pac:215',
+        lat: 48.4293333,
+        lon: -123.2839167,
+        category: 'sector_beacon',
+        name: 'Fiddle Reef',
+        source: 'ccg',
+      }),
+    ]).navaids;
+    expect(merged).toHaveLength(1);
+    expect(merged[0].category).toBe('sector_light');
+    expect(merged[0].lightSectors).toHaveLength(2);
+  });
+
+  it('merges a lit and an unlit pile into a lighted pile', () => {
+    const merged = mergeNavaidSources([
+      mark({
+        id: 'osm:pile-1',
+        lat: 48.42,
+        lon: -123.28,
+        category: 'pile_unlit',
+        name: 'Pile 12',
+        source: 'osm',
+      }),
+      mark({
+        id: 'ccg:pile-1',
+        lat: 48.42,
+        lon: -123.28,
+        category: 'pile_lit',
+        name: 'Pile 12',
+        light: 'F',
+        lightCharacter: 'F',
+        lit: true,
+        source: 'ccg',
+      }),
+    ]).navaids;
+    expect(merged).toHaveLength(1);
+    expect(merged[0].category).toBe('pile_lit');
+  });
+
+  it('resolves legacy records passing through dedupe alone', () => {
+    const deduped = dedupeNavaids([
+      mark({
+        id: 'noaa-enc:Light:9',
+        lat: 58.2,
+        lon: -151.8,
+        category: 'sector_beacon',
+        lightSectors: sectors,
+        source: 'noaa-enc',
+      }),
+      mark({
+        id: 'noaa-enc:Pile:430313',
+        lat: -14.27,
+        lon: -170.69,
+        category: 'pile',
+        source: 'noaa-enc',
+      }),
+    ]).navaids;
+    expect(deduped.map((entry) => entry.category).sort()).toEqual(['pile_unlit', 'sector_light']);
   });
 });
 
@@ -501,7 +706,7 @@ describe('classification', () => {
     expect(classifyTags({ 'seamark:type': 'lighthouse' })?.priority).toBe(98);
   });
 
-  it('ranks a light carrying mapped sectors as a sector beacon', () => {
+  it('ranks a light carrying mapped sectors as a sector light', () => {
     const sector = classifyTags({
       'seamark:type': 'light_minor',
       'seamark:light:1:character': 'Fl',
@@ -509,16 +714,17 @@ describe('classification', () => {
       'seamark:light:1:sector_start': '080',
       'seamark:light:1:sector_end': '104',
     });
-    expect(sector?.category).toBe('sector_beacon');
+    expect(sector?.category).toBe('sector_light');
     // The same light without sectors stays a minor light, and a major
-    // light keeps its starburst even when it carries sectors.
+    // light with sectors is a sector light too — the sector pattern is
+    // what the filter and legend sort on.
     expect(classifyTags({ 'seamark:type': 'light_minor', 'seamark:light:character': 'Fl' })?.category).toBe('light');
     expect(classifyTags({
       'seamark:type': 'light_major',
       'seamark:light:1:character': 'Fl',
       'seamark:light:1:sector_start': '080',
       'seamark:light:1:sector_end': '104',
-    })?.category).toBe('major_light');
+    })?.category).toBe('sector_light');
     // A lit mast or tower that is not a lighthouse stays a major light.
     expect(classifyTags({ 'seamark:type': 'mast', 'seamark:light:character': 'Fl' })?.category).toBe('major_light');
   });
@@ -1072,7 +1278,7 @@ describe('cross-source merge', () => {
     const { navaids } = mergeNavaidSources([osm, enc]) as { navaids: Navaid[]; removed: number };
     expect(navaids).toHaveLength(1);
     expect(navaids[0].id).toBe('osm:node/1');
-    expect(navaids[0].category).toBe('sector_beacon');
+    expect(navaids[0].category).toBe('sector_light');
     expect(navaids[0].lightSectors).toHaveLength(1);
     expect(navaids[0].lightSectors?.[0].start).toBe('338');
     expect(navaids[0].sources).toEqual(['osm', 'noaa-enc']);

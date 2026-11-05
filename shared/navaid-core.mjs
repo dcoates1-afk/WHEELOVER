@@ -86,6 +86,14 @@ const PRIORITY = {
   // light; it ranks below the tower but above a bare cable crossing.
   pile: 59,
   sector_beacon: 62,
+  // A sector light is a light with charted sector bearings: the same
+  // prominence as a sector beacon, which it replaces whenever the sectors
+  // are actually mapped.
+  sector_light: 62,
+  // Piles split by whether they carry a light. Both halves keep the pile's
+  // rank: the split is a filter, not a promotion.
+  pile_lit: 59,
+  pile_unlit: 59,
   // A cable crossing a channel constrains passage (clearance), so it
   // outranks generic special marks.
   cable_overhead: 58,
@@ -118,6 +126,9 @@ const MIN_ZOOM = {
   pylon: 13,
   pile: 13,
   sector_beacon: 13,
+  sector_light: 13,
+  pile_lit: 13,
+  pile_unlit: 13,
   cable_overhead: 13,
   notice: 14,
   facility: 14,
@@ -247,7 +258,7 @@ export function classifyTags(tags) {
     // A typeless element whose light comes only from numbered sector
     // records is a sector light, not a generic minor light.
     if (lightChar && hasChartedSectors) {
-      return { ...base, category: 'sector_beacon', priority: PRIORITY.sector_beacon, lit: true };
+      return { ...base, category: 'sector_light', priority: PRIORITY.sector_light, lit: true };
     }
     if (lightChar) return { ...base, category: 'light', priority: PRIORITY.light };
     // A colour with no character is still a light: fixed harbour and pier
@@ -301,9 +312,15 @@ export function classifyTags(tags) {
     // major-light starburst — whether it is typed as a lighthouse or
     // mapped as a landmark on a lighthouse structure (Hurst Point).
     // Any of these structures carrying a mapped light is otherwise a major
-    // light, as before.
+    // light, as before — unless it carries charted sectors, which makes it
+    // a sector light. A genuine lighthouse keeps its tower even with
+    // sectors: the structure is the aid, and the sectors are a property
+    // of its light (they still draw as arcs).
     if (type === 'lighthouse' || tags['man_made'] === 'lighthouse') {
       return { ...base, category: 'lighthouse', priority: PRIORITY.lighthouse, lit: true };
+    }
+    if (lightChar && hasChartedSectors) {
+      return { ...base, category: 'sector_light', priority: PRIORITY.sector_light, lit: true };
     }
     if (lightChar) {
       return { ...base, category: 'major_light', priority: PRIORITY.major_light, lit: true };
@@ -317,11 +334,13 @@ export function classifyTags(tags) {
       return { ...base, category: key, priority: PRIORITY[key], lit: true };
     }
     if (leading) return { ...base, category: 'range', priority: PRIORITY.range, lit: true };
-    if (type === 'light_major') return { ...base, category: 'major_light', priority: PRIORITY.major_light, lit: true };
     // A light carrying charted sectors is a sector light, drawn as the
     // sector beacon. Transit and leading lights above keep their roles;
-    // a major light keeps its starburst (its arcs still draw).
-    if (hasChartedSectors) return { ...base, category: 'sector_beacon', priority: PRIORITY.sector_beacon, lit: true };
+    // a major light without sectors keeps its starburst (its arcs still
+    // draw when it has them — but then it is a sector light, not a major
+    // light: the sector pattern is what the filter and legend sort on).
+    if (hasChartedSectors) return { ...base, category: 'sector_light', priority: PRIORITY.sector_light, lit: true };
+    if (type === 'light_major') return { ...base, category: 'major_light', priority: PRIORITY.major_light, lit: true };
     return { ...base, category: 'light', priority: PRIORITY.light, lit: true };
   }
 
@@ -389,9 +408,11 @@ export function classifyTags(tags) {
 
   // A pile is a post standing in the water, lit or not: a lit pile keeps
   // the post symbol (with the light annotation on top) instead of
-  // collapsing into a generic light.
+  // collapsing into a generic light. The two halves are separate
+  // categories so the menu can filter lighted piles from unlit ones.
   if (type === 'pile') {
-    return { ...base, category: 'pile', priority: PRIORITY.pile };
+    const pileCategory = base.lit ? 'pile_lit' : 'pile_unlit';
+    return { ...base, category: pileCategory, priority: PRIORITY[pileCategory] };
   }
 
   // Overhead cables are line features, not points: they classify as their
@@ -1003,9 +1024,74 @@ function familyOf(category) {
   if (category.startsWith('preferred_channel')) return category;
   if (category.startsWith('cardinal')) return category;
   if (category === 'light' || category === 'major_light' || category === 'range' ||
-    category === 'lighthouse' || category === 'sector_beacon') return 'light';
+    category === 'lighthouse' || category === 'sector_beacon' || category === 'sector_light') return 'light';
+  if (category === 'pile' || category === 'pile_lit' || category === 'pile_unlit') return 'pile';
   if (category === 'hazard' || category === 'hazard_danger') return 'hazard';
   return category;
+}
+
+/**
+ * Whether a record carries a mapped light, by the same test the chart uses
+ * to decide whether it draws a light cue (see markSignals in
+ * src/lib/navaids.ts): a light string, a character, the lit flag, or
+ * sector bearings. A record with only a colour word and nothing else is
+ * not counted — the classifier already turns that into lit at source.
+ */
+function hasMappedLight(mark) {
+  return Boolean(
+    mark.light || mark.lightCharacter || mark.lit || (mark.lightSectors?.length ?? 0) > 0,
+  );
+}
+
+/**
+ * The display category a record's own data earns it, regardless of which
+ * source classified it or when its shard was built.
+ *
+ * - A mark with charted sector bearings is a sector light — unless it is a
+ *   lighthouse (the structure is the aid; its sectors are a property of
+ *   its light), a transit/range mark (its leading role wins), or a pile
+ *   (the post is the aid; its arcs still draw). The old categories a
+ *   sector-carrying mark used to arrive with are sector_beacon, light and
+ *   major_light: the built Solent/NY Harbor database still holds
+ *   major_light records with sectors, and the shipped NOAA ENC shards
+ *   still hold sector_beacon records with sectors.
+ * - A pile is lighted when it carries a mapped light, unlit otherwise.
+ *   The shipped NOAA ENC shards still hold 40,832 piles as plain `pile`;
+ *   only 51 of them carry light fields, so the split reads off the
+ *   record, not the category — no dataset rebuild is needed.
+ * - Everything else keeps its category.
+ *
+ * Idempotent: running it over an already-resolved record changes nothing.
+ * mergeNavaidSources and dedupeNavaids both apply it, so every mark on
+ * the chart passes through it whatever source it came from.
+ */
+export function resolveNavaidCategory(mark) {
+  // A charted sector carries both bearings — the same test the classifier
+  // uses. An unnumbered light tag creates a sector record too, but with
+  // a colour and no bearings; that is a plain light, not a sector light.
+  const hasSectors = (mark.lightSectors ?? []).some(
+    (sector) => sector.start != null && sector.end != null,
+  );
+  if (hasSectors && (mark.category === 'sector_beacon' || mark.category === 'light' ||
+    mark.category === 'major_light')) {
+    return 'sector_light';
+  }
+  if (mark.category === 'pile' || mark.category === 'pile_lit' || mark.category === 'pile_unlit') {
+    return hasMappedLight(mark) ? 'pile_lit' : 'pile_unlit';
+  }
+  return mark.category;
+}
+
+/** A record with its display category resolved (a copy only when it changes). */
+function withResolvedCategory(mark) {
+  const category = resolveNavaidCategory(mark);
+  if (category === mark.category) return mark;
+  return { ...mark, category, priority: priorityFor(category) };
+}
+
+/** Any of the pile categories, including the legacy unsplit one. */
+function isPileCategory(category) {
+  return category === 'pile' || category === 'pile_lit' || category === 'pile_unlit';
 }
 
 function normName(name) {
@@ -1041,8 +1127,13 @@ export function dedupeNavaids(items, options = {}) {
   const keyOf = (lat, lon) => `${Math.floor(lat / cellSize)}:${Math.floor(lon / cellSize)}`;
 
   // Sorted first, like the merge: the same record set must dedupe the
-  // same way whatever order the sources arrived in.
-  const ordered = [...items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  // same way whatever order the sources arrived in. Categories are
+  // resolved on the way in, so a legacy shard record (a sector_beacon
+  // with sectors, a plain pile) is already its display category before
+  // any duplicate test looks at it.
+  const ordered = [...items]
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map(withResolvedCategory);
   for (const item of ordered) {
     const key = keyOf(item.lat, item.lon);
     const latCell = Math.floor(item.lat / cellSize);
@@ -1105,9 +1196,9 @@ export function dedupeNavaids(items, options = {}) {
     const aidRecord = lightRecord
       ? [item, previous].find((m) => m !== lightRecord && m.category !== 'light' && m.category !== 'major_light')
       : undefined;
-    const structureRecord = [item, previous].find((m) => m.category === 'pile' || m.category === 'pylon');
+    const structureRecord = [item, previous].find((m) => isPileCategory(m.category) || m.category === 'pylon');
     const markRecord = structureRecord
-      ? [item, previous].find((m) => m !== structureRecord && m.category !== 'pile' && m.category !== 'pylon' && m.category !== 'light' && m.category !== 'major_light' && m.category !== 'wind_farm' && m.category !== 'communication_area')
+      ? [item, previous].find((m) => m !== structureRecord && !isPileCategory(m.category) && m.category !== 'pylon' && m.category !== 'light' && m.category !== 'major_light' && m.category !== 'wind_farm' && m.category !== 'communication_area')
       : undefined;
     let merged;
     if (lightRecord && aidRecord) {
@@ -1215,7 +1306,12 @@ export function dedupeNavaids(items, options = {}) {
     // follows the class, or the merged aid would draw at the base record's
     // zoom (a lighthouse carrying a landmark's 44, or a sector beacon's 62).
     if (item.category === 'lighthouse' || previous.category === 'lighthouse') merged.category = 'lighthouse';
-    else if (item.category === 'sector_beacon' || previous.category === 'sector_beacon') merged.category = 'sector_beacon';
+    else if (item.category === 'sector_beacon' || previous.category === 'sector_beacon' ||
+      item.category === 'sector_light' || previous.category === 'sector_light') merged.category = 'sector_beacon';
+    // The collapse can add sectors or a light the base lacked (a pile
+    // collapsing with its own light, a sector record folding in), so the
+    // display category is re-derived from the merged record, not inherited.
+    merged.category = resolveNavaidCategory(merged);
     merged.priority = priorityFor(merged.category);
     accepted[duplicateOf] = merged;
   }
@@ -1635,8 +1731,11 @@ export function mergeNavaidSources(items, options = {}) {
   // join the group it actually belongs to, not the first group whose
   // first record happens to match (a far same-name record must not steal
   // a near record's partner), and a record swallowed into a group must
-  // still be matchable through its group-mates.
-  for (const item of items) {
+  // still be matchable through its group-mates. Categories are resolved
+  // on the way in, so a legacy shard record is already its display
+  // category before any group test looks at it.
+  const resolvedItems = items.map(withResolvedCategory);
+  for (const item of resolvedItems) {
     const key = keyOf(item.lat, item.lon);
     const latCell = Math.floor(item.lat / cellSize);
     const lonCell = Math.floor(item.lon / cellSize);
@@ -1714,9 +1813,12 @@ export function mergeNavaidSources(items, options = {}) {
     // when the base record is a plain light: the merged aid IS that
     // structure, and the other members are its listings. The priority
     // follows the class, or the merged aid would draw at the base
-    // record's zoom.
+    // record's zoom. The merge can add sectors or a light the base
+    // lacked, so the display category is re-derived from the merged
+    // record before the priority is set.
     if (members.some((m) => m.category === 'lighthouse')) merged.category = 'lighthouse';
-    else if (members.some((m) => m.category === 'sector_beacon')) merged.category = 'sector_beacon';
+    else if (members.some((m) => m.category === 'sector_beacon' || m.category === 'sector_light')) merged.category = 'sector_beacon';
+    merged.category = resolveNavaidCategory(merged);
     merged.priority = priorityFor(merged.category);
     merged.sources = [...new Set(members.map((m) => m.source).filter(Boolean))];
     return merged;
@@ -1795,6 +1897,9 @@ export const CATEGORY_LABELS = {
   light: 'Minor light',
   lighthouse: 'Lighthouse',
   sector_beacon: 'Sector beacon',
+  sector_light: 'Sector light',
+  pile_lit: 'Lighted pile',
+  pile_unlit: 'Unlit pile',
   hazard: 'Hazard',
   hazard_danger: 'Dangerous wreck',
   landmark: 'Landmark',

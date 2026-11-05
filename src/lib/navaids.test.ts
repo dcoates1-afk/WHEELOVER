@@ -52,4 +52,16 @@ describe('reconcileLightRank', () => {
 
     expect(reconcileLightRank(archived, regional)).toBe(archived);
   });
+
+  it('keeps an archived sector light and lighted pile against a regional light', () => {
+    // A sector light and a lighted pile are lights too: the regional
+    // record must not overwrite them with a generic light class.
+    const archivedSector = mark({ category: 'sector_light', priority: 62, light: 'Q', lightSectors: [sectors[0]] });
+    const regionalLight = mark({ category: 'light', priority: 66, lightSectors: sectors });
+    expect(reconcileLightRank(archivedSector, regionalLight)).toBe(archivedSector);
+
+    const archivedPile = mark({ category: 'pile_lit', priority: 59, light: 'F', lightCharacter: 'F' });
+    const regionalPile = mark({ category: 'pile_lit', priority: 59, light: 'F', lightCharacter: 'F' });
+    expect(reconcileLightRank(archivedPile, regionalPile)).toBe(archivedPile);
+  });
 });

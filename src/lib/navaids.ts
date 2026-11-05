@@ -40,8 +40,18 @@ export function reconcileLightRank(archived: Navaid, regional: Navaid): Navaid {
   };
 }
 
-/** Classes that are already ranked as aids carrying a light. */
-const LIGHT_CATEGORIES = new Set<NavaidCategory>(['major_light', 'light', 'range', 'transit_front', 'transit_rear']);
+/** Classes that are already ranked as aids carrying a light. A lighthouse, a sector light and a lighted pile are lights too: without them here an archived mark in one of those classes would be overwritten by whatever class the regional record carries. */
+const LIGHT_CATEGORIES = new Set<NavaidCategory>([
+  'major_light',
+  'light',
+  'range',
+  'transit_front',
+  'transit_rear',
+  'lighthouse',
+  'sector_beacon',
+  'sector_light',
+  'pile_lit',
+]);
 
 export interface SymbolSpec {
   svg: string;
@@ -586,9 +596,25 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: 
       return { svg: svgWrap(pylonSvg()), label };
     case 'pile':
       return { svg: svgWrap(pileSvg()), label };
+    case 'pile_lit':
+      // The pile post with an amber lamp on top, so the legend row reads
+      // as lighted at a glance. On the chart symbolForMark adds the
+      // 135° beam in the light's own colour as well.
+      return {
+        svg: svgWrap(
+          `${pileSvg()}<circle cx="16" cy="5" r="2.6" fill="${DEFAULT_LIGHT_MARK}" stroke="#04141f" stroke-width="1"/>`,
+        ),
+        label,
+      };
+    case 'pile_unlit':
+      return { svg: svgWrap(pileSvg()), label };
     case 'lighthouse':
       return { svg: svgWrap(lighthouseSvg()), label };
     case 'sector_beacon':
+      return { svg: svgWrap(sectorBeaconSvg()), label };
+    case 'sector_light':
+      // Same tower as a sector beacon: a sector light IS the sector-beacon
+      // look, now under its own name and filter.
       return { svg: svgWrap(sectorBeaconSvg()), label };
     case 'cable_overhead':
       return { svg: svgWrap(cableSvg()), label };

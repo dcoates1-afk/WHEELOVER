@@ -80,11 +80,30 @@ describe('pile and beacon-board symbols', () => {
     expect(beacon.svg).toContain('M16 2 L23.5 12 L8.5 12 Z');
     expect(beacon.svg).toContain('26.61');
     const pile = symbolForMark(
-      buoy({ category: 'pile', lit: true, light: 'Fl W 4s', lightColour: 'white' }),
+      buoy({ category: 'pile_lit', lit: true, light: 'Fl W 4s', lightColour: 'white' }),
       'B',
     );
     expect(pile.svg).toContain('x="13" y="5" width="6"');
     expect(pile.svg).toContain('26.61');
+  });
+
+  it('draws a lighted pile with a lamp and an unlit pile as the bare post', () => {
+    const lit = symbolFor('pile_lit', 'A');
+    const unlit = symbolFor('pile_unlit', 'A');
+    expect(lit.label).toBe('Lighted pile');
+    expect(unlit.label).toBe('Unlit pile');
+    // Both are the same brown post; only the lighted one carries the lamp.
+    expect(lit.svg).toContain('#a67c52');
+    expect(lit.svg).toContain('#ffd166');
+    expect(unlit.svg).toContain('#a67c52');
+    expect(unlit.svg).not.toContain('#ffd166');
+    expect(lit.svg).not.toBe(unlit.svg);
+  });
+
+  it('gives an unlit pile no beam', () => {
+    const pile = symbolForMark(buoy({ category: 'pile_unlit', lit: false }), 'B');
+    expect(pile.svg).toContain('x="13" y="5" width="6"');
+    expect(pile.svg).not.toContain('data-mark-annotation="light"');
   });
 });
 
@@ -155,6 +174,30 @@ describe('light symbols', () => {
   it('labels the two classes differently', () => {
     expect(symbolFor('major_light', 'A').label).toBe('Major light');
     expect(symbolFor('light', 'A').label).toBe('Minor light');
+  });
+
+  it('draws a sector light as the sector-beacon tower under its own label', () => {
+    const sector = symbolFor('sector_light', 'A');
+    const beacon = symbolFor('sector_beacon', 'A');
+    expect(sector.label).toBe('Sector light');
+    // A sector light IS the sector-beacon look, now under its own name
+    // and filter — the tower and red top are unchanged.
+    expect(sector.svg).toBe(beacon.svg);
+    expect(sector.svg).toContain('#e23b3b');
+  });
+
+  it('gives a sector light its arcs, not the single beam', () => {
+    const sector = symbolForMark(
+      buoy({
+        category: 'sector_light',
+        form: 'light',
+        lit: true,
+        light: 'Q',
+        lightSectors: [{ sector: 1, start: '016.5', end: '055.5', colour: 'red' }],
+      }),
+      'A',
+    );
+    expect(sector.svg).not.toContain('data-mark-annotation="light"');
   });
 
   it('colours the glyph parts from the mapped light, white as yellow', () => {

@@ -261,11 +261,11 @@ export function applyLightSectors(
 
   // A mark whose light was already settled keeps its class; only a scan that
   // needed the index for its light gets re-ranked — to the lighthouse tower
-  // when the indexed light is a lighthouse, otherwise to the sector beacon.
+  // when the indexed light is a lighthouse, otherwise to the sector light.
   // Range still sets the priority, so a long-range sector light keeps the
   // prominence it had as a major light.
   if (!settled && (mark.category === 'landmark' || mark.category === 'other')) {
-    next.category = entry.type === 'lighthouse' ? 'lighthouse' : 'sector_beacon';
+    next.category = entry.type === 'lighthouse' ? 'lighthouse' : 'sector_light';
     next.priority = sectorRangeNm(entry) >= 10 ? 100 : 66;
   }
   fillSignalDetails(next, entry);
@@ -363,10 +363,10 @@ function standaloneMark(id: string, entry: LightSectorEntry): Navaid {
     .filter((range) => Number.isFinite(range) && range > 0);
   const bestRange = ranges.length > 0 ? Math.max(...ranges) : 0;
   // An indexed light is a sector light by definition: the lighthouse tower
-  // when the index says lighthouse, otherwise the sector beacon. Range
+  // when the index says lighthouse, otherwise the sector light. Range
   // still sets the priority, so a long-range sector light keeps the
   // prominence it had as a major light.
-  const category: Navaid['category'] = entry.type === 'lighthouse' ? 'lighthouse' : 'sector_beacon';
+  const category: Navaid['category'] = entry.type === 'lighthouse' ? 'lighthouse' : 'sector_light';
   return {
     id,
     lat: entry.lat!,

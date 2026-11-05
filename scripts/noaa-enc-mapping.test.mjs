@@ -67,12 +67,12 @@ describe('light classification', () => {
     expect(isNonNavigationLight({ CATLIT: 'air obstruction light' })).toBe(true);
     expect(isNonNavigationLight({ CATLIT: ' ' })).toBe(false);
   });
-  it('maps a sector light to a sector beacon', () => {
+  it('maps a sector light to a sector light', () => {
     const record = mapFeature({
       layer: 'Light', band: 'enc_harbour', objectId: 1, lat: 58.0, lon: -152.0,
       attrs: lightAttrs({ SECTR1: 61.0, SECTR2: 225.0, COLOUR: 1 }),
     });
-    expect(record?.category).toBe('sector_beacon');
+    expect(record?.category).toBe('sector_light');
     expect(record?.lightSectors).toHaveLength(1);
     expect(record?.lightSectors?.[0].start).toBe('61');
     expect(record?.lightSectors?.[0].end).toBe('225');
@@ -187,13 +187,13 @@ describe('sector grouping', () => {
     layer: 'Light', band: 'enc_harbour', objectId, lat: 58.0, lon: -152.0,
     attrs: lightAttrs({ SECTR1: start, SECTR2: end, COLOUR: colour, OBJNAM: 'Entrance Light' }),
   });
-  it('groups one light’s sectors into a single sector beacon', () => {
+  it('groups one light’s sectors into a single sector light', () => {
     const grouped = groupLightFeatures([
       sectorRecord(61, 225, 1, 1), sectorRecord(225, 252, 3, 2),
       sectorRecord(252, 330, 1, 3), sectorRecord(330, 347, 3, 4),
     ]);
     expect(grouped).toHaveLength(1);
-    expect(grouped[0].category).toBe('sector_beacon');
+    expect(grouped[0].category).toBe('sector_light');
     expect(grouped[0].lightSectors).toHaveLength(4);
     expect(grouped[0].lightSectors?.map((s) => s.sector)).toEqual([1, 2, 3, 4]);
   });
@@ -217,7 +217,7 @@ describe('sector grouping', () => {
       }),
     ]);
     expect(grouped).toHaveLength(1);
-    expect(grouped[0].category).toBe('sector_beacon');
+    expect(grouped[0].category).toBe('sector_light');
     expect(grouped[0].light).toBe('Fl R 4s');
   });
 });

@@ -55,17 +55,26 @@ describe('classifyOfficialMark', () => {
     })).toMatchObject({ category: 'cardinal_south', form: 'buoy' });
   });
 
-  it('marks piles and dolphins as piles, even when lit', () => {
+  it('marks piles and dolphins as lighted piles when lit, unlit piles when not', () => {
     expect(classifyOfficialMark({
       name: 'Columbia River Pile Light 12',
       description: 'Green pile.',
       lightColour: 'green',
-    })).toMatchObject({ category: 'pile', form: 'beacon' });
+      lit: true,
+    })).toMatchObject({ category: 'pile_lit', form: 'beacon' });
     expect(classifyOfficialMark({
       name: 'Dolphin Light A',
       description: 'Dolphin, red.',
       lightColour: 'red',
-    }).category).toBe('pile');
+      lit: true,
+    }).category).toBe('pile_lit');
+    // A pile record with no light at all is an unlit pile, not a minor light.
+    expect(classifyOfficialMark({
+      name: 'Pile 7',
+      description: 'Wooden pile.',
+      lightColour: null,
+      lit: false,
+    }).category).toBe('pile_unlit');
   });
 
   it('marks daybeacons as fixed lateral boards', () => {

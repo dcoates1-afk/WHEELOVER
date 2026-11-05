@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Beacon_Safe_Water:32458","lat":-0.37054890000001706,"lon":-160.0066218,"source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_harbour/MapServer","sourceDate":"2006-09","colour":"red;white","category":"safe_water","form":"beacon","priority":92}]}

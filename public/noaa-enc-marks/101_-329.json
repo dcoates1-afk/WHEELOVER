@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Landmark:190390","lat":25.468468700000017,"lon":-82.1017157,"source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_general/MapServer","sourceDate":"2005-07-16","fogSignal":true,"fogSignalCategory":"horn","category":"lighthouse","form":"landmark","priority":98}]}

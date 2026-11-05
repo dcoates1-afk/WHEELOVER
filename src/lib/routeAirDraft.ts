@@ -1,5 +1,5 @@
 import { distanceKm, pointSegmentDistanceKm, type LatLon } from './geo';
-import { clearancesForFeature, type ClearanceDatasets } from './clearances';
+import { clearancesForFeature, decidingClearance, type ClearanceDatasets } from './clearances';
 import type { ChartFeature } from './overpass';
 import type { RouteWaypoint } from './routes';
 
@@ -94,13 +94,6 @@ function sampleCrossesBridge(lat: number, lon: number, bridge: ChartFeature): bo
   return segments.some(([a, b]) => pointSegmentDistanceKm(lat, lon, a, b) < BRIDGE_PROXIMITY_KM);
 }
 
-interface FigureEntry {
-  value: number;
-  datum: string;
-  least: boolean;
-  source: string;
-}
-
 function evaluateBridge(
   bridge: ChartFeature,
   datasets: ClearanceDatasets,
@@ -110,30 +103,19 @@ function evaluateBridge(
   const rows = clearancesForFeature(bridge, datasets);
   const hasDatumUnknown = rows.some((row) => row.datum === null);
   const known = rows.filter((row) => row.datum !== null);
-  const entries: FigureEntry[] = [];
-  for (const row of known) {
-    for (const value of row.values) {
-      entries.push({ value, datum: row.datum as string, least: row.least === true, source: row.source });
-    }
-  }
-  const exact = entries.filter((entry) => !entry.least);
-  const deciding = exact.length > 0 ? exact : entries;
-  let clearanceM: number | null = null;
-  let datum: string | null = null;
-  let least = false;
-  for (const entry of deciding) {
-    if (clearanceM === null || entry.value < clearanceM) {
-      clearanceM = entry.value;
-      datum = entry.datum;
-      least = entry.least;
-    }
-  }
+  // The deciding figure is the lowest datum-stated exact figure (Doug's
+  // rule: close but conflicting heights use the lower one, safest call) —
+  // see decidingClearance in clearances.ts.
+  const deciding = decidingClearance(rows);
+  const clearanceM = deciding?.value ?? null;
+  const datum = deciding?.datum ?? null;
+  const least = deciding?.least ?? false;
   // A least figure below the requirement proves nothing: the real
   // clearance is at least that figure, so it may still clear. Only an
   // exact figure below the requirement is a fail.
   let verdict: AirDraftVerdict = 'unverified';
-  if (clearanceM !== null) {
-    if (exact.length > 0) verdict = clearanceM < requiredM ? 'fail' : 'pass';
+  if (clearanceM !== null && deciding !== null) {
+    if (!deciding.least) verdict = clearanceM < requiredM ? 'fail' : 'pass';
     else verdict = clearanceM >= requiredM ? 'pass' : 'unverified';
   }
   const openValues: number[] = [];

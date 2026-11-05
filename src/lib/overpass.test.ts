@@ -1299,12 +1299,15 @@ describe('phantom bridge exclusion', () => {
   });
 
   it('keeps a named man_made=bridge outline', () => {
+    // A named outline that genuinely spans the bay: a long thin deck
+    // rectangle from one shore to the other. An outline that only dips
+    // into the water's edge does not span and is dropped, like Purdy's.
     const { bridges } = chartFeaturesFromElements([
       {
         type: 'way', id: 1, tags: { man_made: 'bridge', layer: '1', name: 'Test Bridge' },
         geometry: [
-          { lat: 50.001, lon: -1.0001 }, { lat: 50.001, lon: -0.9999 },
-          { lat: 50.0011, lon: -0.9999 }, { lat: 50.0011, lon: -1.0001 }, { lat: 50.001, lon: -1.0001 },
+          { lat: 50.0009, lon: -1.0025 }, { lat: 50.0009, lon: -0.9995 },
+          { lat: 50.0011, lon: -0.9995 }, { lat: 50.0011, lon: -1.0025 }, { lat: 50.0009, lon: -1.0025 },
         ],
       },
       bay(-1.002, -1.0),

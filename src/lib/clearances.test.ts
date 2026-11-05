@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   clearanceAtLevel,
   clearancesForFeature,
+  decidingClearance,
   normalizeBridgeName,
+  type BridgeClearance,
   type ClearanceDatasets,
 } from './clearances';
 
@@ -158,5 +160,49 @@ describe('clearanceAtLevel', () => {
   it('subtracts water above the datum and gives back water below it', () => {
     expect(clearanceAtLevel(10, 0.5)).toBeCloseTo(9.5);
     expect(clearanceAtLevel(10, -0.8)).toBeCloseTo(10.8);
+  });
+});
+
+describe('decidingClearance', () => {
+  const row = (overrides: Partial<BridgeClearance> & { source: string; values: number[] }): BridgeClearance => ({
+    closed: false,
+    openValues: [],
+    horizontal: null,
+    datum: 'MHW',
+    datumNote: null,
+    retrieved: '2026-11-02',
+    ...overrides,
+  });
+
+  it('uses the lower of two close but conflicting datum-stated figures', () => {
+    // Halifax MacKay/Macdonald: CHS Sailing Directions ATL 105 says 49 m
+    // above Higher High Water, Large Tides; the operator says 46.9 m at
+    // centre span at high water. Doug's rule: the lower one decides.
+    expect(decidingClearance([
+      row({ source: 'CHS Sailing Directions ATL 105', values: [49], datum: 'Higher High Water, Large Tides' }),
+      row({ source: 'Halifax Harbour Bridges', values: [46.9], datum: 'high water level' }),
+    ])).toEqual({ value: 46.9, datum: 'high water level', least: false, source: 'Halifax Harbour Bridges' });
+    // Golden Gate: NOAA ENC 71 m, Coast Pilot 70 m above MHW.
+    expect(decidingClearance([
+      row({ source: 'NOAA ENC', values: [71], datum: 'MHW' }),
+      row({ source: 'NOAA Coast Pilot', values: [70], datum: 'MHW' }),
+    ])).toEqual({ value: 70, datum: 'MHW', least: false, source: 'NOAA Coast Pilot' });
+  });
+
+  it('prefers an exact figure over a lower group least, and a least only when no exact exists', () => {
+    expect(decidingClearance([
+      row({ source: 'NOAA Coast Pilot', values: [15], datum: 'MHW', least: true }),
+      row({ source: 'NOAA ENC', values: [20], datum: 'MHW' }),
+    ])).toEqual({ value: 20, datum: 'MHW', least: false, source: 'NOAA ENC' });
+    expect(decidingClearance([
+      row({ source: 'NOAA Coast Pilot', values: [15], datum: 'MHW', least: true }),
+    ])).toEqual({ value: 15, datum: 'MHW', least: true, source: 'NOAA Coast Pilot' });
+  });
+
+  it('never decides on a datum-unknown figure', () => {
+    expect(decidingClearance([
+      row({ source: 'OSM seamark', values: [5], datum: null }),
+    ])).toBeNull();
+    expect(decidingClearance([])).toBeNull();
   });
 });

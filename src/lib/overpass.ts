@@ -50,7 +50,7 @@ const CHART_FEATURE_CACHE_MS = 10 * 60 * 1000;
  * key a device keeps serving cells drawn under older rules for up to thirty
  * days. Cells stored under older keys simply stop matching and age out.
  */
-export const CHART_FEATURE_FILTER_VERSION = 4;
+export const CHART_FEATURE_FILTER_VERSION = 5;
 const chartFeatureMemory = new Map<string, { features: ChartFeature[]; at: number }>();
 
 export type RawChartElement = {
@@ -174,15 +174,45 @@ function segmentsNear(
 
 /**
  * Highway values that carry people, not vehicles. Their bridge-tagged ways are
- * often just path segments on structures — boardwalks, piers, marina fingers —
- * rather than crossings, so they must prove a real span (see bridgeMeetsWater).
- * Road, rail and untagged bridges keep the lenient rule: missing one is a
- * hazard, while a walkway fragment is clutter.
+ * often just path segments on structures — boardwalks, piers, marina fingers,
+ * steps down to a dock — rather than crossings, so they must prove a real span
+ * (see bridgeMeetsWater). Road, rail and untagged bridges keep the lenient rule:
+ * missing one is a hazard, while a walkway fragment is clutter.
  */
-const LIGHT_HIGHWAY_VALUES = new Set(['footway', 'cycleway', 'path', 'bridleway']);
+const LIGHT_HIGHWAY_VALUES = new Set(['footway', 'cycleway', 'path', 'bridleway', 'steps']);
 
 function isLightBridge(tags: Record<string, string> | undefined): boolean {
   return LIGHT_HIGHWAY_VALUES.has(tags?.highway?.toLowerCase() ?? '');
+}
+
+/**
+ * Bridges that must prove a real span. Light highways (above) are often just
+ * path segments on structures, and any bridge element with no carrying way at
+ * all — a man_made=bridge outline, a conveyor, a pipeline — is a bare
+ * structure ring, not a crossing: both get the strict span test instead of
+ * the lenient touching rule. A named outline that genuinely spans still
+ * passes (the MacDonald Bridge way itself carries no highway tag), while a
+ * ring that merely overlaps a bay does not. Road, rail and other carrying
+ * bridges keep the lenient rule: missing one is a hazard, while a walkway
+ * fragment or a bare ring is clutter.
+ */
+/**
+ * A bridge that must prove a span. Light bridges (footways, paths, steps,
+ * cycleways, boardwalks) get the strict span test, as does any bridge
+ * element with no carrying way that is a structure rather than a crossing:
+ * a man_made=bridge outline, a conveyor, a pipeline, or a seamark bridge
+ * with no bridge tag. A plain bridge=yes way (no man_made, carrying
+ * something the mapper did not tag) keeps the lenient rule — it is a
+ * crossing, not a structure outline — so a road bridge mapped a few metres
+ * short of the water, or lying inside a harbour basin, still counts.
+ */
+function isStrictBridge(tags: Record<string, string> | undefined): boolean {
+  if (isLightBridge(tags)) return true;
+  const highway = tags?.highway?.toLowerCase();
+  const railway = tags?.railway?.toLowerCase();
+  if (highway || railway) return false;
+  if (tags?.man_made !== undefined) return true;
+  return tags?.bridge === undefined;
 }
 
 /** Length of one segment in metres, equirectangular at the segment's latitude. */
@@ -227,27 +257,26 @@ const MIN_SPAN_PENETRATION_METERS = 10;
 const MIN_SPAN_WIDTH_METERS = 10;
 
 /**
- * Whether a bridge path genuinely spans a water area: it must enter the area
- * and come out again on a run that is a real crossing, not a shoreline
- * weave. Cutting the boundary twice is not enough on its own — a walkway
- * along a wobbly shoreline cuts it twice (or twenty times) without ever
- * leaving the water's edge, and the old cut-count rule drew every such
- * walkway as a bridge. A run counts as a crossing when it gets properly
- * inside (ten metres from the boundary, the mapping-imprecision scale) or
- * when it cuts the boundary steeply at either end across a run at least ten
- * metres wide, the way a bridge meets its banks, rather than grazing along
- * them the way a shoreline path does or nicking a sliver of mapped water.
- * A path that lies inside the area (a walkway along the shore, a boardwalk
- * over the water's edge) or enters it and ends there (a finger out to the
- * floats) does not span, however much water it touches. A bridge to an
- * island inside one polygon cuts the boundary only once and is not counted;
- * road bridges to islands are unaffected.
+ * How far the water must continue past a crossing along the channel for the
+ * crossing to count as a channel span rather than a chord across a polygon
+ * tip. Twenty metres is twice the penetration threshold: a lobe whose nose
+ * sits within that of the crossing is a dead end, not a channel a boat
+ * follows, while a real channel — however narrow — runs on past the bridge.
  */
-function pathSpansArea(path: [number, number][], area: Point[]): boolean {
-  if (path.length < 2 || area.length < 2) return false;
-  // Cut points along the path where it crosses the area boundary, with the
-  // angle between the path and the boundary there.
-  const cuts: { at: number; lat: number; lon: number; angle: number }[] = [];
+const MIN_CHANNEL_CONTINUATION_METERS = 20;
+
+/** One place a bridge path crosses a water area's boundary, with its angle to the boundary. */
+interface AreaCut { at: number; lat: number; lon: number; angle: number }
+
+/**
+ * Cut points where a path crosses an area boundary, with the angle between
+ * the path and the boundary there, plus the path's cumulative distances.
+ * One boundary encounter can register twice (a path vertex sitting on the
+ * ring, or a crossing at a ring vertex): cuts within a metre of each other
+ * along the path are the same encounter, keeping the steepest reading.
+ */
+function cutsAlongPath(path: [number, number][], area: Point[]): { cuts: AreaCut[]; cumulative: number[] } {
+  const cuts: AreaCut[] = [];
   const cumulative: number[] = [0];
   for (let index = 1; index < path.length; index += 1) {
     const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
@@ -270,15 +299,148 @@ function pathSpansArea(path: [number, number][], area: Point[]): boolean {
     cumulative.push(cumulative[index - 1] + segLen);
   }
   cuts.sort((a, b) => a.at - b.at);
-  // One boundary encounter can register twice (a path vertex sitting on the
-  // ring, or a crossing at a ring vertex): cuts within a metre of each other
-  // along the path are the same encounter, keeping the steepest reading.
-  const deduped: typeof cuts = [];
+  const deduped: AreaCut[] = [];
   for (const cut of cuts) {
     const last = deduped[deduped.length - 1];
     if (last !== undefined && cut.at - last.at <= 1) last.angle = Math.max(last.angle, cut.angle);
     else deduped.push({ ...cut });
   }
+  return { cuts: deduped, cumulative };
+}
+
+/** The point on a path at a cumulative distance along it, interpolated within its segment. */
+function pointAtDistance(path: [number, number][], cumulative: number[], target: number): Point {
+  if (target <= 0) return { lat: path[0][0], lon: path[0][1] };
+  for (let index = 1; index < path.length; index += 1) {
+    if (target <= cumulative[index]) {
+      const segLen = cumulative[index] - cumulative[index - 1];
+      const t = segLen === 0 ? 0 : (target - cumulative[index - 1]) / segLen;
+      return {
+        lat: path[index - 1][0] + t * (path[index][0] - path[index - 1][0]),
+        lon: path[index - 1][1] + t * (path[index][1] - path[index - 1][1]),
+      };
+    }
+  }
+  const last = path[path.length - 1];
+  return { lat: last[0], lon: last[1] };
+}
+
+/**
+ * Distance from a point inside a water area to the area boundary along a ray,
+ * in metres. The ray direction is a unit vector in local metres (x east,
+ * y north) around the origin.
+ */
+function rayToBoundaryMeters(origin: Point, dirX: number, dirY: number, area: Point[]): number {
+  const cosLat = Math.cos(origin.lat * Math.PI / 180);
+  const toXY = (p: Point) => ({ x: (p.lon - origin.lon) * 111_320 * cosLat, y: (p.lat - origin.lat) * 110_574 });
+  let best = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < area.length; index += 1) {
+    const a = toXY(area[index - 1]);
+    const b = toXY(area[index]);
+    const ex = b.x - a.x;
+    const ey = b.y - a.y;
+    const denom = dirX * ey - dirY * ex;
+    if (Math.abs(denom) < 1e-12) continue;
+    // Ray o + t*d meets segment a + u*e: t = cross(a, e) / cross(d, e),
+    // u = cross(a, d) / cross(d, e), with the origin at (0, 0).
+    const t = (a.x * ey - a.y * ex) / denom;
+    const u = (a.x * dirY - a.y * dirX) / denom;
+    if (t > 0.001 && u >= 0 && u <= 1) best = Math.min(best, t);
+  }
+  return best;
+}
+
+/**
+ * How far the water continues past a run along the channel, in metres: from
+ * a point on the run, the shorter of the two distances to the area boundary
+ * perpendicular to the run (along the channel). A channel runs on both ways;
+ * a polygon tip ends at its nose a few metres past the crossing.
+ */
+/**
+ * How far the water continues past a point, perpendicular to a run. The
+ * shorter of the two rays either side of the run chord: a wide water body
+ * the run spans extends a long way on both sides, while a polygon tip ends
+ * a short way on one side.
+ */
+function channelContinuationPerpendicularMeters(origin: Point, from: AreaCut, to: AreaCut, area: Point[]): number {
+  const cosLat = Math.cos(origin.lat * Math.PI / 180);
+  const dx = (to.lon - from.lon) * 111_320 * cosLat;
+  const dy = (to.lat - from.lat) * 110_574;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return 0;
+  const perpX = -dy / len;
+  const perpY = dx / len;
+  return Math.min(
+    rayToBoundaryMeters(origin, perpX, perpY, area),
+    rayToBoundaryMeters(origin, -perpX, -perpY, area),
+  );
+}
+
+/**
+ * How far the water continues past a point, along the channel. Rays are cast
+ * in twelve directions (every 15 degrees) and the best axis is taken: the
+ * direction in which the water extends farthest on BOTH sides. A real
+ * channel extends a long way upstream and downstream, so its best axis is
+ * long; a polygon tip ends a short way on one side no matter which axis is
+ * chosen, so its best axis is short. Casting only perpendicular to the
+ * run would miss a skewed crossing of a narrow channel: the perpendicular
+ * is off the channel axis and exits the strip quickly, while the channel
+ * itself runs on.
+ */
+function channelContinuationMeters(origin: Point, area: Point[]): number {
+  let best = 0;
+  for (let k = 0; k < 12; k++) {
+    const theta = (k * Math.PI) / 12;
+    const cosT = Math.cos(theta);
+    const sinT = Math.sin(theta);
+    const fwd = rayToBoundaryMeters(origin, cosT, sinT, area);
+    const back = rayToBoundaryMeters(origin, -cosT, -sinT, area);
+    best = Math.max(best, Math.min(fwd, back));
+  }
+  return best;
+}
+
+/**
+ * Whether a run across a water area is a channel crossing rather than a chord
+ * across a polygon tip. Either the water extends a long way perpendicular to
+ * the run on both sides — a wide water body the run spans, like a bay — or
+ * it continues along a channel axis for at least twice the run's own length
+ * (and at least twenty metres) — a narrow channel that runs on past the
+ * crossing. A tip fails both: its water ends a short way on one side
+ * perpendicular to the chord, and its best-axis continuation is only as wide
+ * as the chord that cuts it off. Measured on Dartmouth Cove, a tip chord
+ * continues ~22–25 m along its best axis against a ~20 m chord (ratio
+ * ~1.1) and ~14–15 m perpendicular, while a skewed footbridge over a 15 m
+ * channel continues ~111 m along its axis against a 30 m run (ratio ~3.7).
+ */
+function runIsChannelCrossing(origin: Point, from: AreaCut, to: AreaCut, runLength: number, area: Point[]): boolean {
+  if (channelContinuationPerpendicularMeters(origin, from, to, area) >= MIN_CHANNEL_CONTINUATION_METERS) return true;
+  return channelContinuationMeters(origin, area) >= Math.max(MIN_CHANNEL_CONTINUATION_METERS, 2 * runLength);
+}
+
+/**
+ * Whether a bridge path genuinely spans a water area: it must enter the area
+ * and come out again on a run that is a real crossing, not a shoreline
+ * weave. Cutting the boundary twice is not enough on its own — a walkway
+ * along a wobbly shoreline cuts it twice (or twenty times) without ever
+ * leaving the water's edge, and the old cut-count rule drew every such
+ * walkway as a bridge. A run counts as a crossing when it gets properly
+ * inside — ten metres from the boundary, the mapping-imprecision scale, and
+ * a quarter of the run's own length, so a long boardwalk weaving in and out
+ * of a harbour cannot pass on a shallow dip — or when it cuts the boundary
+ * steeply at either end across a run at least ten metres wide, the way a
+ * bridge meets its banks, rather than grazing along them the way a shoreline
+ * path does or nicking a sliver of mapped water, and the water continues
+ * past the run along the channel rather than ending at a polygon tip.
+ * A path that lies inside the area (a walkway along the shore, a boardwalk
+ * over the water's edge) or enters it and ends there (a finger out to the
+ * floats) does not span, however much water it touches. A bridge to an
+ * island inside one polygon cuts the boundary only once and is not counted;
+ * road bridges to islands are unaffected.
+ */
+function pathSpansArea(path: [number, number][], area: Point[]): boolean {
+  if (path.length < 2 || area.length < 2) return false;
+  const { cuts: deduped, cumulative } = cutsAlongPath(path, area);
   if (deduped.length < 2) return false;
   // Inside-runs between consecutive cuts alternate with outside-runs. Only a
   // complete inside-run counts: the run from the path start to the first cut
@@ -291,6 +453,10 @@ function pathSpansArea(path: [number, number][], area: Point[]): boolean {
     if (!inside) continue;
     const from = deduped[run - 1];
     const to = deduped[run];
+    const runLength = to.at - from.at;
+    // A point on the path halfway through the run: the run's own middle,
+    // inside the area by construction, from which the channel is measured.
+    const midPoint = pointAtDistance(path, cumulative, (from.at + to.at) / 2);
     // A steep cut at either end proves a crossing only when the run is a
     // channel too narrow for the penetration test: a bridge meets its
     // banks squarely even over a channel too narrow for ten metres of
@@ -299,16 +465,23 @@ function pathSpansArea(path: [number, number][], area: Point[]): boolean {
     // prove itself by penetration instead. The channel width across the
     // path is the run chord times the sine of the shallower cut, and a
     // run narrower than twice the penetration threshold cannot reach ten
-    // metres of penetration at its middle by construction.
+    // metres of penetration at its middle by construction. And the water
+    // must continue past the run along the channel: a chord across a
+    // polygon tip cuts steeply at both ends too, but the tip ends at its
+    // nose a few metres past the crossing.
     const runWidth = segmentLengthMeters({ lat: from.lat, lon: from.lon }, { lat: to.lat, lon: to.lon });
     const perpWidth = runWidth * Math.sin(Math.min(from.angle, to.angle) * Math.PI / 180);
     if (Math.max(from.angle, to.angle) >= 30 &&
       runWidth >= MIN_SPAN_WIDTH_METERS &&
-      perpWidth < 2 * MIN_SPAN_PENETRATION_METERS) return true;
+      perpWidth < 2 * MIN_SPAN_PENETRATION_METERS &&
+      runIsChannelCrossing(midPoint, from, to, to.at - from.at, area)) return true;
     // Otherwise the run must get properly inside. Sample the run's vertices
     // and segment midpoints: the deepest point of the run is its
     // penetration, and a midpoint catches a two-point bridge whose only
-    // vertex inside is none at all.
+    // vertex inside is none at all. Penetration alone is not enough for a
+    // long run: a boardwalk weaving along a harbour edge dips thirty metres
+    // inside over a two-hundred-metre run without ever crossing it, so the
+    // penetration must also be a quarter of the run's own length.
     const samples: Point[] = [];
     for (let index = 1; index < path.length; index += 1) {
       const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
@@ -318,25 +491,31 @@ function pathSpansArea(path: [number, number][], area: Point[]): boolean {
       if (midAt > from.at && midAt < to.at) samples.push({ lat: (start.lat + end.lat) / 2, lon: (start.lon + end.lon) / 2 });
       if (cumulative[index] > from.at && cumulative[index] < to.at) samples.push(end);
     }
+    let maxPenetration = 0;
+    // The run counts by penetration only when the deepest point gets
+    // properly inside relative to the run itself (see the doc comment).
+    const requiredPenetration = Math.max(MIN_SPAN_PENETRATION_METERS, runLength / 4);
     for (const sample of samples) {
       // Penetration is the distance to the nearest boundary segment. Ring
       // segments outside a threshold box around the sample cannot be the
-      // nearest, so they are skipped — but the scan must run to the end:
-      // the nearest segment is the minimum over all of them, and stopping
-      // at the first segment ten metres away would read a far segment as
-      // the nearest while a nearer one sits later in the ring.
+      // nearest: the box is the required penetration, so a segment outside
+      // it is further than the threshold and cannot change the verdict —
+      // but the scan must run to the end, because stopping at the first
+      // segment inside the box would read a far segment as the nearest
+      // while a nearer one sits later in the ring.
       let nearest = Number.POSITIVE_INFINITY;
       for (let waterIndex = 1; waterIndex < area.length; waterIndex += 1) {
         const a = area[waterIndex - 1];
         const b = area[waterIndex];
-        const latTol = MIN_SPAN_PENETRATION_METERS / 110_574;
-        const lonTol = MIN_SPAN_PENETRATION_METERS / (111_320 * Math.cos(sample.lat * Math.PI / 180));
+        const latTol = requiredPenetration / 110_574;
+        const lonTol = requiredPenetration / (111_320 * Math.cos(sample.lat * Math.PI / 180));
         if (Math.min(a.lat, b.lat) > sample.lat + latTol || Math.max(a.lat, b.lat) < sample.lat - latTol ||
           Math.min(a.lon, b.lon) > sample.lon + lonTol || Math.max(a.lon, b.lon) < sample.lon - lonTol) continue;
         nearest = Math.min(nearest, pointToSegmentMeters(sample, a, b));
       }
-      if (nearest >= MIN_SPAN_PENETRATION_METERS) return true;
+      maxPenetration = Math.max(maxPenetration, nearest);
     }
+    if (maxPenetration >= requiredPenetration) return true;
   }
   return false;
 }
@@ -559,24 +738,57 @@ function prepareWater(water: RawChartElement): PreparedWater | null {
  * bodies and individual water segments, and the padding is generous against the
  * 100 m tolerance so a crossing near the bridge's edge is still found.
  *
- * A light bridge (footway, cycleway, path, bridleway) must prove a real span:
- * over an area it has to cut the boundary at least twice, and over a line it
- * has to cross it, not run alongside it — so marina walkways, boardwalks and
- * fingers out to the floats do not count, however much water they touch. Other
- * bridges keep the lenient rule, where touching water or passing within
- * tolerance of it counts.
+ * A strict bridge — a light bridge (footway, cycleway, path, bridleway,
+ * steps), or any bridge element with no carrying way at all — must prove a
+ * real span: over an area it has to cut the boundary at least twice, and over
+ * a line it has to cross it, not run alongside it — so marina walkways,
+ * boardwalks, fingers out to the floats and bare structure rings do not
+ * count, however much water they touch. Other bridges keep the lenient rule,
+ * where touching water or passing within tolerance of it counts — except
+ * that a path entering and exiting an area counts only when the run is a
+ * channel crossing, not a chord across a polygon tip.
  */
+/** Waterway points with their along-water distance to the tide, indexed by ~1 km grid cell. */
+type DistanceGrid = Map<string, { lat: number; lon: number; dist: number }[]>;
+
+/** Index an along-water distances map by grid cell, so one water body can find the points near it. */
+function buildDistanceGrid(distances: Map<string, number>): DistanceGrid {
+  const grid: DistanceGrid = new Map();
+  for (const [key, dist] of distances) {
+    const [latText, lonText] = key.split(',');
+    const lat = Number(latText);
+    const lon = Number(lonText);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const cell = `${Math.floor(lat / 0.01)},${Math.floor(lon / 0.01)}`;
+    const list = grid.get(cell) ?? [];
+    list.push({ lat, lon, dist });
+    grid.set(cell, list);
+  }
+  return grid;
+}
+
 /**
  * Whether a non-tidal water body lies within tidal reach of tidal water.
  *
- * Measured path to path, in metres — never box to box, which let every river
- * reach inside a big sea polygon's bounding box read as tidal. A reach inside
- * a tidal area counts too: its line may run well inside a bay's boundary and
- * still be tidal water. Segment pairs far apart are pruned by their bounding
- * boxes first, so a strait with a thousand segments costs comparisons, not
- * distances.
+ * One test for areas and centrelines, measured along the water, not as the
+ * crow flies. A body counts as tidal when it touches or overlaps a tidal
+ * polygon — a point of it inside a tidal ring, or a boundary segment within
+ * 25 m of a tidal segment, which is how a river polygon whose centreline
+ * stops short of the sea still counts (the mapping-gap fallback) — or when
+ * a waterway point inside it connects to tidal water through the mapped
+ * network within 2000 m along the water (the distance grid built from the
+ * along-water walk). A straight-line 2000 m test used to let a dammed reach
+ * count — its polygon sits near the harbour while its water never reaches
+ * it — so the straight line survives only inside the 25 m touch test,
+ * never as a reach on its own. Segment pairs far apart are pruned by their
+ * bounding boxes first, so a strait with a thousand segments costs
+ * comparisons, not distances.
  */
-function waterWithinTidalReach(water: PreparedWater, seeds: PreparedWater[]): boolean {
+function waterWithinTidalReach(
+  water: PreparedWater,
+  seeds: PreparedWater[],
+  distanceGrid?: DistanceGrid,
+): boolean {
   for (const seed of seeds) {
     for (const seedLine of seed.paths) {
       const seedPoints = seedLine.map(([lat, lon]) => ({ lat, lon }));
@@ -602,15 +814,44 @@ function waterWithinTidalReach(water: PreparedWater, seeds: PreparedWater[]): bo
             const c = { lat: seedLine[seedIndex - 1][0], lon: seedLine[seedIndex - 1][1] };
             const d = { lat: seedLine[seedIndex][0], lon: seedLine[seedIndex][1] };
             // Prune in degrees at the pair's mean latitude; the prune is
-            // wider than the reach, so it never drops a real near miss.
+            // wider than the touch tolerance, so it never drops a real near miss.
             const meanLat = ((a.lat + b.lat + c.lat + d.lat) / 4) * Math.PI / 180;
-            const latTol = TIDAL_REACH_METERS / 110_574;
-            const lonTol = TIDAL_REACH_METERS / (111_320 * Math.cos(meanLat));
+            const latTol = ALONG_WATER_TERMINAL_METERS / 110_574;
+            const lonTol = ALONG_WATER_TERMINAL_METERS / (111_320 * Math.cos(meanLat));
             if (Math.min(c.lat, d.lat) > Math.max(a.lat, b.lat) + latTol ||
               Math.max(c.lat, d.lat) < Math.min(a.lat, b.lat) - latTol ||
               Math.min(c.lon, d.lon) > Math.max(a.lon, b.lon) + lonTol ||
               Math.max(c.lon, d.lon) < Math.min(a.lon, b.lon) - lonTol) continue;
-            if (segmentsWithinMeters(a, b, c, d, TIDAL_REACH_METERS)) return true;
+            if (segmentsWithinMeters(a, b, c, d, ALONG_WATER_TERMINAL_METERS)) return true;
+          }
+        }
+      }
+    }
+  }
+  // Connect through the mapped waterway network within tidal reach: a
+  // waterway point inside the body (or on its edge, a centreline node on
+  // the bank) whose along-water distance to the tide is within reach.
+  // The grid cells are ~1 km, so the range is widened by one cell each way
+  // to catch a point just outside the body's bounds.
+  if (distanceGrid) {
+    const [south, west, north, east] = water.bounds;
+    const rings = water.paths
+      .filter((path) => path.length >= 4 && isClosedPath(path))
+      .map((path) => path.map(([lat, lon]) => [lon, lat]));
+    const cell = (value: number) => Math.floor(value / 0.01);
+    for (let la = cell(south) - 1; la <= cell(north) + 1; la++) {
+      for (let lo = cell(west) - 1; lo <= cell(east) + 1; lo++) {
+        for (const node of distanceGrid.get(`${la},${lo}`) ?? []) {
+          if (node.dist > TIDAL_REACH_METERS) continue;
+          if (rings.some((ring) => pointInRing(node.lon, node.lat, ring))) return true;
+          for (const line of water.paths) {
+            for (let index = 1; index < line.length; index += 1) {
+              if (pointToSegmentMeters(
+                node,
+                { lat: line[index - 1][0], lon: line[index - 1][1] },
+                { lat: line[index][0], lon: line[index][1] },
+              ) <= ALONG_WATER_TERMINAL_METERS) return true;
+            }
           }
         }
       }
@@ -836,6 +1077,10 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
   // Along-water distances are built once per view, not once per bridge: the
   // graph walk is the expensive part, and every bridge in the view shares it.
   const distances = alongWater ?? alongWaterDistances(waters);
+  // The distance grid is built once per view with the walk above, so the
+  // tidal-reach test for an area can find the waterway points near it
+  // without re-indexing the whole network for every bridge.
+  const distanceGrid = buildDistanceGrid(distances);
   // A bridge can meet several bodies at once — the river, an unnamed dock beside
   // it, and a marina basin alongside. The card should say "River Itchen", so an
   // unnamed match is only a fallback and open tidal water beats a marina.
@@ -860,7 +1105,7 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
     // the whole-element test let one segment near the sea make a whole river
     // tidal, bridges kilometres upstream included.
     const waterHasArea = water.paths.some((path) => water.areaLike || isClosedPath(path));
-    if (!water.seed && waterHasArea && !waterWithinTidalReach(water, seeds)) continue;
+    if (!water.seed && waterHasArea && !waterWithinTidalReach(water, seeds, distanceGrid)) continue;
     // Once a named body has matched, only open tidal water can improve on it.
     if (namedMatch !== null && !water.seed) continue;
     // Once any crossing is found, an unnamed body can add nothing.
@@ -889,6 +1134,33 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
         const ring = line.map(({ lat, lon }) => [lon, lat]);
         let crossesArea = false;
         for (const path of bridgePaths) {
+          const { cuts, cumulative } = cutsAlongPath(path, line);
+          if (cuts.length >= 2) {
+            // The path enters and exits the area: only a channel crossing
+            // counts, not a chord across a polygon tip. A rail nicking the
+            // tip of a cove, or a road hugging a bay's edge, is not a bridge
+            // over that water, however lenient the rule for a carrying
+            // bridge — the water must continue past the run along the
+            // channel. A path with fewer cuts keeps the lenient rule below.
+            const startInside = pointInRing(path[0][1], path[0][0], ring);
+            for (let run = 1; run < cuts.length; run += 1) {
+              const inside = startInside ? run % 2 === 0 : run % 2 === 1;
+              if (!inside) continue;
+              const from = cuts[run - 1];
+              const to = cuts[run];
+              const midPoint = pointAtDistance(path, cumulative, (from.at + to.at) / 2);
+              if (runIsChannelCrossing(midPoint, from, to, to.at - from.at, line)) {
+                crossesArea = true;
+                break;
+              }
+            }
+            if (crossesArea) break;
+            continue;
+          }
+          // Fewer than two cuts: the path lies inside the area, or enters
+          // it and ends there (a bridge to an island, a pier) — the lenient
+          // rule counts any point inside, and a segment that merely touches
+          // the boundary counts as a crossing, as before.
           if (path.some(([lat, lon]) => pointInRing(lon, lat, ring))) {
             crossesArea = true;
             break;
@@ -920,6 +1192,13 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
       // keep the lenient rule: missing one is a hazard, while a walkway
       // fragment is clutter.
       if (strict && !waterArea && (water.areaLike || water.paths.some(isClosedPath))) continue;
+      // An area's boundary ring is not a centreline: when a bridge path
+      // enters and exits the area, the area branch above has already ruled
+      // on the run — channel crossing or tip chord — and touching the ring
+      // within tolerance must not overrule it. The tolerance below is only
+      // for a path that does not enter and exit the area: a bridge mapped a
+      // few metres short of the water, or ending inside it.
+      if (waterArea && bridgePaths.some((path) => cutsAlongPath(path, line).cuts.length >= 2)) continue;
       for (const path of bridgePaths) {
         for (let index = 1; index < path.length; index += 1) {
           const start = { lat: path[index - 1][0], lon: path[index - 1][1] };
@@ -967,7 +1246,7 @@ export function bridgeCrossesWater(bridge: RawChartElement, waters: RawChartElem
   const bridgePaths = bridgeLines(bridge);
   if (bridgePaths.length === 0) return false;
   const prepared = waters.map(prepareWater).filter((water): water is PreparedWater => water !== null);
-  return bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), prepared, isLightBridge(bridge.tags)) !== null;
+  return bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), prepared, isStrictBridge(bridge.tags)) !== null;
 }
 
 function keyFor(bounds: Bounds): string {
@@ -1239,7 +1518,7 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
       ? bridgeLines(element)
       : [];
     const crossedWater = bridgePaths.length > 0
-      ? bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), waterWays, isLightBridge(tags), alongWater)
+      ? bridgeMeetsWater(bridgePaths, boundsOfPaths(bridgePaths), waterWays, isStrictBridge(tags), alongWater)
       : null;
     const bridge = crossedWater !== null;
     const area = classifyMarineArea(tags);

@@ -146,8 +146,60 @@ describe('bridge card', () => {
     const card = describeBridge({ name: 'Bridge', properties: {} }, { depth: 'm', distance: 'm-nm' });
     expect(card.title).toBe('Bridge');
     expect(card.subtitle).toBe('Bridge');
-    expect(card.facts).toEqual([{ label: 'Operation', value: 'Fixed' }]);
+    expect(card.facts).toEqual([
+      { label: 'Vertical clearance', value: 'No charted clearance on record — check the chart' },
+      { label: 'Operation', value: 'Fixed' },
+    ]);
     expect(card.sections).toEqual([]);
+  });
+
+  it('reads maxheight as a road-vehicle limit in Restrictions, never as a clearance', () => {
+    // The MacKay/Macdonald bug: maxheight is the height of road vehicles
+    // allowed ON the deck, not the space under the bridge.
+    const card = describeBridge({
+      name: 'Macdonald Bridge',
+      properties: { bridge: 'suspension', highway: 'primary', maxheight: '4', maxweight: '3.2' },
+    }, { depth: 'm', distance: 'm-nm' });
+    const restrictions = card.sections.find((section) => section.title === 'Restrictions and access');
+    expect(restrictions?.rows).toContainEqual({
+      label: 'Road vehicle height limit',
+      value: '4.0 m — height of vehicles allowed on the bridge, not the space under it',
+    });
+    // It must not appear in the clearance section (which is absent entirely
+    // for this bridge, since it has no clearance rows at all).
+    const clearance = card.sections.find((section) => section.title === 'Air and water draught');
+    expect(clearance?.rows.some((row) => row.label === 'Maximum height' || row.label === 'Road vehicle height limit') ?? false).toBe(false);
+    expect(card.facts.some((row) => row.label === 'Vertical clearance' && row.value.includes('4 m'))).toBe(false);
+  });
+
+  it('reads the OSM height tag as Structure height', () => {
+    const card = describeBridge({
+      name: 'Bridge',
+      properties: { bridge: 'suspension', height: '102.9' },
+    }, { depth: 'm', distance: 'm-nm' });
+    const structure = card.sections.find((section) => section.title === 'Structure and operator');
+    expect(structure?.rows).toContainEqual({ label: 'Structure height', value: '103 m' });
+    expect(structure?.rows.some((row) => row.label === 'Height')).toBe(false);
+  });
+
+  it('shows an explicit no-clearance state when no clearance is on record', () => {
+    const card = describeBridge({
+      name: 'Macdonald Bridge',
+      properties: { bridge: 'suspension', highway: 'primary', maxheight: '4' },
+    }, { depth: 'm', distance: 'm-nm' });
+    expect(card.facts).toContainEqual({
+      label: 'Vertical clearance',
+      value: 'No charted clearance on record — check the chart',
+    });
+  });
+
+  it('does not show the no-clearance state when a seamark clearance exists', () => {
+    const card = describeBridge({
+      name: 'Bridge',
+      properties: { bridge: 'yes', 'seamark:bridge:clearance_height': '4.5' },
+    }, { depth: 'm', distance: 'm-nm' });
+    expect(card.facts).toContainEqual({ label: 'Vertical clearance', value: '4.5 m (datum not stated)' });
+    expect(card.facts.some((row) => row.value.includes('No charted clearance'))).toBe(false);
   });
 
   it('reads imperial measurements as feet and metres as metres', () => {

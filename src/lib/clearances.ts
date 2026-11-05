@@ -677,6 +677,46 @@ export function clearancesForFeature(feature: JoinableBridgeFeature, datasets: C
   return out;
 }
 
+export interface DecidingClearance {
+  /** The deciding figure, metres. */
+  value: number;
+  /** Reference water level the figure is above, e.g. 'MHW'. */
+  datum: string;
+  /** True when the figure is a group least (a lower bound), not an exact figure. */
+  least: boolean;
+  /** The dataset the figure came from. */
+  source: string;
+}
+
+/**
+ * The deciding clearance for a bridge: when several datum-stated figures
+ * exist for the same bridge and they disagree, the lowest one decides — the
+ * safest call (Doug's rule, Nov 5: for bridge heights, close but
+ * conflicting figures always use the lower one). Only exact figures decide
+ * when any exist; a group least is a lower bound, so it decides only when
+ * there is no exact figure at all. Datum-unknown figures never decide — a
+ * figure without a datum cannot be tide-adjusted, so it cannot be the
+ * deciding figure. Returns null when no datum-stated figure exists. The
+ * card keeps showing every source row; this governs only which figure a
+ * safety check uses.
+ */
+export function decidingClearance(rows: BridgeClearance[]): DecidingClearance | null {
+  const known = rows.filter((row) => row.datum !== null);
+  const entries: DecidingClearance[] = [];
+  for (const row of known) {
+    for (const value of row.values) {
+      entries.push({ value, datum: row.datum as string, least: row.least === true, source: row.source });
+    }
+  }
+  const exact = entries.filter((entry) => !entry.least);
+  const deciding = exact.length > 0 ? exact : entries;
+  let best: DecidingClearance | null = null;
+  for (const entry of deciding) {
+    if (best === null || entry.value < best.value) best = entry;
+  }
+  return best;
+}
+
 /**
  * Actual clearance at a water level above the figure's datum, same units:
  * water above the datum eats the clearance metre for metre; water below

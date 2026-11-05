@@ -47,6 +47,24 @@ function usace(lat: number, lon: number, standing: number): UsaceClearanceRecord
   return { la: lat, lo: lon, n: 'Test Bridge', v: standing, c: null, o: null, h: null, k: null, s: null };
 }
 
+function coastPilotExact(value: number): CoastPilotClearanceRecord {
+  return {
+    n: 'Test Bridge',
+    w: null,
+    la: 50.7,
+    lo: -1.195,
+    v: [value],
+    c: false,
+    o: null,
+    h: null,
+    d: 'MHW',
+    least: false,
+    g: null,
+    t: null,
+    ch: 'test',
+  };
+}
+
 function coastPilotLeast(value: number): CoastPilotClearanceRecord {
   return {
     n: 'Test Bridge',
@@ -96,6 +114,30 @@ describe('checkRouteAirDraft', () => {
       requiredM: 11,
       datum: 'MHW',
       sources: ['NOAA ENC'],
+    });
+  });
+
+  it('uses the lower of two close but conflicting datum-stated figures', () => {
+    // Golden Gate: NOAA ENC 71 m, Coast Pilot 70 m above MHW. Doug's rule:
+    // the lower one decides, safest call. An air draft of 70.5 m plus a
+    // 1 m margin (71.5 m required) fails on 70 m and would pass on 71 m.
+    const datasets = emptyDatasets();
+    datasets.noaa = [noaa(50.7, -1.195, 71, null, null)];
+    datasets.coastpilot = [coastPilotExact(70)];
+    const { checks } = checkRouteAirDraft({
+      waypoints: LEG,
+      bridges: [bridge('b1', 50.7, BRIDGE_PATH)],
+      datasets,
+      airDraftM: 70.5,
+      marginM: 1,
+    });
+    expect(checks).toHaveLength(1);
+    expect(checks[0]).toMatchObject({
+      verdict: 'fail',
+      clearanceM: 70,
+      requiredM: 71.5,
+      datum: 'MHW',
+      sources: ['NOAA ENC', 'US Coast Pilot'],
     });
   });
 

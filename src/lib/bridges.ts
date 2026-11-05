@@ -276,6 +276,14 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     // says so rather than letting the figure read as tide-adjustable.
     facts.push({ label: 'Vertical clearance', value: `${clearanceHeight} (datum not stated)` });
   }
+  // No clearance on record anywhere — no dataset row and no seamark
+  // clearance tag: say so explicitly, so a road-vehicle limit is never
+  // read as the space under the bridge.
+  const hasChartedClearance = (feature.clearances ?? []).length > 0;
+  const hasSeamarkClearance = value(tags, 'seamark:bridge:clearance_height', 'seamark:bridge:clearance_height_closed', 'seamark:bridge:clearance_height_open') !== null;
+  if (clearanceHeight === null && !hasChartedClearance && !hasSeamarkClearance) {
+    facts.push({ label: 'Vertical clearance', value: 'No charted clearance on record — check the chart' });
+  }
   const clearanceWidthRaw = value(tags, 'seamark:bridge:clearance_width');
   const clearanceWidth = clearanceWidthRaw === null
     ? null
@@ -320,14 +328,6 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     shownKeys.push(key);
     clearance.push({ label: rowLabel, value: `${formatted} (datum not stated)` });
   }
-  const maxHeight = tags.maxheight;
-  if (maxHeight) {
-    shownKeys.push('maxheight');
-    clearance.push({
-      label: 'Maximum height',
-      value: formatMetresList(maxHeight, (metres) => formatDepthWithUnit(metres, units.depth)) ?? maxHeight,
-    });
-  }
   const width = value(tags, 'seamark:bridge:clearance_width_open');
   if (width) {
     shownKeys.push('seamark:bridge:clearance_width_open');
@@ -344,7 +344,7 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     ['Deck width', 'width'],
     ['Span', 'bridge:span'],
     ['Length', 'length'],
-    ['Height', 'height'],
+    ['Structure height', 'height'],
     ['Operator', 'operator'],
     ['Owner', 'owner'],
     ['Reference', 'ref'],
@@ -402,6 +402,18 @@ export function describeBridge(feature: BridgeFeatureLike, units: BridgeUnits): 
     if (!found) continue;
     shownKeys.push(key);
     restrictions.push({ label: rowLabel, value: found });
+  }
+  // maxheight is the height of road vehicles allowed ON the bridge deck,
+  // not the space under it — it belongs with the road restrictions, beside
+  // Max weight and Max width, and never in the clearance section.
+  const maxHeight = value(tags, 'maxheight');
+  if (maxHeight) {
+    shownKeys.push('maxheight');
+    const formatted = formatMetresList(maxHeight, (metres) => formatDepthWithUnit(metres, units.depth)) ?? maxHeight;
+    restrictions.push({
+      label: 'Road vehicle height limit',
+      value: `${formatted} — height of vehicles allowed on the bridge, not the space under it`,
+    });
   }
 
   const dates: BridgeRow[] = [];

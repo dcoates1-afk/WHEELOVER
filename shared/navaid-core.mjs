@@ -1007,7 +1007,10 @@ export function dedupeNavaids(items, options = {}) {
 
   const keyOf = (lat, lon) => `${Math.floor(lat / cellSize)}:${Math.floor(lon / cellSize)}`;
 
-  for (const item of items) {
+  // Sorted first, like the merge: the same record set must dedupe the
+  // same way whatever order the sources arrived in.
+  const ordered = [...items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  for (const item of ordered) {
     const key = keyOf(item.lat, item.lon);
     const latCell = Math.floor(item.lat / cellSize);
     const lonCell = Math.floor(item.lon / cellSize);
@@ -1065,6 +1068,10 @@ export function dedupeNavaids(items, options = {}) {
     const aidRecord = lightRecord
       ? [item, previous].find((m) => m !== lightRecord && m.category !== 'light' && m.category !== 'major_light')
       : undefined;
+    const structureRecord = [item, previous].find((m) => m.category === 'pile' || m.category === 'pylon');
+    const markRecord = structureRecord
+      ? [item, previous].find((m) => m !== structureRecord && m.category !== 'pile' && m.category !== 'pylon' && m.category !== 'light' && m.category !== 'major_light' && m.category !== 'wind_farm' && m.category !== 'communication_area')
+      : undefined;
     let merged;
     if (lightRecord && aidRecord) {
       merged = { ...aidRecord };
@@ -1090,6 +1097,41 @@ export function dedupeNavaids(items, options = {}) {
       merged.lit = aidRecord.lit || lightRecord.lit;
       const sources = [...new Set([...(aidRecord.sources ?? []), aidRecord.source, ...(lightRecord.sources ?? []), lightRecord.source].filter(Boolean))];
       if (sources.length) merged.sources = sources;
+    } else if (structureRecord && markRecord) {
+      // A mark standing on a pile or pylon is the mark, not the
+      // structure: the mark keeps its type and position, and the
+      // structure only fills fields the mark does not already carry.
+      merged = { ...markRecord };
+      for (const [key, value] of Object.entries(structureRecord)) {
+        if (POSITION_FIELDS.has(key) || LIGHT_FIELDS.includes(key)) continue;
+        const current = merged[key];
+        if ((current === null || current === undefined || current === '') &&
+          value !== null && value !== undefined && value !== '') {
+          merged[key] = value;
+        }
+      }
+      for (const field of LIGHT_FIELDS) {
+        const current = merged[field];
+        const value = structureRecord[field];
+        if ((current === null || current === undefined || current === '') &&
+          value !== null && value !== undefined && value !== '') {
+          merged[field] = value;
+        }
+      }
+      merged.lightSectors = mergeLightSectors(markRecord.lightSectors ?? [], structureRecord.lightSectors ?? []);
+      merged.fogSignal = markRecord.fogSignal || structureRecord.fogSignal;
+      merged.fogSignalCategory = markRecord.fogSignalCategory ?? structureRecord.fogSignalCategory;
+      merged.fogSignalGroup = markRecord.fogSignalGroup ?? structureRecord.fogSignalGroup;
+      merged.fogSignalPeriod = markRecord.fogSignalPeriod ?? structureRecord.fogSignalPeriod;
+      merged.fogSignalSequence = markRecord.fogSignalSequence ?? structureRecord.fogSignalSequence;
+      merged.radarTransponderCategory = markRecord.radarTransponderCategory ?? structureRecord.radarTransponderCategory;
+      merged.radarTransponderGroup = markRecord.radarTransponderGroup ?? structureRecord.radarTransponderGroup;
+      merged.radarTransponderPeriod = markRecord.radarTransponderPeriod ?? structureRecord.radarTransponderPeriod;
+      merged.radarTransponderSequence = markRecord.radarTransponderSequence ?? structureRecord.radarTransponderSequence;
+      merged.radarReflector = markRecord.radarReflector || structureRecord.radarReflector;
+      merged.lit = markRecord.lit || structureRecord.lit;
+      const structureSources = [...new Set([...(markRecord.sources ?? []), markRecord.source, ...(structureRecord.sources ?? []), structureRecord.source].filter(Boolean))];
+      if (structureSources.length) merged.sources = structureSources;
     } else {
       merged = {
         ...preferred,
@@ -1166,6 +1208,41 @@ function lateralColourConflict(aid, light) {
   return true;
 }
 
+/** Colour names from a record's light colour, letters mapped to words. */
+function lightColourSet(record) {
+  const set = new Set();
+  for (const token of String(record.lightColour ?? '').toLowerCase().split(/[^a-z]+/)) {
+    if (token) set.add(COLOUR_LETTERS[token] ?? token);
+  }
+  return set;
+}
+
+/** True when both records carry light colours and they share none. */
+function lightColoursConflict(a, b) {
+  const aSet = lightColourSet(a);
+  const bSet = lightColourSet(b);
+  if (!aSet.size || !bSet.size) return false;
+  for (const colour of aSet) if (bSet.has(colour)) return false;
+  return true;
+}
+
+/** Ordinary words that must never count as an aid identifier. */
+const DESIGNATOR_GENERIC = new Set(['light', 'buoy', 'beacon', 'mark', 'tower', 'pole', 'post', 'pile', 'rock', 'shoal', 'point', 'island', 'harbour', 'harbor', 'channel', 'entrance', 'fairway', 'river', 'bay', 'lake', 'cape', 'head', 'wharf', 'pier', 'dock', 'breakwater', 'jetty', 'marina', 'anchorage', 'reef', 'bank', 'ledge', 'passage', 'narrows', 'creek', 'north', 'south', 'east', 'west', 'northern', 'southern', 'eastern', 'western', 'upper', 'lower', 'inner', 'outer', 'middle', 'front', 'rear', 'range', 'station', 'building', 'structure']);
+
+/**
+ * An aid's designator: the last token of its normalised name, when it
+ * looks like an identifier (short, not an ordinary word). Designators
+ * such as VH, V21 or NX5 are unique within a harbour, so two records
+ * sharing one are the same aid even when their full names differ.
+ */
+function designatorOf(name) {
+  const tokens = normName(name).split(' ').filter(Boolean);
+  if (!tokens.length) return null;
+  const last = tokens[tokens.length - 1];
+  if (last.length > 6 || DESIGNATOR_GENERIC.has(last)) return null;
+  return last;
+}
+
 function isWreckLike(navaid) {
   return navaid.category === 'wreck' || navaid.category === 'hazard_danger';
 }
@@ -1213,21 +1290,33 @@ const POSITION_FIELDS = new Set(['lat', 'lon', 'path', 'paths', 'id', 'category'
 /** A minor light record within this distance of an aid is that aid's light. */
 const LIGHT_ATTACH_M = 50;
 
+/** Same-source records sharing a name must be this close to be one aid. */
+const SAME_SOURCE_NAME_M = 50;
+
 /**
  * Cross-source merge for records describing the same physical aid, run in
  * addition to the 40 m dedupeNavaids pass. Match rules: same normalised
  * name within 250 m with a compatible light (equal, or one side unlit);
- * same family within 200 m with an equal light character; wind farms by
- * overlapping area. Never merges across families on position alone, and
- * wrecks merge only on the same name. The OSM record wins the position
+ * a minor light within 50 m of an aid with a compatible light; the same
+ * designator token within 250 m with a compatible light and no colour
+ * conflict; same family across sources within 50 m with an equal light
+ * character; wind farms by overlapping area. Never merges across families
+ * on position alone, and wrecks merge only on the same name. The family
+ * radius is deliberately tight: neighbouring channel marks often share
+ * one light signature, and a wider radius swallows them into one mark.
+ * (NGA positions carry ~185 m of error, so when that supplement lands
+ * its radius needs revisiting.) The OSM record wins the position
  * (official positions are ~185 m); the official record wins each light
  * field it carries. Unmatched records are kept, never dropped, so an
  * official-only aid is added, not lost. A merged aid carries every
- * contributing source in `sources` for the card.
+ * contributing source in `sources` for the card. Callers pass charted
+ * (OSM) records before official records, and an item joins its nearest
+ * matching group, so grouping follows the charted aids rather than
+ * arrival order within a source.
  */
 export function mergeNavaidSources(items, options = {}) {
   const nameDistanceM = options.nameDistanceM ?? 250;
-  const familyDistanceM = options.familyDistanceM ?? 200;
+  const familyDistanceM = options.familyDistanceM ?? 50;
   const accepted = [];
   const groups = [];
   const grid = new Map();
@@ -1273,12 +1362,33 @@ export function mergeNavaidSources(items, options = {}) {
       const bLight = normLightCharacter(lightSide);
       if (!aLight || !bLight || aLight === bLight) return true;
     }
-    if (sameName && metres <= nameDistanceM) {
+    // Same designator, same light: one aid whose official position and
+    // mapper pin disagree by more than the attach radius (the VH buoy
+    // sits ~100 m apart across sources). The designator must be a real
+    // identifier, so neighbouring buoys numbered 1, 2, 3 never match.
+    // Cross-source only: two records from one source sharing a
+    // designator 150 m apart are neighbours, not one aid mapped twice.
+    const aDes = designatorOf(item.name);
+    const bDes = designatorOf(other.name);
+    if (item.source !== other.source && aDes && bDes && aDes === bDes && metres <= nameDistanceM) {
+      const aLight = normLightCharacter(item);
+      const bLight = normLightCharacter(other);
+      if ((!aLight || !bLight || aLight === bLight) && !lightColoursConflict(item, other)) return true;
+    }
+    // Same-source duplicates should be close: two records from one
+    // source sharing a name 150 m apart are neighbouring marks (or a
+    // stale pin), not one aid mapped twice. Cross-source pairs keep the
+    // wider radius, since surveys disagree more.
+    const nameAllowed = item.source === other.source ? SAME_SOURCE_NAME_M : nameDistanceM;
+    if (sameName && metres <= nameAllowed) {
       const aLight = normLightCharacter(item);
       const bLight = normLightCharacter(other);
       if (!aLight || !bLight || aLight === bLight) return true;
     }
-    if (metres <= familyDistanceM && familyOf(item.category) === familyOf(other.category)) {
+    // Same-family merging is cross-source only and close only: two
+    // records from one source with one light signature 150 m apart are
+    // neighbouring marks, not one aid mapped twice.
+    if (item.source !== other.source && metres <= familyDistanceM && familyOf(item.category) === familyOf(other.category)) {
       const aLight = normLightCharacter(item);
       const bLight = normLightCharacter(other);
       if (aLight && bLight && aLight === bLight) return true;
@@ -1286,20 +1396,30 @@ export function mergeNavaidSources(items, options = {}) {
     return false;
   };
 
+  // Nearest-match over every member of every nearby group: an item must
+  // join the group it actually belongs to, not the first group whose
+  // first record happens to match (a far same-name record must not steal
+  // a near record's partner), and a record swallowed into a group must
+  // still be matchable through its group-mates.
   for (const item of items) {
     const key = keyOf(item.lat, item.lon);
     const latCell = Math.floor(item.lat / cellSize);
     const lonCell = Math.floor(item.lon / cellSize);
     let groupOf = -1;
+    let bestMetres = Infinity;
 
-    for (let dy = -1; dy <= 1 && groupOf < 0; dy += 1) {
-      for (let dx = -1; dx <= 1 && groupOf < 0; dx += 1) {
+    for (let dy = -1; dy <= 1; dy += 1) {
+      for (let dx = -1; dx <= 1; dx += 1) {
         const bucket = grid.get(`${latCell + dy}:${lonCell + dx}`);
         if (!bucket) continue;
         for (const index of bucket) {
-          if (matches(item, accepted[index])) {
-            groupOf = index;
-            break;
+          for (const member of groups[index]) {
+            if (!matches(item, member)) continue;
+            const metres = distanceMeters(item.lat, item.lon, member.lat, member.lon);
+            if (metres < bestMetres) {
+              bestMetres = metres;
+              groupOf = index;
+            }
           }
         }
       }

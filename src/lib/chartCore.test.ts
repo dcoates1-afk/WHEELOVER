@@ -985,11 +985,60 @@ describe('cross-source merge', () => {
     expect(navaids[0].sources).toEqual(['osm', 'uscg']);
   });
 
-  it('merges same-family aids within 200 m on an equal light, names aside', () => {
+  it('merges same-family aids across sources within 50 m on an equal light, names aside', () => {
+    const osm = mark({ category: 'lateral_port', lat: 50.7, name: 'A', light: 'Fl R 4s' });
+    const official = mark({ category: 'lateral_port', lat: 50.7004, name: 'B', light: 'Fl R 4s', source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+  });
+
+  it('does not merge same-family aids across sources beyond 50 m on an equal light', () => {
     const osm = mark({ category: 'lateral_port', lat: 50.7, name: 'A', light: 'Fl R 4s' });
     const official = mark({ category: 'lateral_port', lat: 50.701, name: 'B', light: 'Fl R 4s', source: 'uscg' });
     const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not merge same-family aids from one source on an equal light', () => {
+    const first = mark({ category: 'lateral_port', lat: 50.7, name: 'A', light: 'Fl R 4s' });
+    const second = mark({ category: 'lateral_port', lat: 50.7013, name: 'B', light: 'Fl R 4s' });
+    const { navaids } = mergeNavaidSources([first, second]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('joins the nearest matching group, not the first encountered', () => {
+    const far = mark({ id: 'osm:node/1', category: 'special_purpose', lat: 50.7013, lon: -1.2, name: 'Buoy 1', light: 'Fl Y 4s' });
+    const near = mark({ id: 'osm:node/2', category: 'special_purpose', lat: 50.7, lon: -1.2, name: 'Buoy 1', light: 'Fl Y 4s' });
+    const official = mark({ id: 'ccg:1', category: 'light', lat: 50.70019, lon: -1.2, name: 'Buoy 1', light: 'Fl Y 4s', source: 'ccg' });
+    const { navaids } = mergeNavaidSources([far, near, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+    const joined = navaids.find((n) => n.lat === 50.7);
+    expect(joined?.sources).toEqual(['osm', 'ccg']);
+    expect(navaids.some((n) => n.lat === 50.7013)).toBe(true);
+  });
+
+  it('merges the same designator with the same light across a wide position gap', () => {
+    const osm = mark({ category: 'special_purpose', lat: 50.7, lon: -1.2, name: 'Victoria Harbor Buoy VH.', light: 'Fl yellow 4s', lightCharacter: 'Fl', lightColour: 'yellow' });
+    const official = mark({ category: 'light', lat: 50.7009, lon: -1.2, name: 'Victoria Harbour Cautionary light buoy VH', light: 'Fl Y 4s', lightCharacter: 'Fl', lightColour: 'Y', source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
     expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('special_purpose');
+    expect(navaids[0].light).toBe('Fl Y 4s');
+    expect(navaids[0].sources).toEqual(['osm', 'ccg']);
+  });
+
+  it('does not merge different designators on the same light', () => {
+    const osm = mark({ category: 'special_purpose', lat: 50.7, lon: -1.2, name: 'Buoy 1', light: 'Fl Y 4s' });
+    const official = mark({ category: 'light', lat: 50.7009, lon: -1.2, name: 'Buoy 2', light: 'Fl Y 4s', source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not treat an ordinary last word as a designator', () => {
+    const osm = mark({ category: 'special_purpose', lat: 50.7, lon: -1.2, name: 'North Light', light: 'Fl Y 4s' });
+    const official = mark({ category: 'light', lat: 50.7009, lon: -1.2, name: 'South Light', light: 'Fl Y 4s', source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
   });
 
   it('does not merge across families on position alone', () => {
@@ -1149,6 +1198,26 @@ describe('minor light attach', () => {
     const { navaids, removed } = dedupeNavaids([buoy, light]) as { navaids: Navaid[]; removed: number };
     expect(removed).toBe(0);
     expect(navaids).toHaveLength(2);
+  });
+
+  it('dedupe keeps the mark, not the richer pile, when they collapse', () => {
+    const pile = mark({ category: 'pile', name: 'Pile', height: '5', lat: 50.7, lon: -1.2 });
+    const special = mark({ category: 'special_purpose', name: 'Special Buoy', lat: 50.70007, lon: -1.2 });
+    const { navaids, removed } = dedupeNavaids([pile, special]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(1);
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('special_purpose');
+  });
+
+  it('dedupe gives the same result whatever order a pair arrives in', () => {
+    const buoy = mark({ category: 'lateral_port', name: 'B', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'L', light: 'Fl G 4s', lat: 50.70007, lon: -1.2, source: 'uscg', lit: true });
+    const forward = dedupeNavaids([buoy, light]) as { navaids: Navaid[]; removed: number };
+    const reverse = dedupeNavaids([light, buoy]) as { navaids: Navaid[]; removed: number };
+    expect(forward.navaids).toHaveLength(1);
+    expect(reverse.navaids).toHaveLength(1);
+    expect(forward.navaids[0].category).toBe(reverse.navaids[0].category);
+    expect(forward.navaids[0].light).toBe(reverse.navaids[0].light);
   });
 });
 

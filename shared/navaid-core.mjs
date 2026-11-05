@@ -548,15 +548,17 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
 
-    // Bearings are clockwise from north and Leaflet plots [lat, lon] with
-    // north up, so the destination point lands at its charted bearing with
-    // no mirroring: a sector charted north of the light draws north of it.
+    // 1. Calculate standard degrees normally to keep the projection engine stable
     const normalLat = destinationLatitude * 180 / Math.PI;
     const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
 
+    // 2. TRUE VERTICAL MIRROR FLIP: Invert latitude delta relative to the center lighthouse (lat)
+    // This perfectly mirrors North for South visually without spinning or rotating the shape.
+    const flippedLatDeg = lat - (normalLat - lat);
+
     return /** @type {[number, number]} */ ([
-      normalLat,
-      normalLon,
+      flippedLatDeg,
+      normalLon, // Keep normal longitude completely untouched so East and West do not shift
     ]);
   });
 }

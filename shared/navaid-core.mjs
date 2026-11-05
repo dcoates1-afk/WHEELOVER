@@ -1157,6 +1157,51 @@ export function dedupeNavaids(items, options = {}) {
     accepted[duplicateOf] = merged;
   }
 
+  // A bare light — no name, colour, character, or period — next to a
+  // specified light is that light mapped twice, not a second aid: fold
+  // the bare record into the specified one. The specified record keeps
+  // its type, position, and identity; only sources accumulate. A light
+  // carrying any identifying field of its own never folds, so a
+  // fully-tagged second light still stands, and a bare record with no
+  // specified neighbour stays on the chart.
+  const BARE_LIGHT_M = 50;
+  const blank = (value) => value === null || value === undefined || value === '';
+  const isBareLight = (m) =>
+    m.category === 'light' &&
+    normName(m.name) === '' &&
+    blank(m.lightColour) && blank(m.colour) &&
+    blank(m.lightCharacter) && blank(m.lightPeriod) && blank(m.light);
+  const isSpecifiedLight = (m) =>
+    m.category === 'light' &&
+    (normName(m.name) !== '' || !blank(m.lightColour) || !blank(m.colour) ||
+      !blank(m.lightCharacter) || !blank(m.lightPeriod) || !blank(m.light));
+  const folded = new Set();
+  for (let i = 0; i < accepted.length; i += 1) {
+    if (folded.has(i) || !isBareLight(accepted[i])) continue;
+    let nearest = -1;
+    let nearestM = Infinity;
+    for (let j = 0; j < accepted.length; j += 1) {
+      if (i === j || folded.has(j) || !isSpecifiedLight(accepted[j])) continue;
+      const metres = distanceMeters(accepted[i].lat, accepted[i].lon, accepted[j].lat, accepted[j].lon);
+      if (metres <= BARE_LIGHT_M && metres < nearestM) {
+        nearest = j;
+        nearestM = metres;
+      }
+    }
+    if (nearest < 0) continue;
+    const specified = accepted[nearest];
+    const bare = accepted[i];
+    const sources = [...new Set([...(specified.sources ?? []), specified.source, ...(bare.sources ?? []), bare.source].filter(Boolean))];
+    if (sources.length) specified.sources = sources;
+    folded.add(i);
+    removed += 1;
+  }
+  if (folded.size) {
+    const kept = accepted.filter((_, index) => !folded.has(index));
+    accepted.length = 0;
+    accepted.push(...kept);
+  }
+
   return { navaids: accepted, removed };
 }
 
@@ -1234,7 +1279,7 @@ function lightColoursConflict(a, b) {
  * light colour and the same light pattern is that aid's light. Surveys
  * and mappers disagree on names far more than on signatures, and
  * neighbouring aids rarely share both colour and pattern this close. */
-const LIGHT_SIGNATURE_M = 100;
+const LIGHT_SIGNATURE_M = 150;
 
 /**
  * A record's light as (character, group, period, colours). Split fields
@@ -1380,7 +1425,7 @@ const SAME_SOURCE_NAME_M = 50;
  * addition to the 40 m dedupeNavaids pass. Match rules: same normalised
  * name within 250 m with a compatible light (equal, or one side unlit);
  * a minor light within 50 m of an aid with a compatible light; a minor
- * official light within 100 m of an OSM aid with the same light colour
+ * official light within 150 m of an OSM aid with the same light colour
  * and pattern, whatever the names say (a stated range role must agree);
  * the same designator token within 250 m with a compatible light and no colour
  * conflict; same family across sources within 50 m with an equal light

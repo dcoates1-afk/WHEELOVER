@@ -1049,20 +1049,20 @@ describe('cross-source merge', () => {
   });
 
   it('does not merge different designators on the same light beyond the signature radius', () => {
-    // Same signature within 100 m DOES merge regardless of designator
-    // (see the signature tests below), so this pair sits at 150 m: beyond
+    // Same signature within 150 m DOES merge regardless of designator
+    // (see the signature tests below), so this pair sits at 200 m: beyond
     // the radius, different designators stay separate.
     const osm = mark({ category: 'special_purpose', lat: 50.7, lon: -1.2, name: 'Buoy 1', light: 'Fl Y 4s' });
-    const official = mark({ category: 'light', lat: 50.70135, lon: -1.2, name: 'Buoy 2', light: 'Fl Y 4s', source: 'ccg' });
+    const official = mark({ category: 'light', lat: 50.7018, lon: -1.2, name: 'Buoy 2', light: 'Fl Y 4s', source: 'ccg' });
     const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
     expect(navaids).toHaveLength(2);
   });
 
   it('does not treat an ordinary last word as a designator beyond the signature radius', () => {
-    // As above: within 100 m the signature rule merges these anyway, so
-    // the pair sits at 150 m to guard the designator rule itself.
+    // As above: within 150 m the signature rule merges these anyway, so
+    // the pair sits at 200 m to guard the designator rule itself.
     const osm = mark({ category: 'special_purpose', lat: 50.7, lon: -1.2, name: 'North Light', light: 'Fl Y 4s' });
-    const official = mark({ category: 'light', lat: 50.70135, lon: -1.2, name: 'South Light', light: 'Fl Y 4s', source: 'ccg' });
+    const official = mark({ category: 'light', lat: 50.7018, lon: -1.2, name: 'South Light', light: 'Fl Y 4s', source: 'ccg' });
     const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
     expect(navaids).toHaveLength(2);
   });
@@ -1247,6 +1247,45 @@ describe('minor light attach', () => {
   });
 });
 
+describe('bare light dedupe', () => {
+  it('folds the real bare OSM light into the specified red light 33 m away', () => {
+    const bare = normalizeElement({
+      type: 'node', id: 13088474102, lat: 48.4175756, lon: -123.3881553,
+      tags: { note: 'two red lights', 'seamark:type': 'light' },
+    });
+    const specified = normalizeElement({
+      type: 'node', id: 13088474103, lat: 48.4176199, lon: -123.3885979,
+      tags: { 'seamark:light:colour': 'red', 'seamark:type': 'light' },
+    });
+    const { navaids, removed } = dedupeNavaids([bare, specified].filter(Boolean) as Navaid[]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(1);
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].id).toBe('osm:node/13088474103');
+    expect(navaids[0].lat).toBe(48.4176199);
+    expect(navaids[0].lightColour).toBe('red');
+  });
+
+  it('keeps two fully-tagged lights standing 33 m apart', () => {
+    const first = mark({ category: 'light', name: 'Pier Light A', light: 'Fl R 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.7, lon: -1.2 });
+    const second = mark({ category: 'light', name: 'Pier Light B', light: 'Fl G 4s', lightCharacter: 'Fl', lightColour: 'green', lat: 50.7003, lon: -1.2 });
+    const { navaids } = dedupeNavaids([first, second]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('keeps a bare light with no specified neighbour on the chart', () => {
+    const bare = mark({ category: 'light', name: null, light: null, lightCharacter: null, lightColour: null, colour: null, lightPeriod: null, lat: 50.7, lon: -1.2 });
+    const { navaids } = dedupeNavaids([bare]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+  });
+
+  it('keeps a bare light beyond 50 m from a specified light', () => {
+    const bare = mark({ category: 'light', name: null, light: null, lightCharacter: null, lightColour: null, colour: null, lightPeriod: null, lat: 50.7, lon: -1.2 });
+    const specified = mark({ category: 'light', name: 'Pier Light', light: 'Fl R 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.7006, lon: -1.2 });
+    const { navaids } = dedupeNavaids([bare, specified]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+});
+
 describe('minor light signature merge', () => {
   it('merges an official light into an OSM aid on the same colour and pattern, names aside', () => {
     const osm = mark({ category: 'lateral_starboard', name: 'Harbour Buoy', light: 'Fl red 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.7, lon: -1.2 });
@@ -1292,9 +1331,9 @@ describe('minor light signature merge', () => {
     expect(navaids).toHaveLength(2);
   });
 
-  it('does not merge the same signature beyond 100 m', () => {
+  it('does not merge the same signature beyond 150 m', () => {
     const osm = mark({ category: 'lateral_starboard', name: 'Buoy', light: 'Fl red 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.7, lon: -1.2 });
-    const official = mark({ category: 'light', name: 'Other', light: 'Fl R 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.70135, lon: -1.2, source: 'uscg' });
+    const official = mark({ category: 'light', name: 'Other', light: 'Fl R 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.7018, lon: -1.2, source: 'uscg' });
     const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
     expect(navaids).toHaveLength(2);
   });

@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Buoy_Special_Purpose_General:124310","lat":57.14396670000002,"lon":-164.5093833,"name":"MARU","source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_general/MapServer","sourceDate":"2018-03-24","category":"special_purpose","form":"buoy","priority":50}]}

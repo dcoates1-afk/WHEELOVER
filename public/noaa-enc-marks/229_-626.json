@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Landmark:787010","lat":57.364665299999615,"lon":-156.4045303999992,"description":"Pipe","source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_approach/MapServer","sourceDate":"2005-09","category":"landmark","form":"landmark","priority":44}]}

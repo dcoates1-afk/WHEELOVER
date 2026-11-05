@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Landmark:190713","lat":48.80930000000001,"lon":-86.43437,"description":"Relay","source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_general/MapServer","sourceDate":"1999-08-28","category":"landmark","form":"landmark","priority":44}]}

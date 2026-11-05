@@ -1218,3 +1218,128 @@ describe('chart feature background retry', () => {
     }
   });
 });
+
+describe('phantom bridge exclusion', () => {
+  const bay = (west: number, east: number) => ({
+    type: 'way',
+    tags: { natural: 'bay', name: 'Test Bay' },
+    geometry: [
+      { lat: 50.0, lon: west }, { lat: 50.0, lon: east },
+      { lat: 50.002, lon: east }, { lat: 50.002, lon: west }, { lat: 50.0, lon: west },
+    ],
+  });
+
+  it('does not count a shoreline walkway weaving along a bay edge as a span', () => {
+    // The Selkirk walkway: a footway running along the shore, crossing the
+    // bay polygon boundary steeply at each weave, with a long inside-run
+    // that never leaves the water's edge. Steep cuts alone must not admit it.
+    expect(bridgeCrossesWater(
+      {
+        type: 'way',
+        tags: { bridge: 'yes', highway: 'footway', layer: '1' },
+        geometry: [
+          { lat: 50.0001, lon: -0.9997 }, { lat: 50.0003, lon: -1.00008 },
+          { lat: 50.0008, lon: -1.00008 }, { lat: 50.0013, lon: -1.00008 },
+          { lat: 50.0016, lon: -1.00008 }, { lat: 50.0018, lon: -0.9997 },
+        ],
+      },
+      [bay(-1.002, -1.0)],
+    )).toBe(false);
+  });
+
+  it('still counts a footbridge square over a narrow channel', () => {
+    expect(bridgeCrossesWater(
+      {
+        type: 'way',
+        tags: { bridge: 'yes', highway: 'footway' },
+        geometry: [{ lat: 50.001, lon: -1.0005 }, { lat: 50.001, lon: -0.9998 }],
+      },
+      [bay(-1.00021, -1.0)],
+    )).toBe(true);
+  });
+
+  it('still counts a skewed footbridge over a narrow channel', () => {
+    // A 15 m channel crossed at 30 degrees: the run along the path is
+    // 30 m, but the channel itself is too narrow for the penetration test,
+    // so the steep cuts still prove the crossing.
+    expect(bridgeCrossesWater(
+      {
+        type: 'way',
+        tags: { bridge: 'yes', highway: 'footway' },
+        geometry: [{ lat: 50.0005, lon: -1.0005 }, { lat: 50.0015, lon: -0.9996 }],
+      },
+      [bay(-1.00021, -1.0)],
+    )).toBe(true);
+  });
+
+  it('still counts a footbridge over open water by penetration', () => {
+    expect(bridgeCrossesWater(
+      {
+        type: 'way',
+        tags: { bridge: 'yes', highway: 'footway' },
+        geometry: [{ lat: 50.001, lon: -1.0025 }, { lat: 50.001, lon: -0.9995 }],
+      },
+      [bay(-1.002, -1.0)],
+    )).toBe(true);
+  });
+
+  it('drops a bare man_made=bridge outline with no name or carrying way', () => {
+    // The Fleming Bay outlines: a bare ring overlapping a bay polygon.
+    const { bridges } = chartFeaturesFromElements([
+      {
+        type: 'way', id: 1, tags: { man_made: 'bridge', layer: '1' },
+        geometry: [
+          { lat: 50.001, lon: -1.0001 }, { lat: 50.001, lon: -0.9999 },
+          { lat: 50.0011, lon: -0.9999 }, { lat: 50.0011, lon: -1.0001 }, { lat: 50.001, lon: -1.0001 },
+        ],
+      },
+      bay(-1.002, -1.0),
+    ] as never);
+    expect(bridges).toHaveLength(0);
+  });
+
+  it('keeps a named man_made=bridge outline', () => {
+    const { bridges } = chartFeaturesFromElements([
+      {
+        type: 'way', id: 1, tags: { man_made: 'bridge', layer: '1', name: 'Test Bridge' },
+        geometry: [
+          { lat: 50.001, lon: -1.0001 }, { lat: 50.001, lon: -0.9999 },
+          { lat: 50.0011, lon: -0.9999 }, { lat: 50.0011, lon: -1.0001 }, { lat: 50.001, lon: -1.0001 },
+        ],
+      },
+      bay(-1.002, -1.0),
+    ] as never);
+    expect(bridges).toHaveLength(1);
+    expect(bridges[0].name).toBe('Test Bridge');
+  });
+
+  it('keeps an outline folded with a carrying way', () => {
+    const { bridges } = chartFeaturesFromElements([
+      {
+        type: 'way', id: 1, tags: { bridge: 'yes', highway: 'secondary', layer: '1' },
+        geometry: [{ lat: 50.0009, lon: -1.0025 }, { lat: 50.0009, lon: -0.9995 }],
+      },
+      {
+        type: 'way', id: 2, tags: { man_made: 'bridge', layer: '1' },
+        geometry: [
+          { lat: 50.001, lon: -1.0001 }, { lat: 50.001, lon: -0.9999 },
+          { lat: 50.0011, lon: -0.9999 }, { lat: 50.0011, lon: -1.0001 }, { lat: 50.001, lon: -1.0001 },
+        ],
+      },
+      bay(-1.002, -1.0),
+    ] as never);
+    expect(bridges).toHaveLength(1);
+    expect(bridges[0].properties.highway).toBe('secondary');
+  });
+
+  it('keeps a seamark bridge with no name or carrying way', () => {
+    const { bridges } = chartFeaturesFromElements([
+      {
+        type: 'way', id: 1, tags: { 'seamark:type': 'bridge' },
+        geometry: [{ lat: 50.001, lon: -1.0025 }, { lat: 50.001, lon: -0.9995 }],
+      },
+      bay(-1.002, -1.0),
+    ] as never);
+    expect(bridges).toHaveLength(1);
+  });
+});

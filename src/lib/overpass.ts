@@ -50,7 +50,7 @@ const CHART_FEATURE_CACHE_MS = 10 * 60 * 1000;
  * key a device keeps serving cells drawn under older rules for up to thirty
  * days. Cells stored under older keys simply stop matching and age out.
  */
-export const CHART_FEATURE_FILTER_VERSION = 3;
+export const CHART_FEATURE_FILTER_VERSION = 4;
 const chartFeatureMemory = new Map<string, { features: ChartFeature[]; at: number }>();
 
 export type RawChartElement = {
@@ -291,13 +291,20 @@ function pathSpansArea(path: [number, number][], area: Point[]): boolean {
     if (!inside) continue;
     const from = deduped[run - 1];
     const to = deduped[run];
-    // A steep cut at either end proves a crossing only when the run is wide
-    // enough to be one: a bridge meets its banks squarely even over a
-    // channel too narrow for ten metres of penetration, while a shoreline
-    // weave only ever grazes the edge — but a steep cut across a sliver
-    // under ten metres wide is mapping wobble at the same scale, not a span.
+    // A steep cut at either end proves a crossing only when the run is a
+    // channel too narrow for the penetration test: a bridge meets its
+    // banks squarely even over a channel too narrow for ten metres of
+    // penetration, while a shoreline weave also crosses the boundary
+    // steeply — but its run is wide and hugs the edge, so a wide run must
+    // prove itself by penetration instead. The channel width across the
+    // path is the run chord times the sine of the shallower cut, and a
+    // run narrower than twice the penetration threshold cannot reach ten
+    // metres of penetration at its middle by construction.
+    const runWidth = segmentLengthMeters({ lat: from.lat, lon: from.lon }, { lat: to.lat, lon: to.lon });
+    const perpWidth = runWidth * Math.sin(Math.min(from.angle, to.angle) * Math.PI / 180);
     if (Math.max(from.angle, to.angle) >= 30 &&
-      segmentLengthMeters({ lat: from.lat, lon: from.lon }, { lat: to.lat, lon: to.lon }) >= MIN_SPAN_WIDTH_METERS) return true;
+      runWidth >= MIN_SPAN_WIDTH_METERS &&
+      perpWidth < 2 * MIN_SPAN_PENETRATION_METERS) return true;
     // Otherwise the run must get properly inside. Sample the run's vertices
     // and segment midpoints: the deepest point of the run is its
     // penetration, and a midpoint catches a two-point bridge whose only
@@ -1279,7 +1286,19 @@ export function chartFeaturesFromElements(elements: RawChartElement[]): {
   // OSM may split a named bridge into multiple ways and/or map both generic
   // bridge and seamark records. Coalesce nearby parts so the chart shows one
   // overlay and one card for that physical crossing.
-  return { bridges: coalesceBridges(bridges), areas };
+  const merged = coalesceBridges(bridges);
+  // A bare structure outline with no name, no carrying route and no seamark
+  // record is not evidence of a bridge: mappers draw man_made=bridge rings
+  // around piers, docks and waterfront structures, and the lenient water
+  // test lets any ring overlapping a bay polygon through. Named outlines
+  // and outlines folded with a carrying way still stand, as do seamark
+  // bridges, which are navigation structures in their own right.
+  const evidenced = merged.filter((bridge) => {
+    if (bridge.name !== 'Bridge') return true;
+    if (bridge.properties.highway || bridge.properties.railway) return true;
+    return (bridge.properties['seamark:type'] ?? '').split(' / ').includes('bridge');
+  });
+  return { bridges: evidenced, areas };
 }
 
 /**

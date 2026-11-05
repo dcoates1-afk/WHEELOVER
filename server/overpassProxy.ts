@@ -586,7 +586,7 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
     // generic road-bridge results cannot linger as if they were water crossings.
     // Navaid replies are versioned the same way: the v2 query adds offshore
     // selectors, so a cached v1 reply must not serve as if it had them.
-    const cacheKind = kind === 'chart-features' ? `chart-features-cell-v9-${part}` : kind === 'navaids' ? 'navaids-v4' : kind;
+    const cacheKind = kind === 'chart-features' ? `chart-features-cell-v10-${part}` : kind === 'navaids' ? 'navaids-v4' : kind;
     const key = createHash('sha1')
       .update(`${cacheKind}:${cell}`)
       .digest('hex')

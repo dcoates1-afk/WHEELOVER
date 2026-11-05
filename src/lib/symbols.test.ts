@@ -87,6 +87,18 @@ describe('pile and beacon-board symbols', () => {
   });
 });
 
+describe('cable symbol', () => {
+  it('draws an orange wire distinct from the tower and turbine', () => {
+    const cable = symbolFor('cable_overhead', 'A');
+    const pylon = symbolFor('pylon', 'A');
+    const turbine = symbolFor('wind_turbine', 'A');
+    expect(cable.label).toBe('Overhead cable');
+    expect(cable.svg).toContain('#ff8a3d');
+    expect(cable.svg).not.toBe(pylon.svg);
+    expect(cable.svg).not.toBe(turbine.svg);
+  });
+});
+
 describe('light symbols', () => {
   it('draws major and minor lights as different shapes', () => {
     const major = symbolFor('major_light', 'A').svg;

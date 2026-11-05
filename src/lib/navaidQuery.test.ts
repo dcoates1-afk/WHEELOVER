@@ -33,4 +33,17 @@ describe('navaid query', () => {
     // The farm geometry block comes after the communication-area geometry.
     expect(query.indexOf('way["power"="plant"]')).toBeGreaterThan(query.indexOf('relation["seamark:type"="communication_area"]'));
   });
+
+  it('fetches cable lines with geometry, not as centre points', () => {
+    const query = buildOverpassQuery(view);
+    const centreBlock = query.split('out center tags;')[0];
+    // The centre block holds the generic way selector, but the cable line
+    // itself must not appear there, or each cable would draw twice.
+    expect(centreBlock).not.toContain('way["seamark:type"="cable_overhead"]');
+    expect(query).toContain('way["seamark:type"="cable_overhead"](50.6,-0.4,50.8,-0.1)');
+    // The cable geometry block comes after the calling-in-point geometry.
+    expect(query.indexOf('way["seamark:type"="cable_overhead"]')).toBeGreaterThan(
+      query.indexOf('way["seamark:type"="calling-in_point"](50.6,-0.4,50.8,-0.1)'),
+    );
+  });
 });

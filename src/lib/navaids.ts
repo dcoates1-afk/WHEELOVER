@@ -385,6 +385,21 @@ function pylonSvg() {
 }
 
 /**
+ * Overhead cable: two posts with a sagging wire between them, in safety
+ * orange — the same orange the line draws in on the chart. Distinct from
+ * the grey pylon glyph: this is the wire, not the tower.
+ */
+function cableSvg() {
+  return `<g stroke="#04141f" stroke-width="2.4" stroke-linecap="round">
+      <path d="M8 8 V26 M24 8 V26" fill="none"/>
+    </g>
+    <g stroke="#ff8a3d" stroke-width="1.5" stroke-linecap="round" fill="none">
+      <path d="M8 8 V26 M24 8 V26"/>
+      <path d="M8 10 Q16 20 24 10"/>
+    </g>`;
+}
+
+/**
  * Pile: a wooden post standing in the water, with water ticks at its base
  * like the rig's. A lit pile keeps this post and gains the light beam;
  * a pile carrying a lateral beacon is drawn by the beacon board below.
@@ -516,6 +531,8 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: 
       return { svg: svgWrap(pylonSvg()), label };
     case 'pile':
       return { svg: svgWrap(pileSvg()), label };
+    case 'cable_overhead':
+      return { svg: svgWrap(cableSvg()), label };
     default:
       return { svg: svgWrap(outline('<circle cx="16" cy="16" r="6" fill="{fill}"/>', '#7d8f99')), label };
   }

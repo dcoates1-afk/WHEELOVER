@@ -1255,6 +1255,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       // Wind-farm areas draw their boundary in the farm glyph's yellow, from
       // the way ring or the relation members alike. The generic line branch
       // below must not also draw a way farm in calling-line cyan.
+      // Overhead cables draw their own orange line below, not cyan either.
       if (mark.category === 'wind_farm') {
         for (const boundary of [...(mark.path ? [mark.path] : []), ...(mark.paths ?? [])]) {
           if (boundary.length < 2) continue;
@@ -1267,6 +1268,17 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
             interactive: false,
           }).addTo(group);
         }
+      } else if (mark.category === 'cable_overhead' && mark.path && mark.path.length >= 2) {
+        // Overhead cables draw in safety orange, not calling-line cyan: the
+        // wire is a clearance constraint, not a reporting line.
+        L.polyline(mark.path, {
+          className: 'marnav-cable-line',
+          color: '#ff8a3d',
+          weight: 2.2,
+          opacity: 0.95,
+          dashArray: '7 5',
+          interactive: false,
+        }).addTo(group);
       } else if (mark.path && mark.path.length >= 2) {
         L.polyline(mark.path, {
           className: 'marnav-calling-line',

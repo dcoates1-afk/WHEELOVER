@@ -127,6 +127,7 @@ export interface Navaid {
   diveHazard?: string | null;
   driftDive?: boolean;
   height: string | null;
+  clearanceHeight?: string | null;
   range: string | null;
   path: [number, number][] | null;
   paths?: [number, number][][] | null;

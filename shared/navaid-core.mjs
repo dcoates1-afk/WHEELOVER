@@ -84,6 +84,9 @@ const PRIORITY = {
   // A pile is a single post in the water, often carrying a beacon or a
   // light; it ranks below the tower but above a bare cable crossing.
   pile: 59,
+  // A cable crossing a channel constrains passage (clearance), so it
+  // outranks generic special marks.
+  cable_overhead: 58,
 };
 
 const MIN_ZOOM = {
@@ -111,6 +114,7 @@ const MIN_ZOOM = {
   marina: 13,
   pylon: 13,
   pile: 13,
+  cable_overhead: 13,
   notice: 14,
   facility: 14,
   calling_in_point: 11,
@@ -360,6 +364,12 @@ export function classifyTags(tags) {
   // collapsing into a generic light.
   if (type === 'pile') {
     return { ...base, category: 'pile', priority: PRIORITY.pile };
+  }
+
+  // Overhead cables are line features, not points: they classify as their
+  // own mark so the line draws and the clearance reaches the card.
+  if (type === 'cable_overhead') {
+    return { ...base, category: 'cable_overhead', priority: PRIORITY.cable_overhead };
   }
 
   if (
@@ -933,6 +943,7 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
     diveHazard: firstTag(tags, ['scuba_diving:hazard']),
     driftDive: tags['scuba_diving:drift'] === 'yes',
     height: firstTag(tags, [`seamark:${type}:height`, 'seamark:light:height', 'height']),
+    clearanceHeight: firstTag(tags, ['seamark:cable_overhead:clearance_height_safe', 'seamark:cable_overhead:clearance_height']),
     range: firstTag(tags, ['seamark:light:range']),
     path: drawnAsLine ? path : null,
     paths,
@@ -1008,6 +1019,9 @@ export function dedupeNavaids(items, options = {}) {
         if (!bucket) continue;
         for (const index of bucket) {
           const other = accepted[index];
+          // Lines never dedupe against anything: a cable midpoint near another
+          // mark's point (or another cable's midpoint) is not a duplicate.
+          if ((item.path?.length ?? 0) >= 2 || (other.path?.length ?? 0) >= 2) continue;
           const metres = distanceMeters(item.lat, item.lon, other.lat, other.lon);
           if (metres > distance) continue;
           const sameName =
@@ -1163,6 +1177,10 @@ export function mergeNavaidSources(items, options = {}) {
       }
       return sameName && metres <= nameDistanceM;
     }
+    // Line features are never duplicates of points, and two distinct lines
+    // must not merge on a shared name (parallel cable circuits share names).
+    // Wind-farm merging above is unaffected: it returns before this guard.
+    if ((item.path?.length ?? 0) >= 2 || (other.path?.length ?? 0) >= 2) return false;
     if (sameName && metres <= nameDistanceM) {
       const aLight = normLightCharacter(item);
       const bLight = normLightCharacter(other);
@@ -1337,5 +1355,6 @@ export const CATEGORY_LABELS = {
   oil_rig: 'Oil rig',
   pylon: 'Pylon',
   pile: 'Pile',
+  cable_overhead: 'Overhead cable',
   other: 'Mark',
 };

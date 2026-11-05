@@ -35,6 +35,7 @@ export type NavaidCategory =
   | 'oil_rig'
   | 'pylon'
   | 'pile'
+  | 'cable_overhead'
   | 'other';
 
 export type NavaidForm = 'buoy' | 'beacon' | 'light' | 'landmark' | 'mark';
@@ -128,6 +129,8 @@ export interface Navaid {
   diveHazard?: string | null;
   driftDive?: boolean;
   height: string | null;
+  /** Safe overhead clearance as mapped, raw value incl. any unit the mapper gave. */
+  clearanceHeight?: string | null;
   range: string | null;
   path: [number, number][] | null;
   /** Separate geometry paths, used for multipart reporting areas when present. */

@@ -267,7 +267,7 @@ export function buildOverpassQuery([south, west, north, east]: Bounds): string {
     `relation["seamark:type"="communication_area"](${box});`,
     // Calling-in points are lines, so they are fetched separately with geometry
     // instead of collapsing to a centre point like the other ways.
-    `way["seamark:type"](${box})["seamark:type"!="calling-in_point"];`,
+    `way["seamark:type"](${box})["seamark:type"!="calling-in_point"]["seamark:type"!="cable_overhead"];`,
     `node["man_made"="lighthouse"](${box});`,
     `node["seamark:light:character"](${box});`,
     // Lights mapped on the structure itself, not as a separate node: a
@@ -289,6 +289,11 @@ export function buildOverpassQuery([south, west, north, east]: Bounds): string {
     ');',
     'out center tags;',
     `way["seamark:type"="calling-in_point"](${box});`,
+    'out geom;',
+    // Overhead cables are lines: fetch with geometry like calling-in
+    // points, not as centre points, so the wire draws and the clearance
+    // stays attached to the line.
+    `way["seamark:type"="cable_overhead"](${box});`,
     'out geom;',
     `way["seamark:type"="communication_area"](${box});`,
     `relation["seamark:type"="communication_area"](${box});`,
@@ -581,7 +586,7 @@ export function createOverpassHandler(log: (message: string) => void = () => {})
     // generic road-bridge results cannot linger as if they were water crossings.
     // Navaid replies are versioned the same way: the v2 query adds offshore
     // selectors, so a cached v1 reply must not serve as if it had them.
-    const cacheKind = kind === 'chart-features' ? `chart-features-cell-v9-${part}` : kind === 'navaids' ? 'navaids-v3' : kind;
+    const cacheKind = kind === 'chart-features' ? `chart-features-cell-v9-${part}` : kind === 'navaids' ? 'navaids-v4' : kind;
     const key = createHash('sha1')
       .update(`${cacheKind}:${cell}`)
       .digest('hex')

@@ -255,6 +255,7 @@ export function NavaidSheet({
           <Row label="Shape" value={mark.shape} />
           <Row label="Structure" value={structure} />
           <Row label="Height" value={mark.height} />
+          <Row label="Safe clearance" value={mark.clearanceHeight ? `${mark.clearanceHeight} (datum not stated)` : null} />
           <Row label="Operator" value={operator} />
           <Row label="Website" value={website} />
           <Row label="Heritage reference" value={heritageLink} />

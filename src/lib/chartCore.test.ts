@@ -306,6 +306,74 @@ describe('pile marks', () => {
   });
 });
 
+describe('cable_overhead marks', () => {
+  it('charts a cable as its own mark, unlit', () => {
+    const cable = classifyTags({
+      'seamark:type': 'cable_overhead',
+      power: 'line',
+      'seamark:cable_overhead:clearance_height_safe': '41.3',
+    });
+    expect(cable?.category).toBe('cable_overhead');
+    expect(cable?.lit).toBe(false);
+  });
+
+  it('normalizes a cable way with its line path and raw clearance', () => {
+    const mark = normalizeElement({
+      type: 'way',
+      id: 54051843,
+      tags: {
+        cables: '3',
+        name: 'North Bonneville-Troutdale No 1',
+        power: 'line',
+        'seamark:cable_overhead:category': 'power',
+        'seamark:cable_overhead:clearance_height_safe': '90 ft',
+        'seamark:type': 'cable_overhead',
+      },
+      geometry: [
+        { lat: 45.5713513, lon: -122.4098391 },
+        { lat: 45.5743443, lon: -122.4069829 },
+        { lat: 45.5773573, lon: -122.404126 },
+      ],
+    });
+    expect(mark?.category).toBe('cable_overhead');
+    expect(mark?.path?.length).toBeGreaterThanOrEqual(2);
+    expect(mark?.clearanceHeight).toBe('90 ft');
+  });
+
+  it('never merges two same-named cable lines', () => {
+    const first = mark({
+      category: 'cable_overhead',
+      name: 'North Bonneville-Troutdale No 1',
+      lat: 45.5713,
+      lon: -122.4098,
+      path: [[45.5713, -122.4098], [45.5743, -122.407]],
+    });
+    const second = mark({
+      category: 'cable_overhead',
+      name: 'North Bonneville-Troutdale No 1',
+      lat: 45.5718,
+      lon: -122.4098,
+      path: [[45.5718, -122.4098], [45.5748, -122.407]],
+    });
+    const { navaids, removed } = mergeNavaidSources([first, second]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(0);
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('never dedupes a cable line against a nearby point', () => {
+    const cable = mark({
+      category: 'cable_overhead',
+      lat: 50.7,
+      lon: -1.2,
+      path: [[50.7, -1.2], [50.701, -1.2]],
+    });
+    const pylon = mark({ category: 'pylon', lat: 50.70007, lon: -1.2 });
+    const { navaids, removed } = dedupeNavaids([cable, pylon]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(0);
+    expect(navaids).toHaveLength(2);
+  });
+});
+
 describe('classification', () => {
   it('separates port and starboard lateral marks', () => {
     const port = classifyTags({ 'seamark:type': 'buoy_lateral', 'seamark:buoy_lateral:category': 'port' });

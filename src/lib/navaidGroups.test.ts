@@ -46,6 +46,7 @@ const ALL_CATEGORIES: NavaidCategory[] = [
   'oil_rig',
   'pylon',
   'pile',
+  'cable_overhead',
   'other',
 ];
 

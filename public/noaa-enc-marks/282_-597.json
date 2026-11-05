@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Beacon_Special_Purpose_General:122502","lat":70.51071080000003,"lon":-149.1257229,"source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_general/MapServer","sourceDate":"2015-05","category":"special_purpose","form":"beacon","priority":50}]}

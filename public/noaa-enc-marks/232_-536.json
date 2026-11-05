@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Offshore_Platform:1045956","lat":58.03629100000035,"lon":-133.97153369999978,"description":"Float","source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_approach/MapServer","sourceDate":"2014-11","category":"oil_rig","form":"mark","priority":68}]}

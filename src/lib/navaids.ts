@@ -59,7 +59,6 @@ const YELLOW = '#f4c531';
 const BLACK = '#101820';
 const WHITE = '#f4f7f8';
 const LIGHT_MAJOR = '#ff43d0';
-const LIGHT_MINOR = '#d9a6ff';
 const BLUE = '#2f7fd0';
 
 function lateralColours(side: 'port' | 'starboard', region: 'A' | 'B') {
@@ -280,9 +279,9 @@ function cardinalSvg(kind: 'north' | 'east' | 'south' | 'west') {
 }
 
 /**
- * Major lights: a saturated magenta flare star with a white core. Distinct from
- * minor lights in silhouette, colour and size, so the two never read alike on a
- * small chart display.
+ * A saturated magenta flare star with a white core. No longer the major-light
+ * glyph (major lights draw as a lighthouse now); kept for transit marks,
+ * which use a single light symbol at each mapped position.
  */
 function majorLightSvg() {
   const rays = [0, 45, 90, 135, 180, 225, 270, 315]
@@ -303,19 +302,11 @@ function majorLightSvg() {
  * differs from the major 8-ray star, and the stubs keep it from reading as a
  * hazard ball at chart size.
  */
-function minorLightSvg() {
-  const stubs = [0, 90, 180, 270]
-    .map((deg) => {
-      const rad = (deg * Math.PI) / 180;
-      const x1 = 16 + 6.4 * Math.cos(rad);
-      const y1 = 16 + 6.4 * Math.sin(rad);
-      const x2 = 16 + 10.5 * Math.cos(rad);
-      const y2 = 16 + 10.5 * Math.sin(rad);
-      return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${LIGHT_MINOR}" stroke-width="1.5" stroke-linecap="round"/>`;
-    })
-    .join('');
-  return `${stubs}<circle cx="16" cy="16" r="3.8" fill="${WHITE}" stroke="#04141f" stroke-width="1"/>` +
-    `<circle cx="16" cy="16" r="2.2" fill="${BLACK}" stroke="${LIGHT_MINOR}" stroke-width=".8"/>`;
+/** Colour a light's glyph parts are drawn in: the mapped light colour, with
+ * white drawn yellow so it reads on a white tower (the same convention as
+ * the sector arcs, where white sectors draw yellow). */
+function glyphLightColour(hex: string): string {
+  return hex === WHITE ? '#ffe066' : hex;
 }
 
 /**
@@ -410,14 +401,15 @@ function pileSvg() {
 }
 
 /**
- * A lighthouse tower: white tapered body with red bands, a dark gallery
+ * A lighthouse tower: white tapered body with bands, a dark gallery
  * and a lit lamp room. Drawn for land sector lights and named lighthouses,
- * which used to render as the generic major-light starburst.
+ * which used to render as the generic major-light starburst. The bands
+ * default to red; a major light passes its own light colour instead.
  */
-function lighthouseSvg() {
+function lighthouseSvg(bandColour: string = RED) {
   return `${outline('<path d="M12 28 L13.5 11 L18.5 11 L20 28 Z" fill="{fill}"/>', WHITE)}
-    <path d="M13.15 15 L18.85 15 L19.12 18 L12.88 18 Z" fill="${RED}"/>
-    <path d="M12.62 21 L19.38 21 L19.65 24 L12.35 24 Z" fill="${RED}"/>
+    <path d="M13.15 15 L18.85 15 L19.12 18 L12.88 18 Z" fill="${bandColour}"/>
+    <path d="M12.62 21 L19.38 21 L19.65 24 L12.35 24 Z" fill="${bandColour}"/>
     <rect x="11" y="9.5" width="10" height="2" rx="0.5" fill="${BLACK}" stroke="#04141f" stroke-width="1"/>
     <rect x="13.8" y="4.5" width="4.4" height="5" fill="#ffd166" stroke="#04141f" stroke-width="1.1"/>
     <path d="M13.8 4.5 Q16 1.5 18.2 4.5 Z" fill="${BLACK}" stroke="#04141f" stroke-width="1" stroke-linejoin="round"/>`;
@@ -425,12 +417,13 @@ function lighthouseSvg() {
 
 /**
  * A sector light standing in the water or on a rock: just the white
- * tapered tower with a red top, running down to the waterline. Doug asked
- * for the rock base to go — the tower alone is the mark.
+ * tapered tower with a coloured top, running down to the waterline. Doug asked
+ * for the rock base to go — the tower alone is the mark. The top defaults
+ * to red (a sector beacon); a minor light passes its own light colour.
  */
-function sectorBeaconSvg() {
+function sectorBeaconSvg(topColour: string = RED) {
   return `${outline('<path d="M13.5 28 L14.3 10 L17.7 10 L18.5 28 Z" fill="{fill}"/>', WHITE)}
-    <path d="M14.3 10 L17.7 10 L17.9 13 L14.1 13 Z" fill="${RED}"/>
+    <path d="M14.3 10 L17.7 10 L17.9 13 L14.1 13 Z" fill="${topColour}"/>
     <path d="M16 6.5 V10" stroke="#04141f" stroke-width="1.6" stroke-linecap="round"/>`;
 }
 
@@ -527,9 +520,15 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: 
     case 'transit_rear':
       return { svg: svgWrap(transitSvg()), label };
     case 'major_light':
-      return { svg: svgWrap(majorLightSvg()), label };
+      // The lighthouse tower; on the chart symbolForMark recolours the
+      // bands to the mapped light. The legend has no light mapped, so it
+      // shows the classic red bands.
+      return { svg: svgWrap(lighthouseSvg(RED)), label };
     case 'light':
-      return { svg: svgWrap(minorLightSvg()), label };
+      // The sector-beacon post; on the chart symbolForMark recolours the
+      // top to the mapped light. The legend shows the amber a generic
+      // light draws in.
+      return { svg: svgWrap(sectorBeaconSvg(DEFAULT_LIGHT_MARK)), label };
     case 'wreck':
       return { svg: svgWrap(wreckSvg()), label };
     case 'hazard':
@@ -741,7 +740,19 @@ function raconAnnotation(): string {
  * light, bell/horn or racon is drawn exactly as before.
  */
 export function symbolForMark(mark: Navaid, region: 'A' | 'B'): MarkSymbolSpec {
+  const signals = markSignals(mark);
   let base = symbolFor(mark.category, region, mark.colour);
+  // A minor light draws as the sector-beacon post, its top in the colour
+  // of its own light; a major light draws as the lighthouse tower, its
+  // bands in the colour of its own light. A white light draws yellow, so
+  // the top and bands read on the white tower. Marks with no mapped light
+  // keep the legend's generic colours from symbolFor.
+  if (mark.category === 'light' && signals.light) {
+    base = { svg: svgWrap(sectorBeaconSvg(glyphLightColour(signals.light))), label: base.label };
+  }
+  if (mark.category === 'major_light' && signals.light) {
+    base = { svg: svgWrap(lighthouseSvg(glyphLightColour(signals.light))), label: base.label };
+  }
   // A fixed lateral beacon stands on a post: draw its board on the pile
   // instead of the buoy's floating body. Buoy-form laterals are untouched,
   // and the light, sound and racon annotations below still apply.
@@ -764,7 +775,6 @@ export function symbolForMark(mark: Navaid, region: 'A' | 'B'): MarkSymbolSpec {
     const board = specialDaymarkBoardSvg(mark.daymarkShape, mark.daymarkColour);
     if (board) base = { svg: svgWrap(board), label: base.label };
   }
-  const signals = markSignals(mark);
   // A mark carrying mapped sectors shows its light as those sector arcs on
   // the chart, not as the generic single beam: the arcs already carry the
   // colours and bearings, and a beam on top would be a second, wrong light.

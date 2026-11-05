@@ -136,22 +136,40 @@ describe('light symbols', () => {
     const minor = symbolFor('light', 'A').svg;
 
     expect(major).not.toBe(minor);
-    // Retain the flare language; center and ray sizes distinguish the classes.
-    expect((major.match(/<line/g) ?? []).length).toBe(8);
-    expect((minor.match(/<line/g) ?? []).length).toBe(4);
-    expect(major).toContain('r="4.2"');
-    expect(minor).toContain('r="3.8"');
+    // A major light is the lighthouse tower (lamp room and two bands);
+    // a minor light is the sector-beacon post (tower and a coloured top).
+    expect(major).toContain('M13.15 15 L18.85 15');
+    expect(major).toContain('<rect x="13.8" y="4.5"');
+    expect(minor).toContain('M14.3 10 L17.7 10 L17.9 13 L14.1 13 Z');
+    expect(minor).not.toContain('<rect x="13.8" y="4.5"');
   });
 
   it('uses distinct colours for the two light classes', () => {
-    expect(symbolFor('major_light', 'A').svg).toContain('#ff43d0');
-    expect(symbolFor('light', 'A').svg).toContain('#d9a6ff');
-    expect(symbolFor('light', 'A').svg).not.toContain('#ff43d0');
+    // The legend has no light mapped: the major light shows the classic
+    // red bands, the minor light an amber top.
+    expect(symbolFor('major_light', 'A').svg).toContain('#e23b3b');
+    expect(symbolFor('light', 'A').svg).toContain('#ffd166');
+    expect(symbolFor('light', 'A').svg).not.toContain('#e23b3b');
   });
 
   it('labels the two classes differently', () => {
     expect(symbolFor('major_light', 'A').label).toBe('Major light');
     expect(symbolFor('light', 'A').label).toBe('Minor light');
+  });
+
+  it('colours the glyph parts from the mapped light, white as yellow', () => {
+    const redMinor = symbolForMark(
+      buoy({ category: 'light', form: 'light', lit: true, light: 'Fl R 5s', lightColour: 'red' }),
+      'A',
+    );
+    expect(redMinor.svg).toContain('M14.3 10 L17.7 10 L17.9 13 L14.1 13 Z" fill="#e23b3b"');
+    const whiteMajor = symbolForMark(
+      buoy({ category: 'major_light', form: 'light', lit: true, light: 'Fl W 5s', lightColour: 'white' }),
+      'A',
+    );
+    // A white light draws yellow on the white tower, or the bands vanish.
+    expect(whiteMajor.svg).toContain('M13.15 15 L18.85 15 L19.12 18 L12.88 18 Z" fill="#ffe066"');
+    expect(whiteMajor.svg).not.toContain('M13.15 15 L18.85 15 L19.12 18 L12.88 18 Z" fill="#f4f7f8"');
   });
 });
 
@@ -527,26 +545,35 @@ describe('signal annotations on chart marks', () => {
     expect(plain.svg).toContain('data-mark-annotation="light"');
   });
 
-  it('gives a major light the same beam, without a second lamp dot', () => {
-    const spec = symbolForMark(buoy({ category: 'major_light', lit: true, light: 'Fl 5s' }), 'A');
+  it('gives a major light the same beam, in its own light colour', () => {
+    const spec = symbolForMark(
+      buoy({ category: 'major_light', lit: true, light: 'Fl R 5s', lightColour: 'red' }),
+      'A',
+    );
 
     expect(spec.units).toBe(56);
     expect(spec.svg).toContain('data-mark-annotation="light"');
-    // The same beam a buoy gets, starting outside the glyph's 14-unit rays.
-    expect(spec.svg).toContain('M26.61 26.61 L43.15 36.65 L36.65 43.15 Z');
+    // The same beam a buoy gets, starting clear of the tower.
+    expect(spec.svg).toContain('M26.61 26.61 L43.15 36.65 L36.65 43.15 Z" fill="#e23b3b"');
     expect(spec.svg).not.toContain('r="1.8"');
-    // The light's own star is untouched.
-    expect(spec.svg).toContain('stroke="#ff43d0"');
+    // The tower's bands carry the light colour; the magenta star is gone.
+    expect(spec.svg).toContain('M13.15 15 L18.85 15 L19.12 18 L12.88 18 Z" fill="#e23b3b"');
+    expect(spec.svg).not.toContain('#ff43d0');
   });
 
-  it('gives a minor light a beam leaving its body', () => {
-    const spec = symbolForMark(buoy({ category: 'light', lit: true, light: 'Fl 5s' }), 'A');
+  it('gives a minor light a beam leaving its body, in its own light colour', () => {
+    const spec = symbolForMark(
+      buoy({ category: 'light', lit: true, light: 'Fl G 5s', lightColour: 'green' }),
+      'A',
+    );
 
     expect(spec.units).toBe(56);
     expect(spec.svg).toContain('data-mark-annotation="light"');
-    expect(spec.svg).toContain('M26.61 26.61 L43.15 36.65 L36.65 43.15 Z');
+    expect(spec.svg).toContain('M26.61 26.61 L43.15 36.65 L36.65 43.15 Z" fill="#26a65b"');
     expect(spec.svg).not.toContain('r="1.8"');
-    expect(spec.svg).toContain('stroke="#d9a6ff"');
+    // The post's top carries the light colour; the lavender star is gone.
+    expect(spec.svg).toContain('M14.3 10 L17.7 10 L17.9 13 L14.1 13 Z" fill="#26a65b"');
+    expect(spec.svg).not.toContain('#d9a6ff');
   });
 
   it('beams a transit light, which is also drawn as a light', () => {

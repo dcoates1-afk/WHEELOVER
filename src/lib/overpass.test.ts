@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { bridgeCrossesWater, chartFeatureCacheKey, chartFeatureProperties, chartFeaturesFromElements, CHART_FEATURE_FILTER_VERSION, coalesceBridges, isTidalWater, queryChartFeaturePart, queryChartFeaturePartWithBackgroundRetry, type ChartFeature } from './overpass';
+import { bridgeCrossesWater, chartFeatureCacheKey, chartFeatureProperties, chartFeaturesFromElements, CHART_FEATURE_FILTER_VERSION, coalesceBridges, isLakeWater, isTidalWater, queryChartFeaturePart, queryChartFeaturePartWithBackgroundRetry, type ChartFeature } from './overpass';
 
 describe('water-crossing bridge detection', () => {
   it('does not treat a charted bridge over untidal water as a tidal bridge', () => {
@@ -62,6 +62,66 @@ describe('water-crossing bridge detection', () => {
     expect(isTidalWater({ natural: 'water', water: 'lake' })).toBe(false);
     expect(isTidalWater({ water: 'estuary', tidal: 'no' })).toBe(false);
     expect(isTidalWater(undefined)).toBe(false);
+  });
+
+  it('treats a lake as lake water but never as tidal water', () => {
+    expect(isLakeWater({ natural: 'water', water: 'lake' })).toBe(true);
+    expect(isLakeWater({ water: 'lake' })).toBe(true);
+    expect(isLakeWater({ water: 'pond' })).toBe(false);
+    expect(isLakeWater({ water: 'river' })).toBe(false);
+    expect(isLakeWater({ natural: 'water' })).toBe(false);
+    expect(isLakeWater(undefined)).toBe(false);
+    // A lake is water a bridge can span, but the tide does not reach it.
+    expect(isTidalWater({ natural: 'water', water: 'lake' })).toBe(false);
+  });
+
+  it('keeps a bridge crossing a lake', () => {
+    const lake = {
+      type: 'way' as const,
+      tags: { natural: 'water', water: 'lake', name: 'Lake Banook' },
+      geometry: [
+        { lat: 50.0, lon: -3.21 }, { lat: 50.0, lon: -3.17 },
+        { lat: 50.02, lon: -3.17 }, { lat: 50.02, lon: -3.21 }, { lat: 50.0, lon: -3.21 },
+      ],
+    };
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes' }, geometry: [{ lat: 49.999, lon: -3.19 }, { lat: 50.021, lon: -3.19 }] },
+      [lake],
+    )).toBe(true);
+  });
+
+  it('keeps a light bridge that genuinely spans a lake', () => {
+    // The G. Fraser Conrad Bridge is a cycleway over Lake Banook: a light
+    // bridge, so it must prove a real span, not merely touch the water.
+    const lake = {
+      type: 'way' as const,
+      tags: { natural: 'water', water: 'lake', name: 'Lake Banook' },
+      geometry: [
+        { lat: 50.0, lon: -3.21 }, { lat: 50.0, lon: -3.17 },
+        { lat: 50.02, lon: -3.17 }, { lat: 50.02, lon: -3.21 }, { lat: 50.0, lon: -3.21 },
+      ],
+    };
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'cycleway' }, geometry: [{ lat: 49.999, lon: -3.19 }, { lat: 50.021, lon: -3.19 }] },
+      [lake],
+    )).toBe(true);
+  });
+
+  it('does not count a walkway lying inside a lake along its shore', () => {
+    // A finger out to the floats, or a boardwalk along the shore: it lies
+    // inside the water without ever spanning it, so the strict test fails.
+    const lake = {
+      type: 'way' as const,
+      tags: { natural: 'water', water: 'lake', name: 'Lake Banook' },
+      geometry: [
+        { lat: 50.0, lon: -3.4 }, { lat: 50.0, lon: -3.0 },
+        { lat: 50.3, lon: -3.0 }, { lat: 50.3, lon: -3.4 }, { lat: 50.0, lon: -3.4 },
+      ],
+    };
+    expect(bridgeCrossesWater(
+      { type: 'way', tags: { bridge: 'yes', highway: 'footway' }, geometry: [{ lat: 50.1, lon: -3.2 }, { lat: 50.11, lon: -3.2 }] },
+      [lake],
+    )).toBe(false);
   });
 
   it('keeps a bridge crossing an estuary mapped only as a bay', () => {
@@ -247,6 +307,45 @@ describe('water-crossing bridge detection', () => {
     };
     expect(bridgeCrossesWater(bridgeAt(51), [reach, basin(true)])).toBe(false);
     expect(bridgeCrossesWater(bridgeAt(51), [reach, basin(false)])).toBe(true);
+  });
+
+  it('does not let a lake carry the tide to a river above it', () => {
+    // A river runs from the harbour into a lake, and another river runs out
+    // of the lake upstream. The still water breaks the tide: the lower reach
+    // is tidal, the upper reach is not, however short the run through the
+    // lake would be. The lake never joins the along-water graph, so the
+    // upper river has no path to the tide at all.
+    const lake = {
+      type: 'way' as const,
+      tags: { natural: 'water', water: 'lake', name: 'Lake Banook' },
+      geometry: [
+        { lat: 50.996, lon: -1.002 }, { lat: 50.996, lon: -0.998 },
+        { lat: 51.0, lon: -0.998 }, { lat: 51.0, lon: -1.002 }, { lat: 50.996, lon: -1.002 },
+      ],
+    };
+    const lowerRiver = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 51.006, lon: -1.0003 }, { lat: 50.9985, lon: -1.0003 }],
+    };
+    const upperRiver = {
+      type: 'way' as const,
+      tags: { waterway: 'river' },
+      geometry: [{ lat: 50.9975, lon: -1.0003 }, { lat: 50.99, lon: -1.0003 }],
+    };
+    const upperBridge = {
+      type: 'way' as const,
+      tags: { bridge: 'yes' },
+      geometry: [{ lat: 50.994, lon: -1.001 }, { lat: 50.995, lon: -0.999 }],
+    };
+    expect(bridgeCrossesWater(upperBridge, [upperRiver, lowerRiver, lake, harbour(51.015, -1)])).toBe(false);
+    // The lower reach, below the lake and inside tidal reach, still stays.
+    const lowerBridge = {
+      type: 'way' as const,
+      tags: { bridge: 'yes' },
+      geometry: [{ lat: 51.002, lon: -1.001 }, { lat: 51.003, lon: -0.999 }],
+    };
+    expect(bridgeCrossesWater(lowerBridge, [upperRiver, lowerRiver, lake, harbour(51.015, -1)])).toBe(true);
   });
 
   it('does not treat an untagged river reach 7 km from tidal water as tidal', () => {
@@ -844,6 +943,68 @@ describe('bridge overlay coalescing', () => {
       sourceUrl: 'https://www.openstreetmap.org/way/22',
     });
     expect(coalesceBridges([outline, approach])).toHaveLength(2);
+  });
+
+  it('folds a two-node deck whose ends sit on its outline edge', () => {
+    // The G. Fraser Conrad Bridge pattern: the deck is a two-node way whose
+    // ends sit on the structure outline's edge, so no vertex is genuinely
+    // inside — but the whole span runs through the outline's middle, so
+    // most of the line's length is inside and it folds to one card.
+    const ring: [number, number][] = [[50.0, -1.0], [50.0, -1.0005], [50.00035, -1.0005], [50.00035, -1.0], [50.0, -1.0]];
+    const outline = feature({
+      id: 'osm:way/30',
+      name: 'Conrad Bridge',
+      lat: 50.000175,
+      lon: -1.00025,
+      path: ring,
+      paths: [ring],
+      rings: [ring],
+      properties: { 'water crossed': 'Lake Banook' },
+      sourceUrl: 'https://www.openstreetmap.org/way/30',
+    });
+    const deck = feature({
+      id: 'osm:way/31',
+      name: 'Lake Banook Trail',
+      lat: 50.000175,
+      lon: -1.00025,
+      path: [[50.0, -1.0005], [50.00035, -1.0]] as [number, number][],
+      paths: [[[50.0, -1.0005], [50.00035, -1.0]]] as [number, number][][],
+      properties: { highway: 'cycleway', 'water crossed': 'Lake Banook' },
+      sourceUrl: 'https://www.openstreetmap.org/way/31',
+    });
+    const merged = coalesceBridges([outline, deck]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].name).toBe('Conrad Bridge');
+  });
+
+  it('does not fold a long way that only clips a small ring', () => {
+    // The Fort Point Arch pattern: a long sidewalk passes through a small
+    // structure ring at the Golden Gate's foot. A few sample points fall
+    // inside the ring, but only a small fraction of the line's length does,
+    // so the whole bridge must not fold into the structure it only touches.
+    const ring: [number, number][] = [[50.0, -1.0], [50.0, -1.0005], [50.00035, -1.0005], [50.00035, -1.0], [50.0, -1.0]];
+    const outline = feature({
+      id: 'osm:way/32',
+      name: 'Fort Point Arch',
+      lat: 50.000175,
+      lon: -1.00025,
+      path: ring,
+      paths: [ring],
+      rings: [ring],
+      properties: { 'water crossed': 'Golden Gate' },
+      sourceUrl: 'https://www.openstreetmap.org/way/32',
+    });
+    const sidewalk = feature({
+      id: 'osm:way/33',
+      name: 'Golden Gate Bridge East Sidewalk',
+      lat: 50.000175,
+      lon: -1.0,
+      path: [[50.0002, -1.01], [50.0002, -0.99]] as [number, number][],
+      paths: [[[50.0002, -1.01], [50.0002, -0.99]]] as [number, number][][],
+      properties: { highway: 'motorway', 'water crossed': 'Golden Gate' },
+      sourceUrl: 'https://www.openstreetmap.org/way/33',
+    });
+    expect(coalesceBridges([outline, sidewalk])).toHaveLength(2);
   });
 
   it('does not fold a road inside an outline when they cross different water', () => {

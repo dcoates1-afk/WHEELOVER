@@ -234,9 +234,14 @@ const BRIDGE_SELECTORS: ((box: string) => string)[] = [
   // plain `water=river` or a river centreline — and whether such a reach is
   // tidal is decided from its position against water already known to be tidal
   // (see overpass.ts), so these are fetched as candidates, not as tidal water.
+  // Lakes are fetched the same way, as direct crossing targets: a lake is
+  // water a bridge can span regardless of tides, so it needs no tidal proof
+  // — but it never makes a nearby river tidal, and the tide does not flow
+  // through it (see overpass.ts). Ponds stay out: a footbridge over a duck
+  // pond is not a marine crossing.
   (box) =>
     'nwr[~"^(water|waterway|natural)$"' +
-    '~"^(sea|tidal|estuary|lagoon|harbour|harbor|dock|basin|cove|bay|river|riverbank|tidal_channel|fjord|strait)$"]' +
+    '~"^(sea|tidal|estuary|lagoon|harbour|harbor|dock|basin|cove|bay|river|riverbank|tidal_channel|fjord|strait|lake)$"]' +
     `(${box});`,
   // `[~"…"]` with no value regex is rejected by current Overpass, so the key
   // regex is given one; `tidal` and `tidal:range` are still one scan.

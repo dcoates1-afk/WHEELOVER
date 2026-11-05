@@ -50,7 +50,7 @@ const CHART_FEATURE_CACHE_MS = 10 * 60 * 1000;
  * key a device keeps serving cells drawn under older rules for up to thirty
  * days. Cells stored under older keys simply stop matching and age out.
  */
-export const CHART_FEATURE_FILTER_VERSION = 5;
+export const CHART_FEATURE_FILTER_VERSION = 6;
 const chartFeatureMemory = new Map<string, { features: ChartFeature[]; at: number }>();
 
 export type RawChartElement = {
@@ -623,6 +623,21 @@ export function isRiverWater(tags: Record<string, string> | undefined): boolean 
 }
 
 /**
+ * Lake water: a body a bridge can span, full stop.
+ *
+ * A lake is water regardless of tides — the tidal-reach test is the wrong
+ * gate for it. A lake is not tidal (see isTidalWater, which stays false for
+ * `water=lake`), and it never carries the tide: a river above a lake is not
+ * tidal however close the sea is on the other side, because the still water
+ * breaks it. So a lake is a direct crossing target, never a tidal seed, and
+ * it never joins the along-water graph.
+ */
+export function isLakeWater(tags: Record<string, string> | undefined): boolean {
+  if (!tags) return false;
+  return tags.water?.toLowerCase() === 'lake';
+}
+
+/**
  * Water that can make a nearby river reach tidal.
  *
  * A marina basin is tagged as harbour water but says nothing about the tide: a
@@ -701,6 +716,12 @@ interface PreparedWater {
   bounds: Area;
   /** Tidal by its own tags, so it can make a nearby river reach tidal too. */
   seed: boolean;
+  /**
+   * A body that counts as a crossing on its own, with no tidal-reach proof:
+   * tidal water, or a lake. A lake is water a bridge can span regardless of
+   * tides, but it never carries the tide — only seed water does that.
+   */
+  direct: boolean;
   /** The water body's name, for the bridge card. */
   name: string | null;
 }
@@ -713,11 +734,14 @@ function prepareWater(water: RawChartElement): PreparedWater | null {
   if (tags.tidal?.toLowerCase() === 'no') return null;
   const tidal = isTidalWater(tags);
   const seed = isTidalSeed(tags);
+  const lake = isLakeWater(tags);
   // A marina is water a bridge can cross, but it cannot make the river it sits
   // on tidal. River reaches are kept as candidates: `bridgeMeetsWater` only
   // accepts the ones within tidal reach of a seed, which is how a tidal river
-  // that carries no tidal tag at all still shows its bridges.
-  if (!tidal && !isRiverWater(tags)) return null;
+  // that carries no tidal tag at all still shows its bridges. A lake is kept
+  // the same way, but as a direct target: a bridge over a lake needs no
+  // tidal-reach proof, and the lake never makes a nearby river tidal.
+  if (!tidal && !isRiverWater(tags) && !lake) return null;
   const paths = stitchPaths(elementPaths(water));
   if (paths.length === 0) return null;
   const name = tags['seamark:name'] ?? tags.name;
@@ -727,6 +751,7 @@ function prepareWater(water: RawChartElement): PreparedWater | null {
     areaLike: tags.natural === 'water' || tags.waterway?.toLowerCase() === 'riverbank' || tags.type === 'multipolygon',
     bounds: boundsOfPaths(paths),
     seed,
+    direct: tidal || lake,
     name: typeof name === 'string' && name.trim() !== '' ? name.trim() : null,
   };
 }
@@ -936,6 +961,12 @@ export function alongWaterDistances(waters: PreparedWater[]): Map<string, number
   const seedRings: Point[][] = [];
   const areaRings: Point[][] = [];
   for (const water of waters) {
+    // A lake never joins the graph: the tide does not flow through still
+    // water, so a lake must not carry it to a river on its far side. A
+    // river above a lake stays non-tidal however close the sea is below it.
+    // (A lake's own bridges never need the graph — a lake is a direct
+    // crossing target, not a distance to be measured.)
+    if (water.direct && !water.seed) continue;
     for (const path of water.paths) {
       if (path.length < 2) continue;
       const points = path.map(([lat, lon]) => ({ lat, lon }));
@@ -1103,9 +1134,11 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
     // whole-element reach test: an area has no centreline to walk. A river
     // centreline is judged per matched segment below, along the waterway —
     // the whole-element test let one segment near the sea make a whole river
-    // tidal, bridges kilometres upstream included.
+    // tidal, bridges kilometres upstream included. A direct body — tidal
+    // water, or a lake — needs no reach proof at all: a lake is water a
+    // bridge can span regardless of tides.
     const waterHasArea = water.paths.some((path) => water.areaLike || isClosedPath(path));
-    if (!water.seed && waterHasArea && !waterWithinTidalReach(water, seeds, distanceGrid)) continue;
+    if (!water.seed && !water.direct && waterHasArea && !waterWithinTidalReach(water, seeds, distanceGrid)) continue;
     // Once a named body has matched, only open tidal water can improve on it.
     if (namedMatch !== null && !water.seed) continue;
     // Once any crossing is found, an unnamed body can add nothing.
@@ -1216,8 +1249,8 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
             // crossing is within along-water reach of the tide. Judging the
             // whole line would let one mouth segment carry bridges far
             // upstream; judging the crossing keeps the mouth and drops the
-            // headwaters.
-            if (!water.seed && !waterArea && !segmentWithinAlongWaterReach(start, end, from, to, distances)) continue;
+            // headwaters. A direct body needs no such proof.
+            if (!water.seed && !water.direct && !waterArea && !segmentWithinAlongWaterReach(start, end, from, to, distances)) continue;
             lineMatched = true;
           }
           if (lineMatched) break;
@@ -1234,7 +1267,7 @@ function bridgeMeetsWater(bridgePaths: [number, number][][], bridgeBounds: Area,
 }
 
 /**
- * Whether a bridge crosses water the tide reaches.
+ * Whether a bridge crosses water the tide reaches, or a lake.
  *
  * A bridge is often a multipolygon relation, and a sea, estuary or harbour is
  * almost always one, so both sides are read from every line the element holds
@@ -1494,7 +1527,7 @@ export function queryChartFeaturePartWithBackgroundRetry(
 
 /**
  * The features a chart-feature reply can actually be drawn as: bridges that
- * span tidal water, and designated marine areas. A light bridge (footway,
+ * span tidal water or a lake, and designated marine areas. A light bridge (footway,
  * cycleway, path, bridleway) must genuinely span the water — cutting an area's
  * boundary twice, or crossing a centreline — while other bridges keep the
  * lenient touching rule. Shared with the server's coverage line so the
@@ -1741,9 +1774,10 @@ export function coalesceBridges(bridges: ChartFeature[]): ChartFeature[] {
         if (waterA && waterB && waterA !== waterB) continue;
         const inside = outlineRings.some((ring) => {
           const xy = ring.map(([lat, lon]) => [lon, lat]);
-          return other.paths.some((path) => path.some(([lat, lon]) => {
+          // A point on the line genuinely inside the ring, not sitting on
+          // the ring itself.
+          const genuinelyInside = (lat: number, lon: number): boolean => {
             if (!pointInRing(lon, lat, xy)) return false;
-            // Genuinely inside, not a point sitting on the ring itself.
             for (let k = 1; k < ring.length; k++) {
               if (pointToSegmentMeters(
                 { lat, lon },
@@ -1752,7 +1786,35 @@ export function coalesceBridges(bridges: ChartFeature[]): ChartFeature[] {
               ) <= 2) return false;
             }
             return true;
-          }));
+          };
+          // A line runs inside the outline when most of its length does. A
+          // two-node deck's ends sit on the outline's edge while the span
+          // runs through the middle, so vertices alone miss it — but a long
+          // way that merely clips a small ring must not fold a whole bridge
+          // into a structure it only touches (a sidewalk passing Fort Point
+          // Arch at the Golden Gate's foot), so any single point inside is
+          // not enough either. Half the length is the line between them.
+          return other.paths.some((path) => {
+            let total = 0;
+            let insideLength = 0;
+            for (let index = 1; index < path.length; index += 1) {
+              const [prevLat, prevLon] = path[index - 1];
+              const [lat, lon] = path[index];
+              const length = segmentLengthMeters(
+                { lat: prevLat, lon: prevLon },
+                { lat, lon },
+              );
+              total += length;
+              for (let sample = 1; sample < 8; sample += 1) {
+                const fraction = sample / 8;
+                if (genuinelyInside(
+                  prevLat + (lat - prevLat) * fraction,
+                  prevLon + (lon - prevLon) * fraction,
+                )) insideLength += length / 7;
+              }
+            }
+            return total > 0 && insideLength / total >= 0.5;
+          });
         });
         if (!inside) continue;
         foldBridgeInto(outline, other);

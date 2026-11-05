@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Buoy_Lateral:66037","lat":45.96440000000001,"lon":-82.73585000000003,"name":"JJ1","source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_general/MapServer","sourceDate":"2001-12-08","colour":"green","shape":"spar","category":"lateral_port","form":"buoy","priority":84}]}

@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Buoy_Lateral:66035","lat":45.98034999999999,"lon":-82.20256,"source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_general/MapServer","sourceDate":"2001-12-08","colour":"red","shape":"conical","category":"lateral_starboard","form":"buoy","priority":84}]}

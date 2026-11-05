@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { minZoomFor, priorityFor } from '../../shared/navaid-core.mjs';
 import {
+  lightSymbolColour,
   quickInfo,
   raconText,
   soundSignalText,
@@ -547,6 +548,27 @@ describe('signal annotations on chart marks', () => {
     expect(spec.svg).toContain('data-mark-annotation="racon"');
     expect(spec.svg).toContain('r="14"');
     return expect(spec.units).toBe(56);
+  });
+});
+
+describe('light colour letters', () => {
+  it('maps official single-letter colours to their beams', () => {
+    const cases: [string, string][] = [
+      ['R', '#e23b3b'],
+      ['G', '#26a65b'],
+      ['W', '#f4f7f8'],
+      ['Y', '#f4c531'],
+      ['Bu', '#3aa0ff'],
+      ['R W G', '#e23b3b'],
+    ];
+    for (const [letter, hex] of cases) {
+      expect(lightSymbolColour({ lightColour: letter } as Navaid)).toBe(hex);
+    }
+  });
+
+  it('keeps the amber fallback when no colour is given', () => {
+    expect(lightSymbolColour({ lightColour: '.....' } as Navaid)).toBe('#ffd166');
+    expect(lightSymbolColour({ lightColour: null } as Navaid)).toBe('#ffd166');
   });
 });
 

@@ -1119,6 +1119,37 @@ describe('minor light attach', () => {
     expect(navaids[0].category).toBe('lateral_port');
     expect(navaids[0].light).toBe('Fl R 4s');
   });
+
+  it('does not merge a lateral aid with a light of a conflicting colour', () => {
+    const buoy = mark({ category: 'lateral_port', colour: 'green', name: 'Harbour Buoy', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'Harbour Light', light: 'Fl R 4s', lightColour: 'R', lat: 50.70007, lon: -1.2, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([buoy, light]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('merges a lateral aid with a light of the same colour, letter or word', () => {
+    const buoy = mark({ category: 'lateral_port', colour: 'green', name: 'Harbour Buoy', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'Harbour Light', light: 'Fl G 4s', lightColour: 'G', lat: 50.70007, lon: -1.2, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([buoy, light]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('lateral_port');
+    expect(navaids[0].light).toBe('Fl G 4s');
+  });
+
+  it('does not merge same-named aids when the lateral colour disagrees', () => {
+    const buoy = mark({ category: 'lateral_port', colour: 'green', name: 'Harbour Light', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'Harbour Light', light: 'Fl R 4s', lightColour: 'R', lat: 50.70007, lon: -1.2, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([buoy, light]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('dedupe does not collapse a lateral aid with a conflicting-colour light', () => {
+    const buoy = mark({ category: 'lateral_port', colour: 'green', name: 'Harbour Buoy', lat: 50.7, lon: -1.2 });
+    const light = mark({ category: 'light', name: 'Harbour Light', light: 'Fl R 4s', lightColour: 'R', lat: 50.70007, lon: -1.2, source: 'ccg', lit: true });
+    const { navaids, removed } = dedupeNavaids([buoy, light]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(0);
+    expect(navaids).toHaveLength(2);
+  });
 });
 
 describe('cells', () => {

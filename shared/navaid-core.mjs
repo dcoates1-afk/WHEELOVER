@@ -1024,6 +1024,12 @@ export function dedupeNavaids(items, options = {}) {
           if ((item.path?.length ?? 0) >= 2 || (other.path?.length ?? 0) >= 2) continue;
           const metres = distanceMeters(item.lat, item.lon, other.lat, other.lon);
           if (metres > distance) continue;
+          // A lateral aid and a light whose colours positively disagree
+          // are different aids: never collapse them into one mark with
+          // the wrong colour. Both survive, with their own colours.
+          const lightRec = item.category === 'light' ? item : other.category === 'light' ? other : null;
+          const aidRec = lightRec === item ? other : lightRec === other ? item : null;
+          if (lightRec && aidRec && lateralColourConflict(aidRec, lightRec)) continue;
           const sameName =
             normName(item.name) !== '' && normName(item.name) === normName(other.name);
           const sameFamily = familyOf(item.category) === familyOf(other.category);
@@ -1133,6 +1139,33 @@ function normLightCharacter(navaid) {
   return String(raw).toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+/** IALA single-letter colours, as official light lists record them. */
+const COLOUR_LETTERS = { r: 'red', g: 'green', w: 'white', y: 'yellow', bu: 'blue', vi: 'violet', or: 'orange' };
+
+/**
+ * True when a lateral aid's mapped structure colour positively disagrees
+ * with a light record's colour. Lateral marks carry their side colour on
+ * the structure, so a green can with a red light (or the reverse) is a
+ * different aid, not the same aid's light. Other aids are excluded:
+ * cardinal and safe-water marks carry white lights on black/yellow and
+ * red/white structures, so their colours never agree by construction.
+ */
+function lateralColourConflict(aid, light) {
+  if (!aid.category.startsWith('lateral') && !aid.category.startsWith('preferred_channel')) return false;
+  const aidColours = new Set();
+  for (const token of String(aid.colour ?? '').toLowerCase().split(/[^a-z]+/)) {
+    if (token) aidColours.add(COLOUR_LETTERS[token] ?? token);
+  }
+  if (!aidColours.size) return false;
+  const lightColours = new Set();
+  for (const token of String(light.lightColour ?? '').toLowerCase().split(/[^a-z]+/)) {
+    if (token) lightColours.add(COLOUR_LETTERS[token] ?? token);
+  }
+  if (!lightColours.size) return false;
+  for (const colour of lightColours) if (aidColours.has(colour)) return false;
+  return true;
+}
+
 function isWreckLike(navaid) {
   return navaid.category === 'wreck' || navaid.category === 'hazard_danger';
 }
@@ -1220,6 +1253,12 @@ export function mergeNavaidSources(items, options = {}) {
     // must not merge on a shared name (parallel cable circuits share names).
     // Wind-farm merging above is unaffected: it returns before this guard.
     if ((item.path?.length ?? 0) >= 2 || (other.path?.length ?? 0) >= 2) return false;
+    // A lateral aid and a light whose colours positively disagree are
+    // different aids (or one record is wrong): never merge them, by any
+    // rule, rather than paint the aid with the wrong colour.
+    const lightRecord = [item, other].find((m) => m.category === 'light');
+    const otherRecord = lightRecord ? [item, other].find((m) => m !== lightRecord) : undefined;
+    if (lightRecord && otherRecord && lateralColourConflict(otherRecord, lightRecord)) return false;
     // A minor light record at an aid's spot is that aid's light, not a
     // second aid: attach it when the aid carries no light or the same
     // light. Areas are excluded: a farm or reporting area's centre point

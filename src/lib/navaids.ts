@@ -554,6 +554,17 @@ const LIGHT_COLOURS: Record<string, string> = {
   magenta: '#ff43d0',
 };
 
+/** IALA single-letter light colours, as the CCG and NGA lists record them. */
+const LETTER_COLOURS: Record<string, string> = {
+  r: 'red',
+  g: 'green',
+  w: 'white',
+  y: 'yellow',
+  bu: 'blue',
+  vi: 'violet',
+  or: 'orange',
+};
+
 /** Colour of the small flare drawn off a lit aid, taken from the mapped light. */
 export function lightSymbolColour(mark: Navaid): string {
   const candidates: (string | null | undefined)[] = [
@@ -563,7 +574,7 @@ export function lightSymbolColour(mark: Navaid): string {
   for (const candidate of candidates) {
     if (!candidate) continue;
     for (const word of candidate.toLowerCase().split(/[^a-z]+/)) {
-      const hex = LIGHT_COLOURS[word];
+      const hex = LIGHT_COLOURS[LETTER_COLOURS[word] ?? word];
       if (hex) return hex;
     }
   }

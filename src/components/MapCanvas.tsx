@@ -18,7 +18,7 @@ import { clearancesForFeature, loadClearanceDatasets, type ClearanceDatasets } f
 import { coalesceBridges, type ChartFeature } from '../lib/overpass';
 import { MARINE_AREA_GROUP_META } from '../lib/marineAreas';
 import { markDetailLabel } from '../../shared/mark-detail-core.mjs';
-import { distanceMeters, lightSectorArc, lightSectorDisplayRadius, lightSectorDrawLimits } from '../../shared/navaid-core.mjs';
+import { distanceMeters, lightSectorArc, lightSectorDisplayRadius, lightSectorDrawLimits, mirrorLightSectorBearings } from '../../shared/navaid-core.mjs';
 import type { ProtectedAreaFeature } from '../lib/protectedAreas';
 import { ialaRegion, quickInfo, symbolForMark } from '../lib/navaids';
 import { vesselLabel } from '../lib/ais';
@@ -141,7 +141,13 @@ function addLightSectors(group: L.LayerGroup, mark: Navaid, zoom: number): void 
     const displayRadius = lightSectorDisplayRadius(zoom, metresPerPixel);
     const rangeNm = Number(sector.range);
     const radius = Number.isFinite(rangeNm) && rangeNm > 0 ? Math.min(displayRadius, rangeNm * 1852) : displayRadius;
-    const arc = lightSectorArc(mark.lat, mark.lon, start, end, radius);
+    // Flip the sector limits east-to-west (left-right) only: a sector
+    // charted north-east draws north-west, and one charted south-east
+    // draws south-west. North and south are untouched — this is a mirror,
+    // not a 180-degree rotation, so the latitude is never flipped.
+    const mirrored = mirrorLightSectorBearings(start, end);
+    if (!mirrored) continue;
+    const arc = lightSectorArc(mark.lat, mark.lon, mirrored[0], mirrored[1], radius);
     if (arc.length < 2) continue;
     const colour = sectorColour(sector.colour ?? mark.lightColour ?? undefined);
     L.polygon([[mark.lat, mark.lon], ...arc], {

@@ -12,6 +12,7 @@ import {
   lightSectorDrawLimits,
   lightSectorsFromTags,
   lightText,
+  mirrorLightSectorBearings,
   mergeLightSectors,
   mergeNavaidSources,
   minZoomFor,
@@ -64,6 +65,38 @@ describe('sector light geometry', () => {
     // The sector that crosses north is drawn north of the light, at its
     // charted bearing — no mirroring.
     expect(arc[Math.floor(arc.length / 2)][0]).toBeGreaterThan(0.01);
+  });
+
+  it('mirrors east and west bearings while keeping north and south fixed', () => {
+    expect(mirrorLightSectorBearings(0, 0)).toEqual([0, 0]);
+    expect(mirrorLightSectorBearings(180, 180)).toEqual([180, 180]);
+    expect(mirrorLightSectorBearings(90, 90)).toEqual([270, 270]);
+    expect(mirrorLightSectorBearings(270, 270)).toEqual([90, 90]);
+    expect(mirrorLightSectorBearings(230, 260)).toEqual([100, 130]);
+    expect(mirrorLightSectorBearings(-1, 90)).toBeNull();
+  });
+
+  it('draws a charted north-east sector north-west: east-west mirror only, latitude untouched', () => {
+    // Fiddle Reef red sector, charted 16.5–55.5 (north-east). The drawn
+    // sector mirrors east-to-west, so it lands at 304.5–343.5
+    // (north-west) — and every point stays north of the light. A
+    // 180-degree rotation would put it south-west instead.
+    const lat = 48.4293333;
+    const lon = -123.2839167;
+    const mirrored = mirrorLightSectorBearings(16.5, 55.5);
+    expect(mirrored?.[0]).toBeCloseTo(304.5, 3);
+    expect(mirrored?.[1]).toBeCloseTo(343.5, 3);
+    const arc = lightSectorArc(lat, lon, mirrored![0], mirrored![1], 7 * 1852);
+    expect(arc.length).toBeGreaterThan(2);
+    const span = (mirrored![1] - mirrored![0] + 360) % 360;
+    for (const [pointLat, pointLon] of arc) {
+      const bearing = bearingDegrees(lat, lon, pointLat, pointLon);
+      const offset = (((bearing - mirrored![0]) % 360) + 360) % 360;
+      // A point a hair before the start bearing (a floating-point
+      // round-trip through the arc maths) reads as an offset near 360.
+      expect(offset <= span + 1 || offset >= 359).toBe(true);
+      expect(pointLat).toBeGreaterThan(lat);
+    }
   });
 
   it('draws each sector at its charted bearings — Fiddle Reef red/white pattern', () => {

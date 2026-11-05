@@ -306,6 +306,27 @@ describe('pile marks', () => {
   });
 });
 
+describe('special-beacon daymarks', () => {
+  it('normalizes daymark shape and colour from daymark tags', () => {
+    const mark = normalizeElement({
+      type: 'node',
+      id: 9502861273,
+      lat: 48.4243520,
+      lon: -123.2943196,
+      tags: {
+        'seamark:type': 'beacon_special_purpose',
+        'seamark:daymark:colour': 'green',
+        'seamark:daymark:colour_pattern': 'border',
+        'seamark:daymark:shape': 'square',
+      },
+    });
+    expect(mark?.category).toBe('special_purpose');
+    expect(mark?.form).toBe('beacon');
+    expect(mark?.daymarkShape).toBe('square');
+    expect(mark?.daymarkColour).toBe('green');
+  });
+});
+
 describe('cable_overhead marks', () => {
   it('charts a cable as its own mark, unlit', () => {
     const cable = classifyTags({

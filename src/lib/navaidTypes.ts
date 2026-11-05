@@ -73,6 +73,9 @@ export interface Navaid {
   topmarkColour?: string | null;
   shape: string | null;
   topmarkShape?: string | null;
+  /** Daymark board shape/colour (e.g. square, triangle; green, red), when the source maps a daymark. */
+  daymarkShape?: string | null;
+  daymarkColour?: string | null;
   lightCategory?: string | null;
   lightGroup?: string | null;
   lightPeriod?: string | null;

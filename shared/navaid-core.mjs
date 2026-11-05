@@ -860,6 +860,8 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
   const buoyageSystem = firstTag(tags, [`seamark:${type}:system`, 'seamark:buoy_lateral:system', 'seamark:beacon_lateral:system']);
   const shape = firstTag(tags, [`seamark:${type}:shape`]);
   const topmarkShape = firstTag(tags, ['seamark:topmark:shape', 'seamark:topmark']);
+  const daymarkShape = firstTag(tags, ['seamark:daymark:shape']);
+  const daymarkColour = firstTag(tags, ['seamark:daymark:colour']);
   const lightCategory = firstTag(tags, ['seamark:light:category']);
   const lightGroup = firstTag(tags, ['seamark:light:group']);
   const lightPeriod = firstTag(tags, ['seamark:light:period']);
@@ -908,6 +910,8 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
     topmarkColour,
     shape,
     topmarkShape,
+    daymarkShape,
+    daymarkColour,
     lightCategory,
     lightGroup,
     lightPeriod,

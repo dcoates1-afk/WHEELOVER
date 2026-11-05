@@ -423,6 +423,37 @@ function beaconBoardSvg(side: 'port' | 'starboard', region: 'A' | 'B', colour?: 
   return `${board}<rect x="13.5" y="12" width="5" height="15" fill="#a67c52" stroke="#04141f" stroke-width="1.2"/>
     <path d="M8 27.5 H13 M19 27.5 H24" stroke="#3dd6ff" stroke-width="1.4" stroke-linecap="round"/>`;
 }
+
+/**
+ * A fixed special-purpose beacon as it stands: its mapped daymark board on
+ * a post in the water, the same post and water ticks as a lateral board.
+ * Unlike lateral boards, the shape and colour come straight from the
+ * source's daymark tags — a special mark carries no port/starboard
+ * meaning, so no region swapping applies. Unknown shapes or colours
+ * return null so the caller keeps the plain diamond.
+ */
+function specialDaymarkBoardSvg(shape: string, colour: string | null): string | null {
+  const ink = colour ? mappedInks(colour)[0] : undefined;
+  if (!ink) return null;
+  const outline = 'stroke="#04141f" stroke-width="1.2"';
+  const s = shape.trim().toLowerCase();
+  let board: string;
+  if (s === 'square' || s === 'rectangle') {
+    board = `<rect x="8" y="3" width="13" height="9" rx="1" fill="${ink}" ${outline}/>`;
+  } else if (s.startsWith('triangle')) {
+    board = s.includes('point down')
+      ? `<path d="M16 12 L8.5 2 L23.5 2 Z" fill="${ink}" ${outline} stroke-linejoin="round"/>`
+      : `<path d="M16 2 L23.5 12 L8.5 12 Z" fill="${ink}" ${outline} stroke-linejoin="round"/>`;
+  } else if (s === 'diamond') {
+    board = `<path d="M16 1 L23 7.5 L16 14 L9 7.5 Z" fill="${ink}" ${outline} stroke-linejoin="round"/>`;
+  } else if (s === 'circle') {
+    board = `<circle cx="16" cy="7" r="5.5" fill="${ink}" ${outline}/>`;
+  } else {
+    return null;
+  }
+  return `${board}<rect x="13.5" y="12" width="5" height="15" fill="#a67c52" stroke="#04141f" stroke-width="1.2"/>
+    <path d="M8 27.5 H13 M19 27.5 H24" stroke="#3dd6ff" stroke-width="1.4" stroke-linecap="round"/>`;
+}
 export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: string | null): SymbolSpec {
   const label = CATEGORY_LABELS[category] ?? 'Mark';
   switch (category) {
@@ -689,6 +720,18 @@ export function symbolForMark(mark: Navaid, region: 'A' | 'B'): MarkSymbolSpec {
   ) {
     const side = mark.category === 'lateral_port' ? 'port' : 'starboard';
     base = { svg: svgWrap(beaconBoardSvg(side, region, mark.colour)), label: base.label };
+  }
+  // A fixed special-purpose beacon with a mapped daymark draws that board
+  // on a post, the way a lateral beacon draws its board. Buoy-form special
+  // marks and special beacons without daymark tags keep the diamond.
+  if (
+    mark.category === 'special_purpose' &&
+    mark.form === 'beacon' &&
+    mark.daymarkShape &&
+    mark.daymarkColour
+  ) {
+    const board = specialDaymarkBoardSvg(mark.daymarkShape, mark.daymarkColour);
+    if (board) base = { svg: svgWrap(board), label: base.label };
   }
   const signals = markSignals(mark);
   if (!signals.light && !signals.sound && !signals.racon) {

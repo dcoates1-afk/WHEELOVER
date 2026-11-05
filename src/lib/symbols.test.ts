@@ -88,6 +88,36 @@ describe('pile and beacon-board symbols', () => {
   });
 });
 
+describe('special-beacon daymark boards', () => {
+  it('draws a beacon-form special mark with a daymark as its board on a post', () => {
+    const spec = symbolForMark(
+      buoy({ category: 'special_purpose', form: 'beacon', daymarkShape: 'square', daymarkColour: 'green' }),
+      'B',
+    );
+    expect(spec.svg).toContain('x="8" y="3" width="13" height="9"');
+    expect(spec.svg).toContain('#26a65b');
+    expect(spec.svg).toContain('x="13.5" y="12" width="5" height="15"');
+    expect(spec.svg).toContain('M8 27.5 H13');
+    expect(spec.svg).not.toBe(symbolForMark(buoy({ category: 'special_purpose', form: 'beacon' }), 'B').svg);
+  });
+
+  it('draws a triangle daymark as a triangle, not a square', () => {
+    const spec = symbolForMark(
+      buoy({ category: 'special_purpose', form: 'beacon', daymarkShape: 'triangle, point up', daymarkColour: 'red' }),
+      'B',
+    );
+    expect(spec.svg).toContain('M16 2 L23.5 12 L8.5 12 Z');
+    expect(spec.svg).toContain('#e23b3b');
+    expect(spec.svg).not.toContain('x="8" y="3" width="13" height="9"');
+  });
+
+  it('leaves a special beacon without daymark tags as the plain diamond', () => {
+    const spec = symbolForMark(buoy({ category: 'special_purpose', form: 'beacon' }), 'B');
+    expect(spec.svg).toContain('#f4c531');
+    expect(spec.svg).not.toContain('x="13.5" y="12" width="5" height="15"');
+  });
+});
+
 describe('cable symbol', () => {
   it('draws an orange wire distinct from the tower and turbine', () => {
     const cable = symbolFor('cable_overhead', 'A');

@@ -1027,16 +1027,21 @@ describe('cross-source merge', () => {
     expect(navaids[0].sources).toEqual(['osm', 'ccg']);
   });
 
-  it('does not merge different designators on the same light', () => {
+  it('does not merge different designators on the same light beyond the signature radius', () => {
+    // Same signature within 100 m DOES merge regardless of designator
+    // (see the signature tests below), so this pair sits at 150 m: beyond
+    // the radius, different designators stay separate.
     const osm = mark({ category: 'special_purpose', lat: 50.7, lon: -1.2, name: 'Buoy 1', light: 'Fl Y 4s' });
-    const official = mark({ category: 'light', lat: 50.7009, lon: -1.2, name: 'Buoy 2', light: 'Fl Y 4s', source: 'ccg' });
+    const official = mark({ category: 'light', lat: 50.70135, lon: -1.2, name: 'Buoy 2', light: 'Fl Y 4s', source: 'ccg' });
     const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
     expect(navaids).toHaveLength(2);
   });
 
-  it('does not treat an ordinary last word as a designator', () => {
+  it('does not treat an ordinary last word as a designator beyond the signature radius', () => {
+    // As above: within 100 m the signature rule merges these anyway, so
+    // the pair sits at 150 m to guard the designator rule itself.
     const osm = mark({ category: 'special_purpose', lat: 50.7, lon: -1.2, name: 'North Light', light: 'Fl Y 4s' });
-    const official = mark({ category: 'light', lat: 50.7009, lon: -1.2, name: 'South Light', light: 'Fl Y 4s', source: 'ccg' });
+    const official = mark({ category: 'light', lat: 50.70135, lon: -1.2, name: 'South Light', light: 'Fl Y 4s', source: 'ccg' });
     const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
     expect(navaids).toHaveLength(2);
   });
@@ -1218,6 +1223,115 @@ describe('minor light attach', () => {
     expect(reverse.navaids).toHaveLength(1);
     expect(forward.navaids[0].category).toBe(reverse.navaids[0].category);
     expect(forward.navaids[0].light).toBe(reverse.navaids[0].light);
+  });
+});
+
+describe('minor light signature merge', () => {
+  it('merges an official light into an OSM aid on the same colour and pattern, names aside', () => {
+    const osm = mark({ category: 'lateral_starboard', name: 'Harbour Buoy', light: 'Fl red 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'light', name: 'Something Else Entirely', light: 'Fl R 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.70072, lon: -1.2, source: 'uscg' });
+    const { navaids, removed } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(1);
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('lateral_starboard');
+    expect(navaids[0].lat).toBe(50.7);
+    expect(navaids[0].lon).toBe(-1.2);
+    expect(navaids[0].light).toBe('Fl R 4s');
+    expect(navaids[0].sources).toEqual(['osm', 'uscg']);
+  });
+
+  it('merges an archive-shaped aid whose light is only a composed string', () => {
+    const osm = mark({ category: 'special_purpose', name: 'Harbour Buoy', light: 'Fl yellow 4s', lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'light', name: 'Unrelated Name', light: 'Fl Y 4s', lightCharacter: 'Fl', lightColour: 'Y', lat: 50.70072, lon: -1.2, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('special_purpose');
+    expect(navaids[0].lat).toBe(50.7);
+    expect(navaids[0].sources).toEqual(['osm', 'ccg']);
+  });
+
+  it('does not merge the same colour with a different pattern', () => {
+    const osm = mark({ category: 'lateral_starboard', name: 'Buoy', light: 'Fl red 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'light', name: 'Other', light: 'Fl R 6s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.70072, lon: -1.2, source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not merge the same pattern with a different colour', () => {
+    const osm = mark({ category: 'special_purpose', name: 'Buoy', light: 'Fl yellow 4s', lightCharacter: 'Fl', lightColour: 'yellow', lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'light', name: 'Other', light: 'Fl G 4s', lightCharacter: 'Fl', lightColour: 'green', lat: 50.70072, lon: -1.2, source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not merge a rear range light into a front aid', () => {
+    const osm = mark({ category: 'transit_front', name: 'Range Front', light: 'F white', lightCharacter: 'F', lightColour: 'white', lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'light', name: 'Somewhere rear range light', light: 'F W', lightCharacter: 'F', lightColour: 'W', lat: 50.70036, lon: -1.2, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not merge the same signature beyond 100 m', () => {
+    const osm = mark({ category: 'lateral_starboard', name: 'Buoy', light: 'Fl red 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'light', name: 'Other', light: 'Fl R 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.70135, lon: -1.2, source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not merge an unlit aid on signature alone', () => {
+    const osm = mark({ category: 'lateral_starboard', name: 'Buoy', light: null, lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'light', name: 'Other', light: 'Fl R 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 50.70072, lon: -1.2, source: 'uscg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('keeps the five real Victoria Traffic Scheme buoys distinct while combining each with its CCG light', () => {
+    // Real positions: OSM carries two nodes named #1 (one at #2's spot)
+    // and none named #2, so names alone cannot pair them; proximity and
+    // the shared Fl Y 4s signature must. OSM #5 carries no light string,
+    // only a yellow colour, so it pairs by the attach rule instead.
+    const osmMarks = [
+      mark({ id: 'osm:node/4291664945', category: 'special_purpose', name: '#1', light: 'Fl yellow 4s', lat: 48.4241495, lon: -123.3833621 }),
+      mark({ id: 'osm:node/4291664943', category: 'special_purpose', name: '#1', light: 'Fl yellow 4s', lat: 48.4239622, lon: -123.3811187 }),
+      mark({ id: 'osm:node/4291664948', category: 'special_purpose', name: '#3', light: 'Fl yellow 4s', lat: 48.4241167, lon: -123.3791648 }),
+      mark({ id: 'osm:node/4291664946', category: 'special_purpose', name: '#4', light: 'Fl yellow 4s', lat: 48.4243233, lon: -123.3850319 }),
+      mark({ id: 'osm:node/4291664947', category: 'special_purpose', name: '#5', light: null, colour: 'yellow', lat: 48.4243698, lon: -123.3866087 }),
+    ];
+    const ccgMarks = [
+      mark({ id: 'ccg:pac:208.2', category: 'light', name: 'Victoria Harbour Traffic Scheme Cautionary Light Buoy 1', light: 'Fl Y 4s', lightCharacter: 'Fl', lightColour: 'Y', lat: 48.42414, lon: -123.38308, source: 'ccg' }),
+      mark({ id: 'ccg:pac:208.4', category: 'light', name: 'Victoria Harbour Traffic Scheme Cautionary Light Buoy 2', light: 'Fl Y 4s', lightCharacter: 'Fl', lightColour: 'Y', lat: 48.42397, lon: -123.38103, source: 'ccg' }),
+      mark({ id: 'ccg:pac:208.6', category: 'light', name: 'Victoria Harbour Traffic Scheme Cautionary Light Buoy 3', light: 'Fl Y 4s', lightCharacter: 'Fl', lightColour: 'Y', lat: 48.42422, lon: -123.37908, source: 'ccg' }),
+      mark({ id: 'ccg:pac:208.8', category: 'light', name: 'Victoria Harbour Traffic Scheme Cautionary Light Buoy 4', light: 'Fl Y 4s', lightCharacter: 'Fl', lightColour: 'Y', lat: 48.42419, lon: -123.38489, source: 'ccg' }),
+      mark({ id: 'ccg:pac:208.9', category: 'light', name: 'Victoria Harbour Traffic Scheme Cautionary Light Buoy 5', light: 'Fl Y 4s', lightCharacter: 'Fl', lightColour: 'Y', lat: 48.42419, lon: -123.38697, source: 'ccg' }),
+    ];
+    const merged = mergeNavaidSources([...osmMarks, ...ccgMarks]) as { navaids: Navaid[]; removed: number };
+    const deduped = dedupeNavaids(merged.navaids) as { navaids: Navaid[]; removed: number };
+    expect(deduped.navaids).toHaveLength(5);
+    expect(deduped.navaids.every((n) => n.category === 'special_purpose')).toBe(true);
+    expect(deduped.navaids.every((n) => (n.sources ?? []).includes('osm') && (n.sources ?? []).includes('ccg'))).toBe(true);
+    expect(deduped.navaids.every((n) => osmMarks.some((o) => o.lat === n.lat && o.lon === n.lon))).toBe(true);
+  });
+
+  it('keeps the real Victoria V21 pair combined at the OSM position', () => {
+    const osm = mark({ id: 'osm:node/4291664941', category: 'lateral_port', name: 'Victoria Harbour Entrance Light Buoy V21', light: 'Fl green 4s', colour: 'green', lat: 48.4144737, lon: -123.4032468 });
+    const official = mark({ id: 'ccg:pac:204.5', category: 'light', name: 'Victoria Harbour Entrance light buoy V21', light: 'Fl G 4s', lightCharacter: 'Fl', lightColour: 'G', lat: 48.4144722, lon: -123.40325, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('lateral_port');
+    expect(navaids[0].lat).toBe(48.4144737);
+    expect(navaids[0].lon).toBe(-123.4032468);
+    expect(navaids[0].sources).toEqual(['osm', 'ccg']);
+  });
+
+  it('combines the real Victoria VH pair across its 98.8 m position gap', () => {
+    const osm = mark({ id: 'osm:node/1199797497', category: 'special_purpose', name: 'Victoria Harbor Buoy VH.', light: 'Fl yellow 4s', lightCharacter: 'Fl', lightColour: 'yellow', lat: 48.3755556, lon: -123.3913889 });
+    const official = mark({ id: 'ccg:pac:203', category: 'light', name: 'Victoria Harbour Cautionary light buoy VH', light: 'Fl Y 4s', lightCharacter: 'Fl', lightColour: 'Y', lat: 48.37536, lon: -123.39269, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].category).toBe('special_purpose');
+    expect(navaids[0].lat).toBe(48.3755556);
+    expect(navaids[0].lon).toBe(-123.3913889);
+    expect(navaids[0].sources).toEqual(['osm', 'ccg']);
   });
 });
 

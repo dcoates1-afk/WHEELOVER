@@ -1226,6 +1226,84 @@ function lightColoursConflict(a, b) {
   return true;
 }
 
+/** A minor official light within this distance of an OSM aid with the same
+ * light colour and the same light pattern is that aid's light. Surveys
+ * and mappers disagree on names far more than on signatures, and
+ * neighbouring aids rarely share both colour and pattern this close. */
+const LIGHT_SIGNATURE_M = 100;
+
+/**
+ * A record's light as (character, group, period, colours). Split fields
+ * win when present (live records); the composed light string fills any
+ * gap (archive records carry only that string, e.g. "Fl red 4s", and
+ * test records may carry a period only there). An absent group means a
+ * single flash in every source, so it normalises to "1"; an absent
+ * period stays unknown, never assumed.
+ */
+function parseComposedLight(light) {
+  const first = String(light ?? '').split(';')[0].trim();
+  const match = /^([A-Za-z]+)(?:\(([^)]+)\))?\s*(.*)$/.exec(first);
+  if (!match) return { char: null, group: null, period: null, colours: new Set() };
+  const rest = match[3] ?? '';
+  const periodMatch = /(\d+(?:\.\d+)?)\s*s?\s*$/.exec(rest);
+  const period = periodMatch ? parseFloat(periodMatch[1]) : null;
+  const colourText = periodMatch ? rest.slice(0, periodMatch.index) : rest;
+  return { char: match[1].toUpperCase(), group: match[2] ? match[2].replace(/\s+/g, '') : null, period, colours: lightColourSet({ lightColour: colourText }) };
+}
+
+function lightSignature(record) {
+  const parsed = parseComposedLight(record.light);
+  const rawChar = record.lightCharacter != null ? String(record.lightCharacter) : null;
+  const rawGroup = record.lightGroup != null ? String(record.lightGroup) : null;
+  const rawPeriod = record.lightPeriod != null ? String(record.lightPeriod) : null;
+  const paren = rawChar ? /\(([^)]+)\)/.exec(rawChar) : null;
+  const char = rawChar ? rawChar.replace(/\(([^)]+)\)/, '').trim().toUpperCase() : parsed.char;
+  const group = paren ? paren[1].replace(/\s+/g, '') : (rawGroup ? rawGroup.replace(/\s+/g, '') : (parsed.group ?? (char ? '1' : null)));
+  let period = null;
+  if (rawPeriod) {
+    const match = /(\d+(?:\.\d+)?)/.exec(rawPeriod);
+    period = match ? parseFloat(match[1]) : null;
+  } else {
+    period = parsed.period;
+  }
+  const fieldColours = lightColourSet(record);
+  const colours = fieldColours.size ? fieldColours : parsed.colours;
+  return { char: char || null, group, period, colours };
+}
+
+/**
+ * True when two records carry the same light signature: the same
+ * character, no positively disagreeing group or period, and at least one
+ * shared colour. Both sides must carry a character and a colour — a
+ * missing character or colour cannot confirm a match. A group or period
+ * recorded on only one side is not a disagreement.
+ */
+function lightSignaturesMatch(a, b) {
+  const sigA = lightSignature(a);
+  const sigB = lightSignature(b);
+  if (!sigA.char || !sigB.char || sigA.char !== sigB.char) return false;
+  if (sigA.group != null && sigB.group != null && sigA.group !== sigB.group) return false;
+  if (sigA.period != null && sigB.period != null && sigA.period !== sigB.period) return false;
+  if (!sigA.colours.size || !sigB.colours.size) return false;
+  for (const colour of sigA.colours) if (sigB.colours.has(colour)) return true;
+  return false;
+}
+
+/**
+ * True when an official light's name states a range role opposite to the
+ * aid's: a rear range light is not the front aid, even with an identical
+ * signature — ranges share signatures by design, so merging them would
+ * delete a real aid from the chart. Only a positively stated opposite
+ * role blocks; an unmarked name never does.
+ */
+function transitRoleConflict(light, aid) {
+  if (aid.category !== 'transit_front' && aid.category !== 'transit_rear') return false;
+  const tokens = normName(light.name).split(' ').filter(Boolean);
+  if (tokens.includes('front') && aid.category === 'transit_rear') return true;
+  if (tokens.includes('rear') && aid.category === 'transit_front') return true;
+  return false;
+}
+
 /** Ordinary words that must never count as an aid identifier. */
 const DESIGNATOR_GENERIC = new Set(['light', 'buoy', 'beacon', 'mark', 'tower', 'pole', 'post', 'pile', 'rock', 'shoal', 'point', 'island', 'harbour', 'harbor', 'channel', 'entrance', 'fairway', 'river', 'bay', 'lake', 'cape', 'head', 'wharf', 'pier', 'dock', 'breakwater', 'jetty', 'marina', 'anchorage', 'reef', 'bank', 'ledge', 'passage', 'narrows', 'creek', 'north', 'south', 'east', 'west', 'northern', 'southern', 'eastern', 'western', 'upper', 'lower', 'inner', 'outer', 'middle', 'front', 'rear', 'range', 'station', 'building', 'structure']);
 
@@ -1297,8 +1375,10 @@ const SAME_SOURCE_NAME_M = 50;
  * Cross-source merge for records describing the same physical aid, run in
  * addition to the 40 m dedupeNavaids pass. Match rules: same normalised
  * name within 250 m with a compatible light (equal, or one side unlit);
- * a minor light within 50 m of an aid with a compatible light; the same
- * designator token within 250 m with a compatible light and no colour
+ * a minor light within 50 m of an aid with a compatible light; a minor
+ * official light within 100 m of an OSM aid with the same light colour
+ * and pattern, whatever the names say (a stated range role must agree);
+ * the same designator token within 250 m with a compatible light and no colour
  * conflict; same family across sources within 50 m with an equal light
  * character; wind farms by overlapping area. Never merges across families
  * on position alone, and wrecks merge only on the same name. The family
@@ -1360,7 +1440,26 @@ export function mergeNavaidSources(items, options = {}) {
     if (lightSide && aidSide && metres <= LIGHT_ATTACH_M) {
       const aLight = normLightCharacter(aidSide);
       const bLight = normLightCharacter(lightSide);
-      if (!aLight || !bLight || aLight === bLight) return true;
+      // A stated range role must agree here too: a rear range light
+      // attaching to a front aid would delete a real aid, same as the
+      // signature rule below.
+      if ((!aLight || !bLight || aLight === bLight) && !transitRoleConflict(lightSide, aidSide)) return true;
+    }
+    // A minor official light very close to an OSM aid with the same light
+    // colour and the same light pattern is that aid's light, whatever the
+    // names say: surveys and mappers disagree on names far more than on
+    // signatures. The lateral colour guard above already blocks
+    // positively disagreeing pairs, and a stated range role must agree.
+    // OSM-OSM pairs are untouched: this cross-references the official
+    // lists against the charted aids, nothing else.
+    const signatureLight = [item, other].find((m) => m.category === 'light' && OFFICIAL_NAVAID_SOURCES.has(String(m.source ?? '').toLowerCase()));
+    const signatureAid = signatureLight
+      ? [item, other].find((m) => m !== signatureLight && m.source === 'osm' && m.category !== 'light' && m.category !== 'major_light' && m.category !== 'wind_farm' && m.category !== 'communication_area')
+      : undefined;
+    if (signatureLight && signatureAid && metres <= LIGHT_SIGNATURE_M &&
+      !transitRoleConflict(signatureLight, signatureAid) &&
+      lightSignaturesMatch(signatureLight, signatureAid)) {
+      return true;
     }
     // Same designator, same light: one aid whose official position and
     // mapper pin disagree by more than the attach radius (the VH buoy

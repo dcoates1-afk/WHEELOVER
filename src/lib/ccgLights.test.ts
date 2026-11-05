@@ -47,3 +47,25 @@ describe('ccgRecordToNavaid', () => {
     expect(mark.description).toBeNull();
   });
 });
+
+describe('ccgRecordToNavaid classification', () => {
+  it('maps a yellow ODAS buoy to a special-purpose buoy, not a minor light', () => {
+    const mark = ccgRecordToNavaid(record({
+      no: '177.5',
+      name: 'South Nomad ODAS light buoy 46036',
+      location: 'Offshore W. of Cape Scott.',
+      lat: 48.355,
+      lon: -133.93833333333333,
+      character: 'Fl(5)',
+      colour: 'Y',
+      period: '20s',
+      light: 'Fl(5) Y 20s',
+      description: 'Yellow, ODAS, marked “46036”.',
+    }));
+    expect(mark.category).toBe('special_purpose');
+    expect(mark.form).toBe('buoy');
+    expect(mark.colour).toBe('yellow');
+    expect(mark.light).toBe('Fl(5) Y 20s');
+    expect(mark.priority).toBe(priorityFor('special_purpose'));
+  });
+});

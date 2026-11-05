@@ -1446,3 +1446,44 @@ describe('visible marks', () => {
     expect(visible.every((entry) => entry.category === 'major_light')).toBe(true);
   });
 });
+
+describe('official buoy merge guards', () => {
+  it('does not merge an official green buoy into a red charted aid of the same name', () => {
+    const osm = mark({ category: 'lateral_other', colour: 'red', lightColour: 'red', name: 'Reef Buoy', lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'lateral_other', colour: 'green', lightColour: 'green', name: 'Reef Buoy', lat: 50.70007, lon: -1.2, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('merges an official buoy into a charted aid of the same name and colour', () => {
+    const osm = mark({ category: 'lateral_other', colour: 'green', name: 'Reef Buoy', lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'lateral_other', colour: 'green', lightColour: 'green', light: 'Fl G 4s', name: 'Reef Buoy', lat: 50.70007, lon: -1.2, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].lat).toBe(50.7);
+    expect(navaids[0].light).toBe('Fl G 4s');
+  });
+
+  it('dedupe does not collapse a lateral aid with a conflicting-colour official buoy', () => {
+    const osm = mark({ category: 'lateral_other', colour: 'red', name: 'Reef Buoy', lat: 50.7, lon: -1.2 });
+    const official = mark({ category: 'lateral_other', colour: 'green', lightColour: 'green', name: 'Reef Buoy', lat: 50.70007, lon: -1.2, source: 'ccg' });
+    const { navaids, removed } = dedupeNavaids([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(0);
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('dedupe keeps the charted position when a richer official buoy collapses into it', () => {
+    const osm = mark({ category: 'lateral_other', colour: 'green', name: 'Harbour Buoy', lat: 50.7, lon: -1.2 });
+    const official = mark({
+      category: 'lateral_other', colour: 'green', light: 'Fl G 4s', lightCharacter: 'Fl',
+      lightColour: 'green', name: 'Other Buoy', height: '10', range: '5',
+      description: 'Official listing', lat: 50.70007, lon: -1.2, source: 'uscg',
+    });
+    const { navaids, removed } = dedupeNavaids([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(removed).toBe(1);
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].lat).toBe(50.7);
+    expect(navaids[0].lon).toBe(-1.2);
+    expect(navaids[0].light).toBe('Fl G 4s');
+  });
+});

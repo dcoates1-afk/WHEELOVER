@@ -1,5 +1,6 @@
 import type { Navaid } from './navaidTypes';
 import { priorityFor } from '../../shared/navaid-core.mjs';
+import { classifyOfficialMark } from './officialMarkClassification';
 
 /** One row of a USCG Light List dataset file (public/uscg-lights-<volume>.json). */
 export interface UscgLightRecord {
@@ -25,25 +26,32 @@ interface UscgLightsFile {
 
 /** A USCG light as a chart mark: official source, merged downstream by id/position. */
 export function uscgRecordToNavaid(record: UscgLightRecord): Navaid {
+  // The name and desc text say what the aid physically is; a buoy named
+  // as one must not render as a minor light standing on nothing.
+  const markClass = classifyOfficialMark({
+    name: record.name,
+    description: record.desc,
+    lightColour: record.colour,
+  });
   return {
     id: `uscg:${record.v}:${record.no}`,
     lat: record.lat,
     lon: record.lon,
-    category: 'light',
-    form: 'light',
+    category: markClass.category,
+    form: markClass.form,
     name: record.name,
     light: record.light,
     lightCharacter: record.character,
     lightColour: record.colour,
     lightPeriod: record.period,
     lightGroup: record.group,
-    colour: null,
-    shape: null,
+    colour: markClass.colour,
+    shape: markClass.shape,
     height: record.focal,
     range: record.range,
     description: record.desc,
     lit: true,
-    priority: priorityFor('light'),
+    priority: priorityFor(markClass.category),
     source: 'uscg',
     sourceCitation: 'USCG Light List',
     sourceUrl: `https://navcen.uscg.gov/sites/default/files/msi/${record.src}`,

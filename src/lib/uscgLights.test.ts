@@ -50,10 +50,13 @@ const record: UscgLightRecord = {
 };
 
 describe('uscgRecordToNavaid', () => {
-  it('maps a USCG record to a light mark', () => {
+  it('maps a red nun buoy record to a lateral buoy, not a minor light', () => {
     const navaid = uscgRecordToNavaid(record);
     expect(navaid.id).toBe('uscg:01:40095');
-    expect(navaid.category).toBe('light');
+    expect(navaid.category).toBe('lateral_other');
+    expect(navaid.form).toBe('buoy');
+    expect(navaid.colour).toBe('red');
+    expect(navaid.shape).toBe('conical');
     expect(navaid.light).toBe('Fl R 4s');
     expect(navaid.lightCharacter).toBe('Fl');
     expect(navaid.lightColour).toBe('red');

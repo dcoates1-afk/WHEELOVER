@@ -1031,12 +1031,16 @@ export function dedupeNavaids(items, options = {}) {
           if ((item.path?.length ?? 0) >= 2 || (other.path?.length ?? 0) >= 2) continue;
           const metres = distanceMeters(item.lat, item.lon, other.lat, other.lon);
           if (metres > distance) continue;
-          // A lateral aid and a light whose colours positively disagree
-          // are different aids: never collapse them into one mark with
-          // the wrong colour. Both survive, with their own colours.
-          const lightRec = item.category === 'light' ? item : other.category === 'light' ? other : null;
-          const aidRec = lightRec === item ? other : lightRec === other ? item : null;
-          if (lightRec && aidRec && lateralColourConflict(aidRec, lightRec)) continue;
+          // A lateral aid and another record whose colours positively
+          // disagree are different aids: never collapse them into one
+          // mark with the wrong colour. Same guard as the merge stage,
+          // for pairs that reach dedupe without matching there.
+          const lateralRec = [item, other].find((m) => m.category.startsWith('lateral') || m.category.startsWith('preferred_channel'));
+          const lateralPartner = lateralRec ? [item, other].find((m) => m !== lateralRec) : null;
+          if (lateralRec && lateralPartner &&
+            (lateralColourConflict(lateralRec, lateralPartner) ||
+              lightColoursConflict(lateralRec, lateralPartner) ||
+              structureColoursConflict(lateralRec, lateralPartner))) continue;
           const sameName =
             normName(item.name) !== '' && normName(item.name) === normName(other.name);
           const sameFamily = familyOf(item.category) === familyOf(other.category);
@@ -1137,22 +1141,45 @@ export function dedupeNavaids(items, options = {}) {
       const structureSources = [...new Set([...(markRecord.sources ?? []), markRecord.source, ...(structureRecord.sources ?? []), structureRecord.source].filter(Boolean))];
       if (structureSources.length) merged.sources = structureSources;
     } else {
+      // An official aid collapsing with a charted aid is that aid's
+      // official listing, not a replacement: the charted record keeps its
+      // position and form, and the official record only fills light
+      // fields the charted record does not already carry. The merge stage
+      // above does the same; this is the same rule for pairs that reach
+      // dedupe without matching there (official positions are ~185 m,
+      // charted pins are metres).
+      const osmRecord = [item, previous].find((m) => m.source === 'osm');
+      const officialRecord = osmRecord
+        ? [item, previous].find((m) => m !== osmRecord && OFFICIAL_NAVAID_SOURCES.has(String(m.source ?? '').toLowerCase()))
+        : undefined;
+      const base = officialRecord ? osmRecord : preferred;
+      const filler = base === item ? previous : item;
       merged = {
-        ...preferred,
-        lightSectors: mergeLightSectors(preferred.lightSectors ?? [], other.lightSectors ?? []),
+        ...base,
+        lightSectors: mergeLightSectors(base.lightSectors ?? [], filler.lightSectors ?? []),
         // A duplicate record may be the only one carrying the sound or racon
         // signal; keeping both halves avoids silently dropping a charted aid.
-        fogSignal: preferred.fogSignal || other.fogSignal,
-        fogSignalCategory: preferred.fogSignalCategory ?? other.fogSignalCategory,
-        fogSignalGroup: preferred.fogSignalGroup ?? other.fogSignalGroup,
-        fogSignalPeriod: preferred.fogSignalPeriod ?? other.fogSignalPeriod,
-        fogSignalSequence: preferred.fogSignalSequence ?? other.fogSignalSequence,
-        radarTransponderCategory: preferred.radarTransponderCategory ?? other.radarTransponderCategory,
-        radarTransponderGroup: preferred.radarTransponderGroup ?? other.radarTransponderGroup,
-        radarTransponderPeriod: preferred.radarTransponderPeriod ?? other.radarTransponderPeriod,
-        radarTransponderSequence: preferred.radarTransponderSequence ?? other.radarTransponderSequence,
-        radarReflector: preferred.radarReflector || other.radarReflector,
+        fogSignal: base.fogSignal || filler.fogSignal,
+        fogSignalCategory: base.fogSignalCategory ?? filler.fogSignalCategory,
+        fogSignalGroup: base.fogSignalGroup ?? filler.fogSignalGroup,
+        fogSignalPeriod: base.fogSignalPeriod ?? filler.fogSignalPeriod,
+        fogSignalSequence: base.fogSignalSequence ?? filler.fogSignalSequence,
+        radarTransponderCategory: base.radarTransponderCategory ?? filler.radarTransponderCategory,
+        radarTransponderGroup: base.radarTransponderGroup ?? filler.radarTransponderGroup,
+        radarTransponderPeriod: base.radarTransponderPeriod ?? filler.radarTransponderPeriod,
+        radarTransponderSequence: base.radarTransponderSequence ?? filler.radarTransponderSequence,
+        radarReflector: base.radarReflector || filler.radarReflector,
       };
+      if (officialRecord) {
+        for (const field of LIGHT_FIELDS) {
+          const current = merged[field];
+          const value = officialRecord[field];
+          if ((current === null || current === undefined || current === '') &&
+            value !== null && value !== undefined && value !== '') {
+            merged[field] = value;
+          }
+        }
+      }
     }
     accepted[duplicateOf] = merged;
   }
@@ -1264,6 +1291,24 @@ function lightColourSet(record) {
     if (token) set.add(COLOUR_LETTERS[token] ?? token);
   }
   return set;
+}
+
+/** Colour names from a record's structure colour, letters mapped to words. */
+function structureColourSet(record) {
+  const set = new Set();
+  for (const token of String(record.colour ?? '').toLowerCase().split(/[^a-z]+/)) {
+    if (token) set.add(COLOUR_LETTERS[token] ?? token);
+  }
+  return set;
+}
+
+/** True when both records carry structure colours and they share none. */
+function structureColoursConflict(a, b) {
+  const aSet = structureColourSet(a);
+  const bSet = structureColourSet(b);
+  if (!aSet.size || !bSet.size) return false;
+  for (const colour of aSet) if (bSet.has(colour)) return false;
+  return true;
 }
 
 /** True when both records carry light colours and they share none. */
@@ -1471,12 +1516,18 @@ export function mergeNavaidSources(items, options = {}) {
     // must not merge on a shared name (parallel cable circuits share names).
     // Wind-farm merging above is unaffected: it returns before this guard.
     if ((item.path?.length ?? 0) >= 2 || (other.path?.length ?? 0) >= 2) return false;
-    // A lateral aid and a light whose colours positively disagree are
-    // different aids (or one record is wrong): never merge them, by any
-    // rule, rather than paint the aid with the wrong colour.
-    const lightRecord = [item, other].find((m) => m.category === 'light');
-    const otherRecord = lightRecord ? [item, other].find((m) => m !== lightRecord) : undefined;
-    if (lightRecord && otherRecord && lateralColourConflict(otherRecord, lightRecord)) return false;
+    // A lateral aid and another record whose colours positively disagree
+    // are different aids (or one record is wrong): never merge them, by
+    // any rule, rather than paint the aid with the wrong colour. This
+    // used to cover only minor lights merging into lateral aids; official
+    // buoys are aids now, so it covers aid-against-aid pairs too, on
+    // structure colours as well as light colours.
+    const lateralMember = [item, other].find((m) => m.category.startsWith('lateral') || m.category.startsWith('preferred_channel'));
+    const lateralPartner = lateralMember ? [item, other].find((m) => m !== lateralMember) : undefined;
+    if (lateralMember && lateralPartner &&
+      (lateralColourConflict(lateralMember, lateralPartner) ||
+        lightColoursConflict(lateralMember, lateralPartner) ||
+        structureColoursConflict(lateralMember, lateralPartner))) return false;
     // A minor light record at an aid's spot is that aid's light, not a
     // second aid: attach it when the aid carries no light or the same
     // light. Areas are excluded: a farm or reporting area's centre point

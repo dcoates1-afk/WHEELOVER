@@ -1,5 +1,6 @@
 import type { Navaid } from './navaidTypes';
 import { priorityFor } from '../../shared/navaid-core.mjs';
+import { classifyOfficialMark } from './officialMarkClassification';
 
 /** One row of the CCG List of Lights dataset (public/ccg-lights.json). */
 export interface CcgLightRecord {
@@ -30,24 +31,31 @@ interface CcgLightsFile {
 /** A CCG light as a chart mark: official source, merged downstream by id/position. */
 export function ccgRecordToNavaid(record: CcgLightRecord): Navaid {
   const description = [record.location, record.description].filter(Boolean).join(' · ') || null;
+  // The name and structure text say what the aid physically is; a buoy
+  // named as one must not render as a minor light standing on nothing.
+  const markClass = classifyOfficialMark({
+    name: record.name,
+    description: record.description,
+    lightColour: record.colour,
+  });
   return {
     id: `ccg:${record.volume}:${record.no}`,
     lat: record.lat,
     lon: record.lon,
-    category: 'light',
-    form: 'light',
+    category: markClass.category,
+    form: markClass.form,
     name: record.name,
     light: record.light,
     lightCharacter: record.character,
     lightColour: record.colour,
     lightPeriod: record.period,
-    colour: null,
-    shape: null,
+    colour: markClass.colour,
+    shape: markClass.shape,
     height: record.focalHeight,
     range: record.range,
     description,
     lit: true,
-    priority: priorityFor('light'),
+    priority: priorityFor(markClass.category),
     source: 'ccg',
     sourceCitation: 'CCG List of Lights, Buoys and Fog Signals',
     sourceUrl: record.sourceUrl,

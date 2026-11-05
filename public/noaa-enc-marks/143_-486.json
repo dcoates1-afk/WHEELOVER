@@ -1,0 +1,1 @@
+{"navaids":[{"id":"noaa-enc:Landmark:263901","lat":35.8591409,"lon":-121.41659759999999,"description":"Bridge","source":"noaa-enc","sourceCitation":"NOAA ENC Direct to GIS","sourceUrl":"https://encdirect.noaa.gov/arcgis/rest/services/encdirect/enc_coastal/MapServer","sourceDate":"2003-07","category":"landmark","form":"landmark","priority":44}]}

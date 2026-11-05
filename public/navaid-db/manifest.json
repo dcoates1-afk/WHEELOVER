@@ -1,7 +1,7 @@
 {
   "schema": 2,
-  "version": "20261101154433-7e296f926e",
-  "generatedAt": "2026-11-01T15:44:33.132Z",
+  "version": "20261105050101-3b8ef1fdbf",
+  "generatedAt": "2026-11-05T05:01:01.340Z",
   "cellSize": 0.25,
   "regions": [
     {
@@ -13,7 +13,7 @@
         51.05,
         -0.75
       ],
-      "count": 2119,
+      "count": 2100,
       "sources": [
         "osm",
         "emodnet-heritage"
@@ -27,7 +27,7 @@
             51,
             -1
           ],
-          "count": 518
+          "count": 514
         },
         {
           "path": "solent/203_-6.json",
@@ -37,7 +37,7 @@
             51,
             -1.25
           ],
-          "count": 509
+          "count": 500
         },
         {
           "path": "solent/203_-4.json",
@@ -57,7 +57,7 @@
             50.75,
             -1
           ],
-          "count": 206
+          "count": 203
         },
         {
           "path": "solent/202_-7.json",
@@ -77,7 +77,7 @@
             50.75,
             -1.25
           ],
-          "count": 87
+          "count": 83
         },
         {
           "path": "solent/202_-4.json",
@@ -97,7 +97,7 @@
             51,
             -1.5
           ],
-          "count": 41
+          "count": 42
         },
         {
           "path": "solent/202_-8.json",
@@ -131,31 +131,34 @@
         }
       ],
       "categoryCounts": {
-        "gate": 14,
-        "facility": 76,
-        "light": 218,
-        "marina": 55,
-        "landmark": 5,
-        "major_light": 11,
-        "hazard": 182,
+        "mooring": 15,
         "lateral_starboard": 381,
         "lateral_port": 422,
+        "light": 199,
+        "landmark": 4,
+        "facility": 72,
         "wreck": 115,
+        "gate": 14,
+        "lateral_other": 38,
         "cardinal_south": 29,
-        "cardinal_north": 12,
-        "cardinal_west": 11,
-        "cardinal_east": 14,
-        "special_purpose": 395,
-        "safe_water": 1,
-        "anchorage": 8,
+        "special_purpose": 396,
+        "marina": 55,
+        "sector_beacon": 7,
+        "major_light": 8,
         "transit_front": 1,
         "range": 15,
         "transit_rear": 1,
+        "lighthouse": 4,
+        "hazard": 169,
         "preferred_channel_starboard": 1,
+        "pile": 13,
         "isolated_danger": 4,
-        "mooring": 17,
-        "lateral_other": 38,
-        "hazard_danger": 92,
+        "cardinal_north": 12,
+        "cardinal_west": 11,
+        "cardinal_east": 14,
+        "safe_water": 1,
+        "anchorage": 8,
+        "hazard_danger": 90,
         "notice": 1
       }
     },
@@ -168,7 +171,7 @@
         40.95,
         -73.7
       ],
-      "count": 1187,
+      "count": 1182,
       "sources": [
         "osm",
         "noaa-enc"
@@ -182,7 +185,7 @@
             40.75,
             -74
           ],
-          "count": 609
+          "count": 604
         },
         {
           "path": "ny-harbor/162_-296.json",
@@ -276,26 +279,28 @@
         }
       ],
       "categoryCounts": {
-        "marina": 93,
-        "major_light": 15,
-        "landmark": 7,
-        "light": 28,
-        "facility": 58,
-        "safe_water": 2,
-        "lateral_other": 16,
-        "lateral_starboard": 147,
-        "hazard": 225,
-        "preferred_channel_port": 9,
-        "special_purpose": 71,
-        "mooring": 105,
-        "wreck": 237,
-        "lateral_port": 130,
-        "gate": 8,
-        "transit_front": 1,
         "hazard_danger": 17,
+        "marina": 93,
+        "hazard": 204,
+        "mooring": 106,
+        "lateral_port": 130,
+        "lateral_other": 16,
         "preferred_channel_starboard": 8,
+        "lateral_starboard": 147,
+        "wreck": 237,
+        "special_purpose": 71,
         "notice": 2,
+        "light": 25,
+        "facility": 56,
+        "pile": 19,
+        "gate": 8,
         "range": 7,
+        "preferred_channel_port": 9,
+        "major_light": 6,
+        "safe_water": 2,
+        "lighthouse": 11,
+        "landmark": 6,
+        "transit_front": 1,
         "anchorage": 1
       }
     }
@@ -455,7 +460,7 @@
   ],
   "stats": {
     "rawRecords": 3696,
-    "uniqueAids": 3306,
-    "duplicatesRemoved": 202
+    "uniqueAids": 3282,
+    "duplicatesRemoved": 194
   }
 }

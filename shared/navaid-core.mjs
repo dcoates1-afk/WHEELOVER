@@ -126,7 +126,7 @@ const MIN_ZOOM = {
   pylon: 13,
   pile: 13,
   sector_beacon: 13,
-  sector_light: 13,
+  sector_light: 7,
   pile_lit: 13,
   pile_unlit: 13,
   cable_overhead: 13,
@@ -512,13 +512,6 @@ function wreckBoatingEffect(category, waterLevel) {
   return [categoryEffect, water, fallback].filter(Boolean).join(' ') || null;
 }
 
-/** Mirror clockwise-from-north sector limits east-to-west, keeping north and south fixed. */
-export function mirrorLightSectorBearings(start, end) {
-  if (![start, end].every((value) => Number.isFinite(value) && value >= 0 && value <= 360)) return null;
-  const mirror = (bearing) => (360 - bearing) % 360;
-  return [mirror(end), mirror(start)];
-}
-
 /** Geographic arc for clockwise-from-north OSM sector bearings; invalid or zero-width sectors are omitted. */
 export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees = 4) {
   if (![lat, lon, start, end, radiusMeters, stepDegrees].every(Number.isFinite) ||
@@ -548,17 +541,15 @@ export function lightSectorArc(lat, lon, start, end, radiusMeters, stepDegrees =
       Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(destinationLatitude),
     );
 
-    // 1. Calculate standard degrees normally to keep the projection engine stable
+    // Bearings are clockwise from north and Leaflet plots [lat, lon] with
+    // north up, so the destination point lands at its charted bearing with
+    // no mirroring: a sector charted north of the light draws north of it.
     const normalLat = destinationLatitude * 180 / Math.PI;
     const normalLon = ((destinationLongitude * 180 / Math.PI + 540) % 360) - 180;
 
-    // 2. TRUE VERTICAL MIRROR FLIP: Invert latitude delta relative to the center lighthouse (lat)
-    // This perfectly mirrors North for South visually without spinning or rotating the shape.
-    const flippedLatDeg = lat - (normalLat - lat);
-
     return /** @type {[number, number]} */ ([
-      flippedLatDeg,
-      normalLon, // Keep normal longitude completely untouched so East and West do not shift
+      normalLat,
+      normalLon,
     ]);
   });
 }

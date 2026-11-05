@@ -1312,14 +1312,19 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       // legible beside the hazard spheres it is decluttered against.
       // A transit's two dots have to stay distinguishable, so it gets the
       // same extra room as a wreck rather than shrinking to two specks.
+      // Minor lights and cardinal marks read small at harbour scales, so
+      // they render at twice the base size; the beam and other annotations
+      // scale with the icon, since iconPx scales from the same size.
       const size =
-        mark.category === 'major_light'
-          ? baseSize + 4
-          : mark.category === 'wreck' ||
-              mark.category === 'transit_front' ||
-              mark.category === 'transit_rear'
-            ? baseSize + 2
-            : baseSize;
+        mark.category === 'light' || mark.category.startsWith('cardinal')
+          ? baseSize * 2
+          : mark.category === 'major_light'
+            ? baseSize + 4
+            : mark.category === 'wreck' ||
+                mark.category === 'transit_front' ||
+                mark.category === 'transit_rear'
+              ? baseSize + 2
+              : baseSize;
       // A mark carrying a light flare, sound beam or racon ring needs a wider
       // box than the aid itself; the aid stays the same size on screen and the
       // extra room holds the chart cues.

@@ -1085,6 +1085,9 @@ export async function queryChartFeaturePart(
       if (response.ok) break;
       const body = (await response.json().catch(() => ({}))) as { error?: string };
       lastError = new Error(body.error ?? `Bridge and protected-area data unavailable (HTTP ${response.status})`);
+      // The status rides on the error so a background retry can tell a
+      // rate limit or hard denial (stop) from a mirror outage (retry).
+      (lastError as { status?: number }).status = response.status;
       response = undefined;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Bridge and protected-area data unavailable');
@@ -1120,6 +1123,87 @@ export async function queryChartFeaturePart(
   chartFeatureMemory.set(key, { features, at: fetchedAt });
   void writeChartFeatureCell(key, features, fetchedAt);
   return { features, cached: Boolean(payload.meta?.cached), fetchedAt };
+}
+
+/**
+ * Backoff between background retry rounds for a chart-feature part that
+ * exhausted its foreground attempts. Minutes apart in total, so a
+ * saturated mirror gets room to recover instead of another immediate hit.
+ */
+export const CHART_FEATURE_BACKGROUND_RETRY_DELAYS_MS = [30_000, 60_000, 120_000];
+
+/**
+ * True when a chart-feature failure is worth retrying in the background:
+ * mirror outages, proxy 5xx and network blips are transient, but a 429
+ * (rate limit) or 403 (hard denial) means retrying would only add load
+ * against a refusal, so those stop at once. Aborts stop too.
+ */
+function isRetryableChartFeatureError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') return false;
+  const status = (error as { status?: number } | null)?.status;
+  return status !== 429 && status !== 403;
+}
+
+/**
+ * Fetch one chart-feature part, then keep retrying quietly in the
+ * background when the foreground attempts exhaust. The returned promise
+ * stays pending across background rounds and resolves the moment a round
+ * succeeds, so a caller that draws on resolution (the App overlay effect)
+ * fills the overlay in without the user panning or reloading; it rejects
+ * only when a round fails non-retryably or the delays run out. The rounds
+ * reuse queryChartFeaturePart unchanged, so memory/device cache semantics
+ * (fresh 6 h, stale-serve + quiet refresh) are exactly as before, and a
+ * caller-supplied signal stops the chain at once.
+ */
+export function queryChartFeaturePartWithBackgroundRetry(
+  bounds: Bounds,
+  part: ChartFeaturePart,
+  options: {
+    signal?: AbortSignal;
+    force?: boolean;
+    backgroundDelaysMs?: number[];
+  } = {},
+): Promise<LiveChartFeaturesResult> {
+  const delays = options.backgroundDelaysMs ?? CHART_FEATURE_BACKGROUND_RETRY_DELAYS_MS;
+  return new Promise<LiveChartFeaturesResult>((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
+    let round = 0;
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      if (timer !== undefined) clearTimeout(timer);
+      options.signal?.removeEventListener('abort', onAbort);
+      fn();
+    };
+    const onAbort = () => settle(() => reject(new DOMException('The operation was aborted', 'AbortError')));
+    if (options.signal) {
+      if (options.signal.aborted) {
+        onAbort();
+        return;
+      }
+      options.signal.addEventListener('abort', onAbort, { once: true });
+    }
+    const attemptRound = () => {
+      if (options.signal?.aborted) {
+        onAbort();
+        return;
+      }
+      queryChartFeaturePart(bounds, part, { signal: options.signal, force: options.force })
+        .then((result) => settle(() => resolve(result)))
+        .catch((error) => {
+          if (settled) return;
+          if (!isRetryableChartFeatureError(error) || options.signal?.aborted || round >= delays.length) {
+            settle(() => reject(error));
+            return;
+          }
+          const delay = delays[round];
+          round += 1;
+          timer = setTimeout(attemptRound, delay);
+        });
+    };
+    attemptRound();
+  });
 }
 
 /**

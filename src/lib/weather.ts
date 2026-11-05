@@ -10,6 +10,8 @@ export interface WeatherReport {
   wind: SeriesPoint[];
   gusts: SeriesPoint[];
   windDirection: SeriesPoint[];
+  /** Visibility in metres, hourly, from the forecast model. */
+  visibility: SeriesPoint[];
   temperature: SeriesPoint[];
   waves: SeriesPoint[];
   wavePeriod: SeriesPoint[];
@@ -23,6 +25,7 @@ export interface WeatherReport {
   /** Direction the surface current sets towards, degrees true. */
   currentDirection: SeriesPoint[];
   marineAvailable: boolean;
+  visibilityAvailable: boolean;
   tideModelAvailable: boolean;
   currentModelAvailable: boolean;
 }
@@ -56,7 +59,7 @@ export async function fetchWeather(lat: number, lon: number, signal?: AbortSigna
   const forecastParams = new URLSearchParams({
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
-    hourly: 'temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl',
+    hourly: 'temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,visibility',
     wind_speed_unit: 'kn',
     timezone: 'UTC',
     forecast_days: '2',
@@ -95,6 +98,7 @@ export async function fetchWeather(lat: number, lon: number, signal?: AbortSigna
     wind: series(forecast.hourly, 'wind_speed_10m'),
     gusts: series(forecast.hourly, 'wind_gusts_10m'),
     windDirection: series(forecast.hourly, 'wind_direction_10m'),
+    visibility: series(forecast.hourly, 'visibility'),
     temperature: series(forecast.hourly, 'temperature_2m'),
     waves: series(marine?.hourly, 'wave_height'),
     wavePeriod: series(marine?.hourly, 'wave_period'),
@@ -104,6 +108,7 @@ export async function fetchWeather(lat: number, lon: number, signal?: AbortSigna
     currentSpeed,
     currentDirection,
     marineAvailable: Array.isArray(marine?.hourly?.wave_height),
+    visibilityAvailable: Array.isArray(forecast.hourly?.visibility),
     tideModelAvailable: seaLevel.length > 1,
     currentModelAvailable: currentSpeed.length > 1,
   };

@@ -59,6 +59,13 @@ describe('settings', () => {
     expect(settings.boat.draughtM).toBe('1.6');
   });
 
+  it('keeps an air draft and defaults it to empty when missing', () => {
+    const kept = sanitizeSettings({ boat: { airDraftM: '4.5' } });
+    expect(kept.boat.airDraftM).toBe('4.5');
+    const missing = sanitizeSettings({ boat: {} });
+    expect(missing.boat.airDraftM).toBe('');
+  });
+
   it('round-trips through storage', () => {
     const storage = fakeStorage();
     writeSettings(storage, {

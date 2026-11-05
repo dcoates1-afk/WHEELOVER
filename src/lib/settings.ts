@@ -62,6 +62,8 @@ export interface BoatSettings {
   lengthM: string;
   beamM: string;
   draughtM: string;
+  /** Air draft (highest point above the waterline) in metres, as typed; empty means unknown. */
+  airDraftM: string;
   /** Fuel burn in litres per hour, as typed; empty means unknown. */
   fuelBurnLph: string;
   mmsi: string;
@@ -215,6 +217,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     lengthM: '',
     beamM: '',
     draughtM: '',
+    airDraftM: '',
     fuelBurnLph: '',
     mmsi: '',
     callSign: '',
@@ -275,6 +278,7 @@ export function sanitizeSettings(value: unknown): AppSettings {
       lengthM: text(boat.lengthM),
       beamM: text(boat.beamM),
       draughtM: text(boat.draughtM),
+      airDraftM: text(boat.airDraftM),
       fuelBurnLph: text(boat.fuelBurnLph),
       mmsi: text(boat.mmsi),
       callSign: text(boat.callSign),

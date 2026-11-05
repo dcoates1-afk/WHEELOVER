@@ -110,7 +110,7 @@ import type { GpsMode } from './lib/gpsPreference';
 import { navaidDatabase, regionForPoint } from './lib/navaidDb';
 import { ialaRegion } from './lib/navaids';
 import type { NavaidManifest } from './lib/navaidDb';
-import { queryChartFeaturePart, queryNavaids, type ChartFeature, type ChartFeaturePart } from './lib/overpass';
+import { queryChartFeaturePartWithBackgroundRetry, queryNavaids, type ChartFeature, type ChartFeaturePart } from './lib/overpass';
 import { loadCcgLights, ccgRecordToNavaid } from './lib/ccgLights';
 import { loadUscgLights, uscgRecordToNavaid } from './lib/uscgLights';
 import { loadMarineData, type MarineFeature } from './lib/marineDb';
@@ -727,7 +727,12 @@ export default function App() {
         setChartFeatures([...areas, ...bridges]);
       };
       for (const part of parts) {
-        void queryChartFeaturePart(view.bounds, part)
+        // A part whose foreground attempts exhaust keeps retrying quietly
+        // in the background: this promise resolves when a later round
+        // succeeds, so the overlay fills in without another pan or reload.
+        // Final exhaustion still lands here, and the half already drawn
+        // for this view stays put.
+        void queryChartFeaturePartWithBackgroundRetry(view.bounds, part)
           .then(({ features }) => {
             if (id !== chartFeatureRequestId.current) return;
             // Each half draws on its own arrival: bridges no longer wait for the
@@ -1303,6 +1308,10 @@ export default function App() {
           tss={marineFeatures?.tss ?? []}
           draughtM={(() => {
             const parsed = Number(settings.boat.draughtM);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+          })()}
+          airDraftM={(() => {
+            const parsed = Number(settings.boat.airDraftM);
             return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
           })()}
           fuelBurnLph={(() => {

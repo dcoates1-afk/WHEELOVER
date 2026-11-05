@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { bridgeCrossesWater, chartFeatureCacheKey, chartFeatureProperties, chartFeaturesFromElements, CHART_FEATURE_FILTER_VERSION, coalesceBridges, isTidalWater, queryChartFeaturePart, type ChartFeature } from './overpass';
+import { bridgeCrossesWater, chartFeatureCacheKey, chartFeatureProperties, chartFeaturesFromElements, CHART_FEATURE_FILTER_VERSION, coalesceBridges, isTidalWater, queryChartFeaturePart, queryChartFeaturePartWithBackgroundRetry, type ChartFeature } from './overpass';
 
 describe('water-crossing bridge detection', () => {
   it('does not treat a charted bridge over untidal water as a tidal bridge', () => {
@@ -1102,6 +1102,119 @@ describe('chart feature fetching', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe('chart feature background retry', () => {
+  const feature = {
+    id: 'bridge-1',
+    type: 'bridge',
+    name: 'Test Bridge',
+    lat: 52.11,
+    lon: -2.58,
+    path: [[52.11, -2.58]],
+    paths: [[[52.11, -2.58]]],
+    properties: {},
+    sourceUrl: 'https://example.invalid/1',
+  };
+
+  it('resolves on the first round without any background wait', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ features: [feature] }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const result = await queryChartFeaturePartWithBackgroundRetry([52.0, -2.6, 52.03, -2.56], 'bridges');
+      expect(result.features).toEqual([feature]);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('recovers when a background round succeeds after the foreground attempts exhaust', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => {
+      if (fetchMock.mock.calls.length <= 3) {
+        return { ok: false, status: 502, json: async () => ({ error: 'overpass unavailable' }) };
+      }
+      return { ok: true, json: async () => ({ features: [feature] }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const promise = queryChartFeaturePartWithBackgroundRetry([52.1, -2.7, 52.13, -2.66], 'bridges', { backgroundDelaysMs: [5000] });
+      await vi.advanceTimersByTimeAsync(30000);
+      const result = await promise;
+      expect(result.features).toEqual([feature]);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops at once on a rate limit instead of retrying in the background', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 429, json: async () => ({ error: 'rate limited' }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const promise = queryChartFeaturePartWithBackgroundRetry([52.2, -2.8, 52.23, -2.76], 'bridges', { backgroundDelaysMs: [5000] });
+      promise.catch(() => {});
+      await vi.advanceTimersByTimeAsync(30000);
+      await expect(promise).rejects.toThrow('rate limited');
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops at once on a hard denial instead of retrying in the background', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 403, json: async () => ({ error: 'forbidden' }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const promise = queryChartFeaturePartWithBackgroundRetry([52.3, -2.9, 52.33, -2.86], 'bridges', { backgroundDelaysMs: [5000] });
+      promise.catch(() => {});
+      await vi.advanceTimersByTimeAsync(30000);
+      await expect(promise).rejects.toThrow('forbidden');
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('gives up once the background delays run out', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 502, json: async () => ({ error: 'overpass unavailable' }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const promise = queryChartFeaturePartWithBackgroundRetry([52.4, -3.0, 52.43, -2.96], 'bridges', { backgroundDelaysMs: [1000, 2000] });
+      promise.catch(() => {});
+      await vi.advanceTimersByTimeAsync(30000);
+      await expect(promise).rejects.toThrow('overpass unavailable');
+      expect(fetchMock).toHaveBeenCalledTimes(9);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('an aborted signal stops the chain without another round', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 502, json: async () => ({ error: 'overpass unavailable' }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    const controller = new AbortController();
+    try {
+      const promise = queryChartFeaturePartWithBackgroundRetry([52.5, -3.1, 52.53, -3.06], 'bridges', { signal: controller.signal, backgroundDelaysMs: [60000] });
+      promise.catch(() => {});
+      await vi.advanceTimersByTimeAsync(2000);
+      controller.abort();
+      await expect(promise).rejects.toThrow();
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
     }
   });
 });

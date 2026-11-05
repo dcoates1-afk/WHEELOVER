@@ -1347,6 +1347,15 @@ export function LayerControl({
                     fromUnitText={(text) => parseDepth(text, settings.units.depth)}
                     onChangeMetres={(value) => setBoat('draughtM', value)}
                   />
+                  <MeasurementField
+                    label="Air draft"
+                    unitLabel={depthUnitLabel(settings.units.depth)}
+                    metres={settings.boat.airDraftM}
+                    placeholderM="4.5"
+                    toUnit={(metres) => convertDepth(metres, settings.units.depth)}
+                    fromUnitText={(text) => parseDepth(text, settings.units.depth)}
+                    onChangeMetres={(value) => setBoat('airDraftM', value)}
+                  />
                   <TextField
                     label="Fuel burn"
                     hint="Litres per hour, for route fuel estimates"

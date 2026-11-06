@@ -7,7 +7,7 @@
   "scripts": {
     "setup": "bash scripts/dev-setup.sh",
     "dev": "vite",
-    "build": "npm run lights:bounds && tsc --noEmit && vite build && npm run build:server",
+    "build": "npm run lights:bounds && tsc --noEmit && vite build && node scripts/write-build-info.mjs && npm run build:server",
     "build:server": "node scripts/build-server.mjs",
     "start": "node --env-file-if-exists=.env.local build/server.mjs",
     "typecheck": "tsc --noEmit",

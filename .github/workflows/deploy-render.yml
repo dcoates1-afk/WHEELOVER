@@ -66,3 +66,40 @@ jobs:
               exit 1
               ;;
           esac
+
+      - name: Confirm the new commit is serving
+        # The hook answers 202 immediately, so this waits out the build (~100 s
+        # on the free plan) and then proves the pushed commit is what goes out,
+        # rather than just that the site answers.
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          PRODUCTION_URL: https://wheelover.onrender.com
+          TIMEOUT_SECONDS: 720
+        run: |
+          target="${PRODUCTION_URL%/}/build-info.json"
+          deadline=$((SECONDS + TIMEOUT_SECONDS))
+          attempt=0
+          while :; do
+            attempt=$((attempt + 1))
+            # A per-attempt nonce defeats any shared cache: read this fresh.
+            body=$(curl -sS --max-time 20 -H 'Cache-Control: no-cache' \
+              "${target}?attempt=${attempt}" || true)
+            served=$(printf '%s' "$body" \
+              | grep -o '"commit"[[:space:]]*:[[:space:]]*"[^"]*"' \
+              | head -1 | sed -E 's/.*"([^"]*)"$/\1/' || true)
+
+            if [ "$served" = "$COMMIT_SHA" ]; then
+              echo "Production is serving ${COMMIT_SHA} (attempt ${attempt})."
+              printf '%s\n' "$body"
+              exit 0
+            fi
+
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::Production never served ${COMMIT_SHA} within ${TIMEOUT_SECONDS}s."
+              echo "Last /build-info.json body: ${body:-<empty>}"
+              exit 1
+            fi
+
+            echo "attempt ${attempt}: serving ${served:-<none yet>}, waiting 10s..."
+            sleep 10
+          done

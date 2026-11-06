@@ -14,6 +14,11 @@
   --radius: 16px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* The top row: the weather and menu buttons start just under the wordmark,
+     and the destination search collapses to the weather button's width. */
+  --top-row-height: 52px;
+  --top-row-width: 140px;
+  --top-row-offset: calc(var(--safe-top) + 30px);
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   font-size: 16px;
   background: var(--bg);
@@ -636,7 +641,7 @@ ul {
 .menu-button {
   position: fixed;
   z-index: 1300;
-  top: calc(var(--safe-top) + 12px);
+  top: var(--top-row-offset);
   right: 12px;
   display: inline-flex;
   align-items: center;
@@ -668,12 +673,15 @@ ul {
 .weather-button {
   position: fixed;
   z-index: 1200;
-  top: calc(var(--safe-top) + 12px);
+  top: var(--top-row-offset);
   left: 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 52px;
+  /* One width for the weather button and the collapsed search, so the two line
+     up exactly whatever the label wraps to. */
+  width: var(--top-row-width);
+  min-height: var(--top-row-height);
   padding: 0 14px;
   border: 1px solid rgba(61, 214, 255, 0.45);
   border-radius: 16px;
@@ -695,12 +703,22 @@ ul {
   display: none;
 }
 
-/* Destination search: sits under the weather button, top-left. */
+/*
+ * Destination search: sits under the weather button, top-left. Collapsed to the
+ * weather button's own width so the top of the chart stays mostly clear, and it
+ * opens to the full field once it is focused or holds a query.
+ */
 .destination-search {
   position: fixed;
   z-index: 1200;
-  top: calc(var(--safe-top) + 76px);
+  top: calc(var(--safe-top) + 94px);
   left: 12px;
+  width: var(--top-row-width);
+  transition: width 0.18s ease-out;
+}
+
+.destination-search:focus-within,
+.destination-search.has-query {
   width: min(320px, calc(100vw - 24px));
 }
 
@@ -712,7 +730,7 @@ ul {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 52px;
+  min-height: var(--top-row-height);
   padding: 0 12px;
   border: 1px solid rgba(61, 214, 255, 0.45);
   border-radius: 16px;
@@ -1826,8 +1844,12 @@ ul {
 }
 
 @media (max-width: 719px) {
+  :root {
+    --top-row-height: 48px;
+  }
+
   .weather-button {
-    min-height: 48px;
+    min-height: var(--top-row-height);
     padding: 0 12px;
   }
 

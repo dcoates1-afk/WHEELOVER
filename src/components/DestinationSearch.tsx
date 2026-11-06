@@ -70,7 +70,7 @@ export function DestinationSearch({ hidden, onSelect }: DestinationSearchProps) 
   };
 
   return (
-    <div className={`destination-search ${hidden ? 'is-hidden' : ''}`}>
+    <div className={`destination-search ${query.trim() ? 'has-query' : ''} ${hidden ? 'is-hidden' : ''}`}>
       <div className="destination-search-box">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -85,7 +85,7 @@ export function DestinationSearch({ hidden, onSelect }: DestinationSearchProps) 
           onKeyDown={(event) => {
             if (event.key === 'Escape') setOpen(false);
           }}
-          placeholder="Search destinations…"
+          placeholder="Search…"
           aria-label="Search destinations"
           autoComplete="off"
           spellCheck={false}

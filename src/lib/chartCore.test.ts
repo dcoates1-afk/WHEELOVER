@@ -1721,6 +1721,33 @@ describe('minor light signature merge', () => {
     expect(deduped.navaids.every((n) => osmMarks.some((o) => o.lat === n.lat && o.lon === n.lon))).toBe(true);
   });
 
+  it('combines "Lee Rock Light" with the chart\u2019s "Lee Rock"', () => {
+    // The CCG appends "Light" to the name the chart carries, so the two
+    // records sat side by side for years as separate marks.
+    const osm = mark({ id: 'osm:node/23', category: 'lateral_port', name: 'Lee Rock', light: 'Fl R 4s', lightCharacter: 'Fl', lightColour: 'red', lat: 48.42, lon: -123.3 });
+    const official = mark({ id: 'ccg:pac:300', category: 'light', name: 'Lee Rock Light', light: 'Fl R 4s', lightCharacter: 'Fl', lightColour: 'R', lat: 48.4208, lon: -123.3, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].id).toBe('osm:node/23');
+  });
+
+  it('combines a south cardinal recorded under a longer official name', () => {
+    const osm = mark({ id: 'osm:node/31', category: 'cardinal_south', name: 'Mout Reef South Cardinal Buoy', light: 'Q(3) 10s', lightCharacter: 'Q(3)', lightColour: 'white', lat: 48.43, lon: -123.31 });
+    const official = mark({ id: 'ccg:pac:301', category: 'cardinal_south', name: 'Mout Reef', light: 'Q(3) 10s', lightCharacter: 'Q(3)', lightColour: 'W', lat: 48.4306, lon: -123.31, source: 'ccg' });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+  });
+
+  it('does not pair two same-source marks that only share their distinctive words', () => {
+    // The traffic scheme has two OSM nodes both named #1 166 m apart; they
+    // are separate buoys and must never collapse just because the words
+    // left after the descriptive ones are the same.
+    const first = mark({ id: 'osm:node/4291664945', category: 'special_purpose', name: '#1', light: 'Fl yellow 4s', lat: 48.4241495, lon: -123.3833621 });
+    const second = mark({ id: 'osm:node/4291664943', category: 'special_purpose', name: '#1', light: 'Fl yellow 4s', lat: 48.4239622, lon: -123.3811187 });
+    const { navaids } = mergeNavaidSources([first, second]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
   it('keeps the real Victoria V21 pair combined at the OSM position', () => {
     const osm = mark({ id: 'osm:node/4291664941', category: 'lateral_port', name: 'Victoria Harbour Entrance Light Buoy V21', light: 'Fl green 4s', colour: 'green', lat: 48.4144737, lon: -123.4032468 });
     const official = mark({ id: 'ccg:pac:204.5', category: 'light', name: 'Victoria Harbour Entrance light buoy V21', light: 'Fl G 4s', lightCharacter: 'Fl', lightColour: 'G', lat: 48.4144722, lon: -123.40325, source: 'ccg' });

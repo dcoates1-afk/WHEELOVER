@@ -1163,12 +1163,15 @@ export function dedupeNavaids(items, options = {}) {
               structureColoursConflict(lateralRec, lateralPartner))) continue;
           const sameName =
             normName(item.name) !== '' && normName(item.name) === normName(other.name);
+          const itemCore = nameCore(item.name);
+          const sameCore = !sameName && item.source !== other.source &&
+            itemCore !== null && itemCore === nameCore(other.name);
           const sameFamily = familyOf(item.category) === familyOf(other.category);
           const itemIsWreck = item.category === 'wreck' || item.category === 'hazard_danger';
           const otherIsWreck = other.category === 'wreck' || other.category === 'hazard_danger';
           const sameWreckIdentity = itemIsWreck && otherIsWreck &&
             item.source === other.source && item.id === other.id;
-          if (sameWreckIdentity || sameName || (!itemIsWreck && !otherIsWreck && ((sameFamily && metres <= 15) || metres <= 12))) {
+          if (sameWreckIdentity || sameName || sameCore || (!itemIsWreck && !otherIsWreck && ((sameFamily && metres <= 15) || metres <= 12))) {
             duplicateOf = index;
             break;
           }
@@ -1547,6 +1550,56 @@ function designatorOf(name) {
   return last;
 }
 
+/**
+ * Words that describe what kind of aid something is, or where it is, rather
+ * than which aid it is. Two records of one mark often disagree on exactly
+ * these: the CCG writes "Victoria Harbour cautionary light buoy VH" where the
+ * chart says "Buoy VH", and "Lee Rock Light" appears without the trailing
+ * "Light". Dropping them leaves the part the two names share.
+ */
+const NAME_CORE_GENERIC = new Set([
+  'light', 'lights', 'buoy', 'buoys', 'beacon', 'beacons', 'mark', 'marks',
+  'tower', 'towers', 'pole', 'post', 'pile', 'dolphin', 'rock', 'shoal', 'point',
+  'island', 'harbour', 'harbor', 'channel', 'entrance', 'fairway', 'river', 'bay',
+  'lake', 'cape', 'head', 'wharf', 'pier', 'dock', 'breakwater', 'jetty', 'marina',
+  'anchorage', 'reef', 'bank', 'ledge', 'passage', 'narrows', 'creek',
+  'north', 'south', 'east', 'west', 'northern', 'southern', 'eastern', 'western',
+  'upper', 'lower', 'inner', 'outer', 'middle', 'front', 'rear', 'range',
+  'station', 'building', 'structure', 'cautionary', 'traffic', 'scheme', 'special',
+  'purpose', 'cardinal', 'lateral', 'directional', 'sector', 'starboard', 'port',
+  'can', 'nun', 'spar', 'pillar', 'the', 'of', 'de', 'la', 'le', 'du', 'des',
+  'les', 'and', 'no', 'number',
+]);
+
+/**
+ * The distinctive words of a name: what is left once the words describing the
+ * kind of aid are removed, sorted so word order cannot matter.
+ *
+ * "Victoria Harbour cautionary light buoy VH" and "Buoy VH" both reduce to
+ * "vh", so the same aid recorded twice by two conventions can be recognised.
+ * Null when nothing distinctive remains, so two records called only "light
+ * buoy" never pair on this rule alone.
+ */
+function nameCore(name) {
+  const tokens = normName(name)
+    .split(' ')
+    .filter((token) => token && !NAME_CORE_GENERIC.has(token));
+  if (!tokens.length) return null;
+  return tokens.sort().join(' ');
+}
+
+/**
+ * Whether two records' lights can belong to one aid: one side may be silent,
+ * the characters may be written the same way, or the signatures may agree after
+ * parsing ("Fl Y 4s" against "Fl yellow 4s").
+ */
+function lightsCompatible(a, b) {
+  const aLight = normLightCharacter(a);
+  const bLight = normLightCharacter(b);
+  if (!aLight || !bLight || aLight === bLight) return true;
+  return lightSignaturesMatch(a, b);
+}
+
 function isWreckLike(navaid) {
   return navaid.category === 'wreck' || navaid.category === 'hazard_danger';
 }
@@ -1705,6 +1758,21 @@ export function mergeNavaidSources(items, options = {}) {
       const aLight = normLightCharacter(item);
       const bLight = normLightCharacter(other);
       if ((!aLight || !bLight || aLight === bLight) && !lightColoursConflict(item, other)) return true;
+    }
+    // Same distinctive words, different names: the chart writes "Buoy VH"
+    // where the official list writes "Victoria Harbour cautionary light buoy
+    // VH", and both mean one aid. Comparing the names with the descriptive
+    // words removed pairs them without ever pairing two marks that are merely
+    // described the same way, and a pair whose lights or colours disagree is
+    // still refused.
+    const aCore = nameCore(item.name);
+    const bCore = nameCore(other.name);
+    if (item.source !== other.source && aCore && bCore && aCore === bCore && metres <= nameDistanceM &&
+      lightsCompatible(item, other) &&
+      !lightColoursConflict(item, other) &&
+      !structureColoursConflict(item, other) &&
+      !transitRoleConflict(item, other)) {
+      return true;
     }
     // Same-source duplicates should be close: two records from one
     // source sharing a name 150 m apart are neighbouring marks (or a

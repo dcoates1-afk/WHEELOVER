@@ -4299,3 +4299,72 @@ ul {
 .segmented-three {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+
+/*
+ * Very small phones: the top row shrinks to three square icon buttons so the
+ * weather, menu and search tabs fit without crowding the chart. The search
+ * keeps a zero-width input while collapsed (so its plate stays a 48 px square
+ * with the magnifier centred), and opens to the full field once it is focused
+ * or holds a query. Taps land on the plate, which focuses the input.
+ */
+@media (max-width: 400px) {
+  .weather-button {
+    width: var(--top-row-height);
+    min-height: var(--top-row-height);
+    padding: 0;
+    justify-content: center;
+  }
+
+  .weather-button-label,
+  .menu-button-label {
+    display: none;
+  }
+
+  .menu-button {
+    width: var(--top-row-height);
+    min-width: var(--top-row-height);
+    min-height: var(--top-row-height);
+    padding: 0;
+    justify-content: center;
+  }
+
+  .destination-search {
+    width: var(--top-row-height);
+  }
+
+  .destination-search:focus-within,
+  .destination-search.has-query {
+    width: min(320px, calc(100vw - 24px));
+  }
+
+  .destination-search-box {
+    gap: 0;
+    padding: 0;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .destination-search-box input {
+    flex: 0 0 0;
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    opacity: 0;
+  }
+
+  .destination-search:focus-within .destination-search-box,
+  .destination-search.has-query .destination-search-box {
+    gap: 8px;
+    padding: 0 12px;
+    justify-content: flex-start;
+    cursor: text;
+  }
+
+  .destination-search:focus-within .destination-search-box input,
+  .destination-search.has-query .destination-search-box input {
+    flex: 1;
+    width: auto;
+    opacity: 1;
+    cursor: text;
+  }
+}

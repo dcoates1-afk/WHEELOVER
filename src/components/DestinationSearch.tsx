@@ -21,6 +21,9 @@ export function DestinationSearch({ hidden, onSelect }: DestinationSearchProps) 
   const [searched, setSearched] = useState(false);
   const [open, setOpen] = useState(false);
   const requestRef = useRef(0);
+  // On the narrowest screens the field collapses to its magnifier, so a tap on
+  // the plate has to open it: the input itself is zero-width until focused.
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const text = query.trim();
@@ -71,12 +74,13 @@ export function DestinationSearch({ hidden, onSelect }: DestinationSearchProps) 
 
   return (
     <div className={`destination-search ${query.trim() ? 'has-query' : ''} ${hidden ? 'is-hidden' : ''}`}>
-      <div className="destination-search-box">
+      <div className="destination-search-box" onClick={() => inputRef.current?.focus()}>
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
           <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" strokeWidth="2" />
         </svg>
         <input
+          ref={inputRef}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onFocus={() => {

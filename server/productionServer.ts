@@ -173,6 +173,10 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: 
     else res.destroy(error);
   });
   if (!compress) {
+    // Stop reading the file if the client goes away mid-download.
+    res.on('close', () => {
+      if (!res.writableFinished) stream.destroy();
+    });
     stream.pipe(res);
     return;
   }
@@ -183,6 +187,14 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: 
   gzip.on('error', (error) => {
     log(`static file compression failed: ${error.message}`);
     res.destroy(error);
+  });
+  // An abandoned download has to stop compressing as well: a multi-megabyte
+  // gzip still running into a dead socket spends the instance's whole CPU
+  // quota, which is what leaves the service unable to answer anything.
+  res.on('close', () => {
+    if (res.writableFinished) return;
+    stream.destroy();
+    gzip.destroy();
   });
   stream.pipe(gzip).pipe(res);
 }
@@ -230,6 +242,14 @@ const server = createServer((req, res) => {
     else res.destroy();
   });
 });
+
+// Render's edge holds an idle connection open for up to 75 s, so Node's 5 s
+// keep-alive default closes it first and the proxy reports the reuse as a 502.
+// Keep the app's window above the proxy's, and leave large chart payloads room
+// to finish before the request itself is abandoned.
+server.keepAliveTimeout = 75_000;
+server.headersTimeout = 80_000;
+server.requestTimeout = 120_000;
 
 server.on('upgrade', (req, socket, head) => {
   let pathname = '/';

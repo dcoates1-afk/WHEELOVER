@@ -10,6 +10,9 @@ name: Deploy to Render
 # URL, then add it as a repository secret named RENDER_DEPLOY_HOOK_URL
 # (Settings -> Secrets and variables -> Actions -> New repository secret).
 # The hook URL is a credential: keep it in the secret, never in this file.
+#
+# Tests gate the deploy: the deploy job needs the test job, so a failing suite
+# leaves production on the previous commit rather than shipping a broken build.
 
 on:
   push:
@@ -25,7 +28,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # The runtime Render builds with (render.yaml NODE_VERSION), so a test
+          # that only passes on a newer local Node fails here first.
+          node-version: '24.22.1'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
   deploy:
+    # Nothing below runs unless the suite passes.
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Render deploy hook

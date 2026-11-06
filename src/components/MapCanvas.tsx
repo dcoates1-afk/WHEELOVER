@@ -611,7 +611,14 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
 
     return () => {
       map.off();
-      map.remove();
+      try {
+        map.remove();
+      } catch (error) {
+        // A teardown that throws used to abandon the rest of this cleanup, so
+        // mapRef kept pointing at a removed map: its panes are gone, and the
+        // next base-layer switch threw inside Leaflet's GridLayer.onAdd.
+        console.error('[WHEELOVER] map teardown failed', error);
+      }
       mapRef.current = null;
       groupsRef.current = {};
       seaRef.current = null;
@@ -635,6 +642,9 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     for (const layer of Object.values(basesRef.current)) {
       if (map.hasLayer(layer)) map.removeLayer(layer);
     }
+    // A map that has been removed keeps its layers but loses its panes, and
+    // adding a tile layer to one throws inside Leaflet instead of returning.
+    if (!map.getPane('tilePane')) return;
     const next = basesRef.current[props.preferences.base];
     if (next && !map.hasLayer(next)) {
       next.addTo(map);
@@ -651,6 +661,8 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    // Same teardown case as the base switch: no tile pane means no map.
+    if (!map.getPane('tilePane')) return;
     const sea = seaRef.current;
     if (!sea) return;
     if (overlays.openseamap) {

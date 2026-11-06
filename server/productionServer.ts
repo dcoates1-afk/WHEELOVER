@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, relative, resolve, sep } from 'node:path';
+import { createGzip } from 'node:zlib';
 import { serveArchiveFile } from './archiveServer';
 import { WebSocketServer } from 'ws';
 import { createAisRelay } from './aisRelay';
@@ -41,6 +42,51 @@ const mimeTypes: Record<string, string> = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
 };
+
+/**
+ * Only text-shaped payloads are worth compressing. Images, fonts and archives
+ * are already compressed, so gzipping them would spend CPU on Render's small
+ * instances to make the response slightly larger.
+ */
+const COMPRESSIBLE_EXTENSIONS = new Set([
+  '.css',
+  '.html',
+  '.js',
+  '.json',
+  '.map',
+  '.svg',
+  '.txt',
+  '.webmanifest',
+]);
+
+/** Below this size the gzip header costs more than the bytes it saves. */
+const MIN_COMPRESS_BYTES = 1024;
+
+/**
+ * Answers the one question a response needs: may it be gzipped? q-values are
+ * honoured, so an explicit `gzip;q=0` is treated as a refusal rather than a
+ * bare mention of the token.
+ */
+function acceptsGzip(header: string | string[] | undefined): boolean {
+  const value = Array.isArray(header) ? header.join(',') : header;
+  if (!value) return false;
+  let wildcard = 0;
+  for (const part of value.split(',')) {
+    const [rawName, ...params] = part.trim().split(';');
+    const name = rawName.trim().toLowerCase();
+    if (!name) continue;
+    let quality = 1;
+    for (const param of params) {
+      const [key, raw] = param.trim().split('=');
+      if (key?.trim().toLowerCase() !== 'q') continue;
+      const parsed = Number(raw);
+      if (Number.isFinite(parsed)) quality = parsed;
+    }
+    if (name === 'gzip' || name === 'x-gzip') return quality > 0;
+    if (name === '*') wildcard = quality;
+  }
+  return wildcard > 0;
+}
 
 function sendError(res: ServerResponse, status: number, message: string) {
   res.statusCode = status;
@@ -94,13 +140,27 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: 
     return;
   }
 
+  const extension = extname(file).toLowerCase();
+  // Applies to HEAD as well, so a HEAD response advertises the same encoding a
+  // GET would rather than an identity length the body will never match.
+  const compress =
+    COMPRESSIBLE_EXTENSIONS.has(extension) &&
+    fileStat.size >= MIN_COMPRESS_BYTES &&
+    acceptsGzip(req.headers['accept-encoding']);
+
   res.statusCode = 200;
-  res.setHeader('Content-Type', mimeTypes[extname(file).toLowerCase()] ?? 'application/octet-stream');
-  res.setHeader('Content-Length', fileStat.size);
+  res.setHeader('Content-Type', mimeTypes[extension] ?? 'application/octet-stream');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   // Only Vite's content-hashed assets are safe to cache as immutable. Public
   // data such as the NAVAID manifest can change without its URL changing.
   res.setHeader('Cache-Control', pathname.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
+  // The same URL now serves different bytes depending on the client, so any
+  // shared cache has to key on the encoding, not just the path.
+  res.setHeader('Vary', 'Accept-Encoding');
+  // A gzipped body has no known length until it finishes, so the header is
+  // omitted and Node falls back to chunked transfer encoding.
+  if (compress) res.setHeader('Content-Encoding', 'gzip');
+  else res.setHeader('Content-Length', fileStat.size);
   if (req.method === 'HEAD') {
     res.end();
     return;
@@ -112,7 +172,19 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: 
     if (!res.headersSent) sendError(res, 500, 'Unable to read file');
     else res.destroy(error);
   });
-  stream.pipe(res);
+  if (!compress) {
+    stream.pipe(res);
+    return;
+  }
+
+  // Streamed rather than buffered: the largest data files are several megabytes
+  // and this process shares 512 MB of RAM with the AIS relay and its caches.
+  const gzip = createGzip({ level: 6 });
+  gzip.on('error', (error) => {
+    log(`static file compression failed: ${error.message}`);
+    res.destroy(error);
+  });
+  stream.pipe(gzip).pipe(res);
 }
 
 async function handleHttp(req: IncomingMessage, res: ServerResponse) {

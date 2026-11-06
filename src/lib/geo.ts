@@ -23,6 +23,39 @@ export function compassPoint(degrees: number): string {
   return COMPASS[Math.round(normalised / 22.5) % 16];
 }
 
+/** A chart viewport: [south, west, north, east] in degrees. */
+export type Bounds = [number, number, number, number];
+
+/**
+ * Longitude ranges a box covers, split at the antimeridian: a box running from
+ * +170 to -170 is two ranges, not one that spans the globe the long way round.
+ */
+function longitudeRanges(west: number, east: number): Array<[number, number]> {
+  return west <= east ? [[west, east]] : [[west, 180], [-180, east]];
+}
+
+/**
+ * True when two chart viewports overlap. This decides whether a regional
+ * dataset is worth downloading, so it errs towards a false positive: an unneeded
+ * fetch costs bytes, a skipped one loses lights off the chart.
+ *
+ * Longitudes are compared modulo 360 so a coverage box may be written in the
+ * compact "Pacific" form (e.g. -216..-122 for a volume that straddles the
+ * antimeridian) and still match a view given in ordinary -180..180 degrees.
+ */
+export function boundsIntersect(a: Bounds, b: Bounds): boolean {
+  const [aSouth, aWest, aNorth, aEast] = a;
+  const [bSouth, bWest, bNorth, bEast] = b;
+  if (aNorth < bSouth || bNorth < aSouth) return false;
+  const aRanges = longitudeRanges(aWest, aEast);
+  const bRanges = longitudeRanges(bWest, bEast);
+  return aRanges.some(([aStart, aEnd]) =>
+    bRanges.some(([bStart, bEnd]) =>
+      [-360, 0, 360].some((shift) => aStart <= bEnd + shift && bStart + shift <= aEnd),
+    ),
+  );
+}
+
 // --- Route safety helpers -------------------------------------------------
 // Small pure functions for the route-vs-hazard checks. Coordinates are
 // [lat, lon] pairs throughout, matching the rest of the app. Distances use a

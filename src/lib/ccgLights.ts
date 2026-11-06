@@ -1,4 +1,5 @@
 import type { Navaid } from './navaidTypes';
+import { CCG_COVERAGE } from './lightCoverage.generated';
 import { priorityFor } from '../../shared/navaid-core.mjs';
 import { classifyOfficialMark } from './officialMarkClassification';
 
@@ -71,6 +72,10 @@ export function ccgRecordToNavaid(record: CcgLightRecord): Navaid {
     region: null,
   };
 }
+
+// Generated from public/ccg-lights.json: outside this box a Canadian light
+// cannot exist, so the app never fetches the 4 MB file.
+export { CCG_COVERAGE };
 
 let cache: Promise<CcgLightRecord[]> | null = null;
 

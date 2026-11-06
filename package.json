@@ -7,7 +7,7 @@
   "scripts": {
     "setup": "bash scripts/dev-setup.sh",
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && npm run build:server",
+    "build": "npm run lights:bounds && tsc --noEmit && vite build && npm run build:server",
     "build:server": "node scripts/build-server.mjs",
     "start": "node --env-file-if-exists=.env.local build/server.mjs",
     "typecheck": "tsc --noEmit",
@@ -23,6 +23,7 @@
     "marine:test-pipeline": "node scripts/test-marine-pipeline.mjs",
     "lights:build": "node scripts/build-light-sector-index.mjs",
     "lights:verify": "node scripts/verify-light-sectors.mjs",
+    "lights:bounds": "node scripts/build-light-bounds.mjs",
     "signals:build": "node scripts/build-signal-index.mjs",
     "signals:verify": "node scripts/verify-mark-signals.mjs",
     "currents:build": "node scripts/build-current-stations.mjs",

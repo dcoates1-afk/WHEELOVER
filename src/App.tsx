@@ -111,8 +111,9 @@ import { navaidDatabase, regionForPoint } from './lib/navaidDb';
 import { ialaRegion } from './lib/navaids';
 import type { NavaidManifest } from './lib/navaidDb';
 import { queryChartFeaturePartWithBackgroundRetry, queryNavaids, type ChartFeature, type ChartFeaturePart } from './lib/overpass';
-import { loadCcgLights, ccgRecordToNavaid } from './lib/ccgLights';
-import { loadUscgLights, uscgRecordToNavaid } from './lib/uscgLights';
+import { loadCcgLights, ccgRecordToNavaid, CCG_COVERAGE } from './lib/ccgLights';
+import { loadUscgLights, uscgRecordToNavaid, uscgVolumesForBounds } from './lib/uscgLights';
+import { boundsIntersect } from './lib/geo';
 import { loadNoaaEncMarks } from './lib/noaaEnc';
 import { loadMarineData, type MarineFeature } from './lib/marineDb';
 import {
@@ -616,29 +617,33 @@ export default function App() {
     };
   }, [view, db.manifest, reloadKey]);
 
-  // CCG lights load once; a failed load just means no supplement, marks still work.
+  // CCG lights are a 4 MB Canadian supplement. It loads the first time the view
+  // reaches Canadian waters and is cached for the session; anywhere else it
+  // could not contribute a mark, so the download never happens.
+  const ccgRequested = useRef(false);
   useEffect(() => {
-    let cancelled = false;
-    loadCcgLights().then((records) => {
-      if (cancelled) return;
-      setCcgLights(records.map(ccgRecordToNavaid));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (ccgRequested.current) return;
+    if (!boundsIntersect(view.bounds, CCG_COVERAGE)) return;
+    ccgRequested.current = true;
+    void loadCcgLights().then((records) => setCcgLights(records.map(ccgRecordToNavaid)));
+  }, [view.bounds]);
 
-  // USCG lights load once, same pattern as CCG.
+  // USCG lights load one volume at a time, as the view reaches each volume's
+  // waters. Volumes share borders, so a coast straddling two loads both, and a
+  // volume already fetched is never requested again during the session.
+  const uscgVolumesLoaded = useRef<Set<string>>(new Set());
   useEffect(() => {
-    let cancelled = false;
-    loadUscgLights().then((records) => {
-      if (cancelled) return;
-      setUscgLights(records.map(uscgRecordToNavaid));
+    const wanted = uscgVolumesForBounds(view.bounds).filter(
+      (volume) => !uscgVolumesLoaded.current.has(volume),
+    );
+    if (!wanted.length) return;
+    for (const volume of wanted) uscgVolumesLoaded.current.add(volume);
+    void loadUscgLights(wanted).then((records) => {
+      const loaded = records.map(uscgRecordToNavaid);
+      if (!loaded.length) return;
+      setUscgLights((current) => [...(current ?? []), ...loaded]);
     });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [view.bounds]);
 
   // NOAA ENC aids load by viewport from the built shard dataset (the manifest
   // loads on the first call inside the loader). A failed load keeps the last

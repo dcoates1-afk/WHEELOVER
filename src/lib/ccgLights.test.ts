@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ccgRecordToNavaid, type CcgLightRecord } from './ccgLights';
+import { CCG_COVERAGE, ccgRecordToNavaid, type CcgLightRecord } from './ccgLights';
 import { priorityFor } from '../../shared/navaid-core.mjs';
 
 function record(overrides: Partial<CcgLightRecord>): CcgLightRecord {
@@ -67,5 +69,21 @@ describe('ccgRecordToNavaid classification', () => {
     expect(mark.colour).toBe('yellow');
     expect(mark.light).toBe('Fl(5) Y 20s');
     expect(mark.priority).toBe(priorityFor('special_purpose'));
+  });
+});
+
+describe('CCG_COVERAGE', () => {
+  it('covers every record of the shipped dataset', () => {
+    // The 4 MB supplement is only fetched inside this box, so a rebuilt dataset
+    // that reaches outside it would hide lights rather than fail loudly.
+    const file = JSON.parse(readFileSync(resolve('public', 'ccg-lights.json'), 'utf8')) as {
+      records: CcgLightRecord[];
+    };
+    const [south, west, north, east] = CCG_COVERAGE;
+    const outside = (file.records ?? []).filter(
+      (record) => record.lat < south || record.lat > north || record.lon < west || record.lon > east,
+    );
+    expect(outside.map((record) => record.no)).toEqual([]);
+    expect((file.records ?? []).length).toBeGreaterThan(1000);
   });
 });

@@ -1,4 +1,6 @@
 import type { Navaid } from './navaidTypes';
+import { boundsIntersect, type Bounds } from './geo';
+import { USCG_VOLUMES, USCG_VOLUME_BOUNDS } from './lightCoverage.generated';
 import { priorityFor } from '../../shared/navaid-core.mjs';
 import { classifyOfficialMark } from './officialMarkClassification';
 
@@ -68,29 +70,45 @@ export function uscgRecordToNavaid(record: UscgLightRecord): Navaid {
   };
 }
 
-let cache: Promise<UscgLightRecord[]> | null = null;
+// The volume list and coverage boxes are derived from the shipped datasets by
+// scripts/build-light-bounds.mjs, so a rebuilt dataset cannot leave the gate
+// pointing at the geography it used to have. src/lib/uscgLights.test.ts still
+// re-derives them, which catches a stale generated file.
+export { USCG_VOLUMES, USCG_VOLUME_BOUNDS };
 
-/** The seven Light List volumes, each served as its own dataset file. */
-export const USCG_VOLUMES = ['01', '02', '03', '04', '05', '06', '07'];
+/** Load a volume just before its marks scroll in, rather than while they do. */
+const VOLUME_PAD_DEG = 0.5;
+
+/** The volumes that can contribute a mark to this view. */
+export function uscgVolumesForBounds(view: Bounds, pad = VOLUME_PAD_DEG): string[] {
+  const padded: Bounds = [view[0] - pad, view[1] - pad, view[2] + pad, view[3] + pad];
+  return USCG_VOLUMES.filter((volume) =>
+    (USCG_VOLUME_BOUNDS[volume] ?? []).some((box) => boundsIntersect(padded, box)),
+  );
+}
+
+/** One in-flight or settled request per volume, so panning back costs nothing. */
+const cache = new Map<string, Promise<UscgLightRecord[]>>();
+
+function loadUscgVolume(volume: string): Promise<UscgLightRecord[]> {
+  const pending = cache.get(volume);
+  if (pending) return pending;
+  const request = fetch(`/uscg-lights-${volume}.json`)
+    .then((res) => {
+      if (!res.ok) throw new Error(`USCG lights ${volume} HTTP ${res.status}`);
+      return res.json() as Promise<UscgLightsFile>;
+    })
+    .then((file) => file.records ?? [])
+    .catch(() => [] as UscgLightRecord[]);
+  cache.set(volume, request);
+  return request;
+}
 
 /**
- * Fetch the USCG datasets once and combine them. The supplement is optional,
- * so a failed volume is skipped (the rest still load) and a total failure
- * yields [].
+ * Fetch the requested volumes and combine them, defaulting to all seven. The
+ * supplement is optional, so a failed volume is skipped (the rest still load)
+ * and a total failure yields [].
  */
-export function loadUscgLights(): Promise<UscgLightRecord[]> {
-  if (!cache) {
-    cache = Promise.all(
-      USCG_VOLUMES.map((volume) =>
-        fetch(`/uscg-lights-${volume}.json`)
-          .then((res) => {
-            if (!res.ok) throw new Error(`USCG lights ${volume} HTTP ${res.status}`);
-            return res.json() as Promise<UscgLightsFile>;
-          })
-          .then((file) => file.records ?? [])
-          .catch(() => [] as UscgLightRecord[]),
-      ),
-    ).then((volumes) => volumes.flat());
-  }
-  return cache;
+export function loadUscgLights(volumes: string[] = USCG_VOLUMES): Promise<UscgLightRecord[]> {
+  return Promise.all(volumes.map(loadUscgVolume)).then((batches) => batches.flat());
 }

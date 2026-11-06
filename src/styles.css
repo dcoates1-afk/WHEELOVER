@@ -2090,6 +2090,107 @@ ul {
   }
 }
 
+/* New-deploy notice: bottom centre, clear of the corner controls and the
+   alert stack, so it never covers the chart's own buttons. */
+.build-banner {
+  position: fixed;
+  z-index: 1320;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + 12px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(520px, calc(100vw - 160px));
+  padding: 7px 7px 7px 14px;
+  border: 1px solid rgba(61, 214, 255, 0.4);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.build-banner-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.25;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.build-banner-builds {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.build-banner-reload {
+  flex: none;
+  padding: 7px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: rgba(61, 214, 255, 0.14);
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.build-banner-reload:active {
+  transform: scale(0.97);
+}
+
+.build-banner-reload:focus-visible,
+.build-banner-dismiss:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.build-banner-dismiss {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.build-banner-dismiss:hover {
+  color: var(--ink);
+}
+
+@media (max-width: 560px) {
+  .build-banner {
+    max-width: calc(100vw - 152px);
+    gap: 8px;
+    padding: 6px 6px 6px 12px;
+  }
+
+  .build-banner-text {
+    font-size: 12.5px;
+  }
+
+  .build-banner-builds {
+    display: none;
+  }
+
+  .build-banner-reload {
+    padding: 6px 11px;
+    font-size: 12.5px;
+  }
+}
+
 .menu-button-label {
   font-size: 15px;
 }

@@ -87,6 +87,7 @@ import { useAis } from './hooks/useAis';
 import { useChartAlerts } from './hooks/useChartAlerts';
 import { useGeolocation } from './hooks/useGeolocation';
 import { ChartAlerts } from './components/ChartAlerts';
+import { BuildBanner } from './components/BuildBanner';
 import {
   readChartPreferences,
   writeChartPreferences,
@@ -1450,6 +1451,8 @@ export default function App() {
           {locateNote}
         </p>
       )}
+
+      <BuildBanner />
 
       <ChartAlerts
         alerts={alerts}

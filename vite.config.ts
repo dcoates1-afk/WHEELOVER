@@ -1,7 +1,26 @@
 /// <reference types="vitest" />
+import { execFileSync } from 'node:child_process';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { marnavServer } from './server/marnavServer';
+
+/**
+ * The commit this bundle is built from. The same sources feed
+ * scripts/write-build-info.mjs, so the stamp baked into the JavaScript and the
+ * one the server publishes agree, and the app can spot a deployment that has
+ * moved on without wondering which build it is.
+ */
+function buildCommit(): string {
+  const fromEnvironment = process.env.RENDER_GIT_COMMIT || process.env.GITHUB_SHA;
+  if (fromEnvironment) return fromEnvironment.trim();
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  } catch {
+    return '';
+  }
+}
+
+const BUILD_COMMIT = buildCommit();
 
 /**
  * Hostname the Cloud preview reaches this dev server on. It changes when the
@@ -30,6 +49,9 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port,
       allowedHosts: ALLOWED_HOSTS,
+    },
+    define: {
+      __BUILD_COMMIT__: JSON.stringify(BUILD_COMMIT),
     },
     build: {
       target: 'es2020',

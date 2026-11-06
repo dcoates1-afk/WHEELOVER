@@ -286,6 +286,26 @@ const NoaaChartLayer = L.GridLayer.extend({
   },
 }) as unknown as new (options?: L.GridLayerOptions) => L.GridLayer;
 
+/**
+ * Add a layer to a map that is still alive, giving it the pane it asks for.
+ *
+ * A removed Leaflet map keeps its layer list but drops its panes, so a
+ * deferred callback that fires after teardown reaches GridLayer.onAdd with no
+ * pane to append to and throws on `appendChild` of undefined. Tile layers added
+ * into the custom depth panes were reachable that way, because the contour
+ * coverage fetch resolves long after a remount.
+ */
+function addToLiveMap(map: L.Map, layer: L.Layer): boolean {
+  // No default tile pane means the map has been removed; nothing can be drawn.
+  if (!map.getPane('tilePane')) return false;
+  const pane = (layer as L.Layer & { options?: L.LayerOptions }).options?.pane;
+  // A pane is only ever missing here because the map was replaced underneath
+  // this layer, so recreate it rather than lose the layer.
+  if (pane && !map.getPane(pane)) map.createPane(pane);
+  if (!map.hasLayer(layer)) layer.addTo(map);
+  return true;
+}
+
 export function createNoaaChart(): L.GridLayer {
   return new NoaaChartLayer({ zIndex: 3, attribution: NOAA_ATTRIBUTION });
 }
@@ -560,13 +580,15 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     // the chart centre on every settled view. Below zoom 9 the ENC export omits
     // contours entirely, so the global layer carries the overview.
     const syncDepth = () => {
+      // The contour coverage fetch can settle after this map was torn down.
+      if (!map.getPane('tilePane')) return;
       const active = handlers.current.preferences.overlays;
       const centre = map.getCenter();
       const useEnc =
         isUsWaters(centre.lat, centre.lng) && map.getZoom() >= ENC_CONTOUR_MIN_ZOOM;
       const setWanted = (layer: L.Layer, wanted: boolean) => {
         if (wanted) {
-          if (!map.hasLayer(layer)) layer.addTo(map);
+          addToLiveMap(map, layer);
         } else if (map.hasLayer(layer)) {
           map.removeLayer(layer);
         }
@@ -642,13 +664,11 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     for (const layer of Object.values(basesRef.current)) {
       if (map.hasLayer(layer)) map.removeLayer(layer);
     }
-    // A map that has been removed keeps its layers but loses its panes, and
-    // adding a tile layer to one throws inside Leaflet instead of returning.
-    if (!map.getPane('tilePane')) return;
     const next = basesRef.current[props.preferences.base];
-    if (next && !map.hasLayer(next)) {
-      next.addTo(map);
-      if (next instanceof L.GridLayer) next.setZIndex(3);
+    // A removed map keeps its layers but loses its panes, so the helper refuses
+    // it rather than letting Leaflet throw inside onAdd.
+    if (next && addToLiveMap(map, next) && next instanceof L.GridLayer) {
+      next.setZIndex(3);
     }
     // Chart bands cover ports and approaches, not every square mile of water.
     // Show blank chart paper rather than a black hole where a band has no tile.
@@ -661,12 +681,11 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    // Same teardown case as the base switch: no tile pane means no map.
-    if (!map.getPane('tilePane')) return;
     const sea = seaRef.current;
     if (!sea) return;
     if (overlays.openseamap) {
-      if (!map.hasLayer(sea)) sea.addTo(map);
+      // Seamarks follow the same teardown rule as the base chart.
+      addToLiveMap(map, sea);
     } else if (map.hasLayer(sea)) {
       map.removeLayer(sea);
     }
@@ -802,7 +821,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
           group.addLayer(layer);
           group.addLayer(hitTarget);
         }
-        if (features.length > 0 && !map.hasLayer(group)) group.addTo(map);
+        if (features.length > 0) addToLiveMap(map, group);
         if (features.length === 0) contourCoverageRef.current = false;
         depthSyncRef.current?.();
       } catch (error) {
@@ -948,7 +967,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       if (!group) continue;
       const wanted = overlays[key];
       if (wanted) {
-        if (!map.hasLayer(group)) group.addTo(map);
+        addToLiveMap(map, group);
       } else if (map.hasLayer(group)) {
         map.removeLayer(group);
       }
@@ -957,9 +976,9 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     // more: they are always drawn, with navaids filtered per type by the
     // Legend & mark filters.
     const navaids = groupsRef.current.navaids;
-    if (navaids && !map.hasLayer(navaids)) navaids.addTo(map);
+    if (navaids) addToLiveMap(map, navaids);
     const reportingSystems = groupsRef.current.reportingSystems;
-    if (reportingSystems && !map.hasLayer(reportingSystems)) reportingSystems.addTo(map);
+    if (reportingSystems) addToLiveMap(map, reportingSystems);
     // The lane geometry is OpenStreetMap data, so its credit follows the
     // toggles rather than sitting on the chart when nothing is drawn.
     const control = map.attributionControl;
@@ -1020,7 +1039,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       ferries.addLayer(line);
     }
     if (props.preferences.overlays.ferries && source.ferries.length > 0 && !map.hasLayer(ferries)) {
-      ferries.addTo(map);
+      addToLiveMap(map, ferries);
     }
     for (const feature of source.tss) {
       const info = describeTssFeature(feature);
@@ -1039,7 +1058,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       }
     }
     if (props.preferences.overlays.tss && source.tss.length > 0 && !map.hasLayer(tss)) {
-      tss.addTo(map);
+      addToLiveMap(map, tss);
     }
   }, [props.marineFeatures, props.preferences.overlays.ferries, props.preferences.overlays.tss]);
 
@@ -1142,7 +1161,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       );
       group.addLayer(marker);
     }
-    if (bridges.length > 0) group.addTo(map);
+    if (bridges.length > 0) addToLiveMap(map, group);
     else if (map.hasLayer(group)) map.removeLayer(group);
     if (openBridgeId !== null && bridges.length > 0) {
       for (const layer of group.getLayers()) {
@@ -1217,7 +1236,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       layer.bindPopup(`<strong>${escapePopupText(feature.name)}</strong>${rows ? `<hr>${rows}` : ''}${nearbyWrecks ? `<hr><strong>Charted wrecks within mapped site geometry (possible association)</strong>${nearbyWrecks}` : ''}<hr><small>Protected-site designation only; it does not establish a boating prohibition. Check site-specific rules with the responsible authority. EMODnet Human Activities / EEA, CC BY 4.0. <a href="${escapePopupText(feature.sourceUrl)}" target="_blank" rel="noopener noreferrer">Dataset information ↗</a></small>`, { className: 'reporting-system-popup', maxWidth: 360 });
       group.addLayer(layer);
     }
-    if (group.getLayers().length > 0) group.addTo(map);
+    if (group.getLayers().length > 0) addToLiveMap(map, group);
     else if (map.hasLayer(group)) map.removeLayer(group);
   }, [props.marks, props.chartFeatures, props.protectedAreaFeatures, props.preferences.hiddenAreaGroups]);
 
@@ -1591,7 +1610,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
     });
     if (!vesselRef.current) {
       vesselRef.current = L.marker([props.fix.lat, props.fix.lon], { icon, interactive: false, zIndexOffset: 5000 });
-      vesselRef.current.addTo(map);
+      addToLiveMap(map, vesselRef.current);
     } else {
       vesselRef.current.setLatLng([props.fix.lat, props.fix.lon]);
       vesselRef.current.setIcon(icon);
@@ -1618,7 +1637,7 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
         fillColor: '#f2a65a',
         fillOpacity: 0.9,
       });
-      searchPinRef.current.addTo(map);
+      addToLiveMap(map, searchPinRef.current);
     } else {
       searchPinRef.current.setLatLng([props.searchPin.lat, props.searchPin.lon]);
     }

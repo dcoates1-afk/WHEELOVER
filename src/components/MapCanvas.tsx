@@ -496,6 +496,22 @@ export const MapCanvas = forwardRef<MapHandle, MapCanvasProps>(function MapCanva
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors',
     });
+    // Leaflet's GridLayer and Marker append to getPane(name) without checking
+    // that the pane exists, so any add that reaches a map whose panes are gone
+    // kills the whole chart on `appendChild` of undefined. Enforce the
+    // invariant at the one place Leaflet reads it: return the pane, create one
+    // that has gone missing, and for a discarded map hand back a detached pane
+    // so a late layer lands nowhere instead of throwing.
+    const readPane = map.getPane.bind(map);
+    map.getPane = (pane: string | HTMLElement): HTMLElement => {
+      const existing = readPane(pane);
+      if (existing) return existing;
+      const name = typeof pane === 'string' ? pane : 'tilePane';
+      if (map.getContainer()) return map.createPane(name);
+      console.warn('[WHEELOVER] layer added after map teardown, pane:', name);
+      return document.createElement('div');
+    };
+
     const satellite = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       { maxZoom: 19, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics' },

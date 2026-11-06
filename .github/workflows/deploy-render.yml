@@ -1,0 +1,68 @@
+name: Deploy to Render
+
+# Render cannot auto-deploy this service: it was created from the repo's public
+# Git URL, so no webhook ever tells Render that a push happened ("Services that
+# use a prebuilt Docker image or a public Git repository URL must be deployed
+# manually" — https://render.com/docs/deploys). This workflow supplies the
+# missing trigger by calling the service's deploy hook.
+#
+# Setup: Render Dashboard -> the service -> Settings -> Deploy Hook, copy the
+# URL, then add it as a repository secret named RENDER_DEPLOY_HOOK_URL
+# (Settings -> Secrets and variables -> Actions -> New repository secret).
+# The hook URL is a credential: keep it in the secret, never in this file.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Let a queued deploy finish rather than cancelling it mid-build; Render also
+# cancels superseded builds on its own side.
+concurrency:
+  group: deploy-render
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          # Tolerate a trailing newline or CR if the secret was pasted in.
+          RENDER_DEPLOY_HOOK_URL=$(printf '%s' "$RENDER_DEPLOY_HOOK_URL" | tr -d '\r\n')
+
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::Repository secret RENDER_DEPLOY_HOOK_URL is not set."
+            exit 1
+          fi
+
+          # Deploy this exact commit rather than whatever the branch points at
+          # when the hook fires, so back-to-back pushes cannot race.
+          # The hook URL already has a ?key=... query, so append with &.
+          sep='?'
+          case "$RENDER_DEPLOY_HOOK_URL" in
+            *\?*) sep='&' ;;
+          esac
+          url="${RENDER_DEPLOY_HOOK_URL}${sep}ref=${COMMIT_SHA}"
+
+          status=$(curl -sS -o "$RUNNER_TEMP/render-response.txt" \
+            -w '%{http_code}' \
+            --retry 3 --retry-delay 5 --retry-all-errors \
+            "$url")
+          echo "Render responded with HTTP $status"
+          cat "$RUNNER_TEMP/render-response.txt"
+
+          case "$status" in
+            2*)
+              echo "Deploy triggered for $COMMIT_SHA."
+              ;;
+            *)
+              echo "::error::Render deploy hook returned HTTP $status"
+              exit 1
+              ;;
+          esac

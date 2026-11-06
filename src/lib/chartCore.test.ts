@@ -1738,6 +1738,23 @@ describe('minor light signature merge', () => {
     expect(navaids).toHaveLength(1);
   });
 
+  it('folds one source\u2019s light and its buoy into one mark', () => {
+    // Real pair from the archive: the same aid mapped twice 15 m apart, with
+    // the light named \u201cLight 2\u201d and the buoy \u201cLighted Buoy 2\u201d.
+    const first = mark({ id: 'osm:node/5000001', category: 'lateral_port', name: 'Smiling Cove Light 2', light: 'Fl R 2.5s', lightCharacter: 'Fl', lightColour: 'R', lat: 15.2, lon: 145.7 });
+    const second = mark({ id: 'osm:node/5000002', category: 'lateral_port', name: 'Smiling Cove Lighted Buoy 2', light: 'Fl R 2.5s', lightCharacter: 'Fl', lightColour: 'R', lat: 15.2001, lon: 145.7 });
+    const { navaids } = mergeNavaidSources([first, second]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+  });
+
+  it('keeps neighbouring numbered marks of one source apart', () => {
+    // Same words, different number: two real aids, 29 m apart.
+    const sixth = mark({ id: 'osm:node/5000003', category: 'lateral_starboard', name: 'Haters Dock Light 6', light: 'F R', lat: 45.2, lon: -85.2 });
+    const eighth = mark({ id: 'osm:node/5000004', category: 'lateral_starboard', name: 'Haters Dock Light 8', light: 'F R', lat: 45.20026, lon: -85.2 });
+    const { navaids } = mergeNavaidSources([sixth, eighth]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
   it('does not pair two same-source marks that only share their distinctive words', () => {
     // The traffic scheme has two OSM nodes both named #1 166 m apart; they
     // are separate buoys and must never collapse just because the words

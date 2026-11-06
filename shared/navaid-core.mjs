@@ -1568,7 +1568,7 @@ const NAME_CORE_GENERIC = new Set([
   'station', 'building', 'structure', 'cautionary', 'traffic', 'scheme', 'special',
   'purpose', 'cardinal', 'lateral', 'directional', 'sector', 'starboard', 'port',
   'can', 'nun', 'spar', 'pillar', 'the', 'of', 'de', 'la', 'le', 'du', 'des',
-  'les', 'and', 'no', 'number',
+  'les', 'and', 'no', 'number', 'lighted', 'lit', 'unlit', 'lamp',
 ]);
 
 /**
@@ -1649,6 +1649,16 @@ const LIGHT_ATTACH_M = 50;
 
 /** Same-source records sharing a name must be this close to be one aid. */
 const SAME_SOURCE_NAME_M = 50;
+
+/**
+ * Two records from one source whose names agree on every distinctive word
+ * this far apart are one mark: a light mapped as a buoy and as its buoy node
+ * sit a few metres apart and are named differently only by convention
+ * ("Smiling Cove Light 2" beside "Smiling Cove Lighted Buoy 2"). The radius
+ * stays tight because within one source neighbouring numbered marks share all
+ * their words but the number, and the number is what distinguishes them.
+ */
+const SAME_SOURCE_CORE_M = 30;
 
 /**
  * Cross-source merge for records describing the same physical aid, run in
@@ -1772,6 +1782,22 @@ export function mergeNavaidSources(items, options = {}) {
       !lightColoursConflict(item, other) &&
       !structureColoursConflict(item, other) &&
       !transitRoleConflict(item, other)) {
+      return true;
+    }
+    // One aid, one chart: mappers name the light and the buoy it stands on by
+    // different conventions, so the same mark can arrive twice from a single
+    // source ("Smiling Cove Light 2" / "Smiling Cove Lighted Buoy 2", 15 m
+    // apart). At this range, with every distinctive word in agreement, that is
+    // one mark. Numbered neighbours stay apart because the number is part of
+    // the core, and range/transit pairs are structures in their own right.
+    if (item.source === other.source && aCore && bCore && aCore === bCore &&
+      metres <= SAME_SOURCE_CORE_M &&
+      item.category !== 'range' && other.category !== 'range' &&
+      !String(item.category).startsWith('transit_') && !String(other.category).startsWith('transit_') &&
+      !transitRoleConflict(item, other) &&
+      lightsCompatible(item, other) &&
+      !lightColoursConflict(item, other) &&
+      !structureColoursConflict(item, other)) {
       return true;
     }
     // Same-source duplicates should be close: two records from one

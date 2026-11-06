@@ -7,6 +7,7 @@ import DisclaimerPage from './DisclaimerPage';
 import FeaturesPage from './FeaturesPage';
 import SupportPage from './SupportPage';
 import FutureProjectsPage from './FutureProjectsPage';
+import ErrorBoundary from './ErrorBoundary';
 
 const isAppRoute = window.location.pathname === '/app' || window.location.pathname.startsWith('/app/');
 const isDisclaimerRoute = window.location.pathname === '/disclaimer';
@@ -52,4 +53,8 @@ import.meta.env.DEV && console.info(`[WHEELOVER] ${isAppRoute ? 'chart app' : 'p
 const container = document.getElementById('root');
 if (!container) throw new Error('WHEELOVER root element is missing');
 
-createRoot(container).render(<RootView />);
+createRoot(container).render(
+  <ErrorBoundary>
+    <RootView />
+  </ErrorBoundary>,
+);

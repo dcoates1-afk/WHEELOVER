@@ -152,8 +152,25 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: 
   res.setHeader('Content-Type', mimeTypes[extension] ?? 'application/octet-stream');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   // Only Vite's content-hashed assets are safe to cache as immutable. Public
-  // data such as the NAVAID manifest can change without its URL changing.
-  res.setHeader('Cache-Control', pathname.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
+  // data such as the NAVAID manifest can change without its URL changing, so it
+  // revalidates. The app shell must not be stored at all: a cached shell keeps
+  // naming the bundle it was built against, so after a deploy a browser can sit
+  // on a build that no longer exists while every asset request 404s.
+  const isHashedAsset = pathname.startsWith('/assets/');
+  const isAppShell = extension === '.html';
+  res.setHeader(
+    'Cache-Control',
+    isHashedAsset
+      ? 'public, max-age=31536000, immutable'
+      : isAppShell
+        ? 'no-cache, no-store, must-revalidate'
+        : 'no-cache',
+  );
+  if (isAppShell) {
+    // Redundant for current browsers and decisive for the caches in between.
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
   // The same URL now serves different bytes depending on the client, so any
   // shared cache has to key on the encoding, not just the path.
   res.setHeader('Vary', 'Accept-Encoding');

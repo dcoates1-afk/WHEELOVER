@@ -1408,8 +1408,8 @@ export function LayerControl({
                     <p className="menu-note">Version {dbInfo.version}</p>
                     <p className="menu-note">
                       {dbInfo.checkedAt
-                        ? `Last checked ${new Date(dbInfo.checkedAt).toLocaleDateString()} · rechecked weekly`
-                        : 'Weekly update check pending'}
+                        ? `Last checked ${new Date(dbInfo.checkedAt).toLocaleDateString()} · rechecked after each update`
+                        : 'Update check pending'}
                     </p>
                     <p className="menu-note" data-testid="chart-cache">
                       {chartCache

@@ -1,7 +1,7 @@
 {
   "schema": 2,
-  "version": "20261105050101-3b8ef1fdbf",
-  "generatedAt": "2026-11-05T05:01:01.340Z",
+  "version": "20261107174555-9d5449a041",
+  "generatedAt": "2026-11-07T17:45:55.658Z",
   "cellSize": 0.25,
   "regions": [
     {
@@ -143,18 +143,18 @@
         "cardinal_south": 29,
         "special_purpose": 396,
         "marina": 55,
-        "sector_beacon": 7,
-        "major_light": 8,
+        "sector_light": 9,
         "transit_front": 1,
         "range": 15,
         "transit_rear": 1,
         "lighthouse": 4,
         "hazard": 169,
         "preferred_channel_starboard": 1,
-        "pile": 13,
+        "pile_unlit": 13,
         "isolated_danger": 4,
         "cardinal_north": 12,
         "cardinal_west": 11,
+        "major_light": 6,
         "cardinal_east": 14,
         "safe_water": 1,
         "anchorage": 8,
@@ -292,7 +292,7 @@
         "notice": 2,
         "light": 25,
         "facility": 56,
-        "pile": 19,
+        "pile_unlit": 19,
         "gate": 8,
         "range": 7,
         "preferred_channel_port": 9,
@@ -302,6 +302,2072 @@
         "landmark": 6,
         "transit_front": 1,
         "anchorage": 1
+      }
+    },
+    {
+      "id": "us-gulf",
+      "name": "US Gulf of Mexico offshore",
+      "bounds": [
+        25.8,
+        -97.2,
+        29.6,
+        -89.4
+      ],
+      "count": 2520,
+      "sources": [
+        "osm"
+      ],
+      "shards": [
+        {
+          "path": "us-gulf/117_-380.json",
+          "bounds": [
+            29.25,
+            -95,
+            29.5,
+            -94.75
+          ],
+          "count": 211
+        },
+        {
+          "path": "us-gulf/115_-384.json",
+          "bounds": [
+            28.75,
+            -96,
+            29,
+            -95.75
+          ],
+          "count": 97
+        },
+        {
+          "path": "us-gulf/115_-364.json",
+          "bounds": [
+            28.75,
+            -91,
+            29,
+            -90.75
+          ],
+          "count": 82
+        },
+        {
+          "path": "us-gulf/116_-385.json",
+          "bounds": [
+            29,
+            -96.25,
+            29.25,
+            -96
+          ],
+          "count": 75
+        },
+        {
+          "path": "us-gulf/116_-359.json",
+          "bounds": [
+            29,
+            -89.75,
+            29.25,
+            -89.5
+          ],
+          "count": 70
+        },
+        {
+          "path": "us-gulf/117_-369.json",
+          "bounds": [
+            29.25,
+            -92.25,
+            29.5,
+            -92
+          ],
+          "count": 64
+        },
+        {
+          "path": "us-gulf/115_-363.json",
+          "bounds": [
+            28.75,
+            -90.75,
+            29,
+            -90.5
+          ],
+          "count": 64
+        },
+        {
+          "path": "us-gulf/115_-362.json",
+          "bounds": [
+            28.75,
+            -90.5,
+            29,
+            -90.25
+          ],
+          "count": 62
+        },
+        {
+          "path": "us-gulf/117_-368.json",
+          "bounds": [
+            29.25,
+            -92,
+            29.5,
+            -91.75
+          ],
+          "count": 57
+        },
+        {
+          "path": "us-gulf/115_-361.json",
+          "bounds": [
+            28.75,
+            -90.25,
+            29,
+            -90
+          ],
+          "count": 50
+        },
+        {
+          "path": "us-gulf/115_-366.json",
+          "bounds": [
+            28.75,
+            -91.5,
+            29,
+            -91.25
+          ],
+          "count": 49
+        },
+        {
+          "path": "us-gulf/116_-367.json",
+          "bounds": [
+            29,
+            -91.75,
+            29.25,
+            -91.5
+          ],
+          "count": 47
+        },
+        {
+          "path": "us-gulf/114_-365.json",
+          "bounds": [
+            28.5,
+            -91.25,
+            28.75,
+            -91
+          ],
+          "count": 45
+        },
+        {
+          "path": "us-gulf/114_-364.json",
+          "bounds": [
+            28.5,
+            -91,
+            28.75,
+            -90.75
+          ],
+          "count": 39
+        },
+        {
+          "path": "us-gulf/104_-389.json",
+          "bounds": [
+            26,
+            -97.25,
+            26.25,
+            -97
+          ],
+          "count": 39
+        },
+        {
+          "path": "us-gulf/115_-359.json",
+          "bounds": [
+            28.75,
+            -89.75,
+            29,
+            -89.5
+          ],
+          "count": 36
+        },
+        {
+          "path": "us-gulf/116_-366.json",
+          "bounds": [
+            29,
+            -91.5,
+            29.25,
+            -91.25
+          ],
+          "count": 33
+        },
+        {
+          "path": "us-gulf/117_-367.json",
+          "bounds": [
+            29.25,
+            -91.75,
+            29.5,
+            -91.5
+          ],
+          "count": 32
+        },
+        {
+          "path": "us-gulf/117_-370.json",
+          "bounds": [
+            29.25,
+            -92.5,
+            29.5,
+            -92.25
+          ],
+          "count": 31
+        },
+        {
+          "path": "us-gulf/113_-366.json",
+          "bounds": [
+            28.25,
+            -91.5,
+            28.5,
+            -91.25
+          ],
+          "count": 31
+        },
+        {
+          "path": "us-gulf/114_-366.json",
+          "bounds": [
+            28.5,
+            -91.5,
+            28.75,
+            -91.25
+          ],
+          "count": 31
+        },
+        {
+          "path": "us-gulf/116_-360.json",
+          "bounds": [
+            29,
+            -90,
+            29.25,
+            -89.75
+          ],
+          "count": 31
+        },
+        {
+          "path": "us-gulf/117_-371.json",
+          "bounds": [
+            29.25,
+            -92.75,
+            29.5,
+            -92.5
+          ],
+          "count": 28
+        },
+        {
+          "path": "us-gulf/117_-373.json",
+          "bounds": [
+            29.25,
+            -93.25,
+            29.5,
+            -93
+          ],
+          "count": 28
+        },
+        {
+          "path": "us-gulf/114_-367.json",
+          "bounds": [
+            28.5,
+            -91.75,
+            28.75,
+            -91.5
+          ],
+          "count": 28
+        },
+        {
+          "path": "us-gulf/117_-374.json",
+          "bounds": [
+            29.25,
+            -93.5,
+            29.5,
+            -93.25
+          ],
+          "count": 27
+        },
+        {
+          "path": "us-gulf/116_-361.json",
+          "bounds": [
+            29,
+            -90.25,
+            29.25,
+            -90
+          ],
+          "count": 27
+        },
+        {
+          "path": "us-gulf/114_-370.json",
+          "bounds": [
+            28.5,
+            -92.5,
+            28.75,
+            -92.25
+          ],
+          "count": 27
+        },
+        {
+          "path": "us-gulf/117_-375.json",
+          "bounds": [
+            29.25,
+            -93.75,
+            29.5,
+            -93.5
+          ],
+          "count": 26
+        },
+        {
+          "path": "us-gulf/115_-360.json",
+          "bounds": [
+            28.75,
+            -90,
+            29,
+            -89.75
+          ],
+          "count": 25
+        },
+        {
+          "path": "us-gulf/115_-368.json",
+          "bounds": [
+            28.75,
+            -92,
+            29,
+            -91.75
+          ],
+          "count": 23
+        },
+        {
+          "path": "us-gulf/114_-368.json",
+          "bounds": [
+            28.5,
+            -92,
+            28.75,
+            -91.75
+          ],
+          "count": 23
+        },
+        {
+          "path": "us-gulf/114_-361.json",
+          "bounds": [
+            28.5,
+            -90.25,
+            28.75,
+            -90
+          ],
+          "count": 23
+        },
+        {
+          "path": "us-gulf/113_-365.json",
+          "bounds": [
+            28.25,
+            -91.25,
+            28.5,
+            -91
+          ],
+          "count": 23
+        },
+        {
+          "path": "us-gulf/117_-359.json",
+          "bounds": [
+            29.25,
+            -89.75,
+            29.5,
+            -89.5
+          ],
+          "count": 23
+        },
+        {
+          "path": "us-gulf/115_-365.json",
+          "bounds": [
+            28.75,
+            -91.25,
+            29,
+            -91
+          ],
+          "count": 22
+        },
+        {
+          "path": "us-gulf/114_-363.json",
+          "bounds": [
+            28.5,
+            -90.75,
+            28.75,
+            -90.5
+          ],
+          "count": 22
+        },
+        {
+          "path": "us-gulf/116_-368.json",
+          "bounds": [
+            29,
+            -92,
+            29.25,
+            -91.75
+          ],
+          "count": 20
+        },
+        {
+          "path": "us-gulf/116_-384.json",
+          "bounds": [
+            29,
+            -96,
+            29.25,
+            -95.75
+          ],
+          "count": 20
+        },
+        {
+          "path": "us-gulf/113_-368.json",
+          "bounds": [
+            28.25,
+            -92,
+            28.5,
+            -91.75
+          ],
+          "count": 19
+        },
+        {
+          "path": "us-gulf/117_-372.json",
+          "bounds": [
+            29.25,
+            -93,
+            29.5,
+            -92.75
+          ],
+          "count": 19
+        },
+        {
+          "path": "us-gulf/113_-369.json",
+          "bounds": [
+            28.25,
+            -92.25,
+            28.5,
+            -92
+          ],
+          "count": 18
+        },
+        {
+          "path": "us-gulf/115_-367.json",
+          "bounds": [
+            28.75,
+            -91.75,
+            29,
+            -91.5
+          ],
+          "count": 18
+        },
+        {
+          "path": "us-gulf/113_-367.json",
+          "bounds": [
+            28.25,
+            -91.75,
+            28.5,
+            -91.5
+          ],
+          "count": 16
+        },
+        {
+          "path": "us-gulf/112_-372.json",
+          "bounds": [
+            28,
+            -93,
+            28.25,
+            -92.75
+          ],
+          "count": 16
+        },
+        {
+          "path": "us-gulf/113_-364.json",
+          "bounds": [
+            28.25,
+            -91,
+            28.5,
+            -90.75
+          ],
+          "count": 15
+        },
+        {
+          "path": "us-gulf/114_-362.json",
+          "bounds": [
+            28.5,
+            -90.5,
+            28.75,
+            -90.25
+          ],
+          "count": 15
+        },
+        {
+          "path": "us-gulf/114_-369.json",
+          "bounds": [
+            28.5,
+            -92.25,
+            28.75,
+            -92
+          ],
+          "count": 15
+        },
+        {
+          "path": "us-gulf/115_-369.json",
+          "bounds": [
+            28.75,
+            -92.25,
+            29,
+            -92
+          ],
+          "count": 14
+        },
+        {
+          "path": "us-gulf/118_-374.json",
+          "bounds": [
+            29.5,
+            -93.5,
+            29.75,
+            -93.25
+          ],
+          "count": 14
+        },
+        {
+          "path": "us-gulf/116_-365.json",
+          "bounds": [
+            29,
+            -91.25,
+            29.25,
+            -91
+          ],
+          "count": 14
+        },
+        {
+          "path": "us-gulf/117_-376.json",
+          "bounds": [
+            29.25,
+            -94,
+            29.5,
+            -93.75
+          ],
+          "count": 14
+        },
+        {
+          "path": "us-gulf/112_-386.json",
+          "bounds": [
+            28,
+            -96.5,
+            28.25,
+            -96.25
+          ],
+          "count": 13
+        },
+        {
+          "path": "us-gulf/113_-373.json",
+          "bounds": [
+            28.25,
+            -93.25,
+            28.5,
+            -93
+          ],
+          "count": 13
+        },
+        {
+          "path": "us-gulf/112_-367.json",
+          "bounds": [
+            28,
+            -91.75,
+            28.25,
+            -91.5
+          ],
+          "count": 13
+        },
+        {
+          "path": "us-gulf/116_-378.json",
+          "bounds": [
+            29,
+            -94.5,
+            29.25,
+            -94.25
+          ],
+          "count": 13
+        },
+        {
+          "path": "us-gulf/113_-362.json",
+          "bounds": [
+            28.25,
+            -90.5,
+            28.5,
+            -90.25
+          ],
+          "count": 13
+        },
+        {
+          "path": "us-gulf/111_-389.json",
+          "bounds": [
+            27.75,
+            -97.25,
+            28,
+            -97
+          ],
+          "count": 13
+        },
+        {
+          "path": "us-gulf/111_-376.json",
+          "bounds": [
+            27.75,
+            -94,
+            28,
+            -93.75
+          ],
+          "count": 12
+        },
+        {
+          "path": "us-gulf/112_-371.json",
+          "bounds": [
+            28,
+            -92.75,
+            28.25,
+            -92.5
+          ],
+          "count": 10
+        },
+        {
+          "path": "us-gulf/117_-377.json",
+          "bounds": [
+            29.25,
+            -94.25,
+            29.5,
+            -94
+          ],
+          "count": 10
+        },
+        {
+          "path": "us-gulf/118_-373.json",
+          "bounds": [
+            29.5,
+            -93.25,
+            29.75,
+            -93
+          ],
+          "count": 10
+        },
+        {
+          "path": "us-gulf/112_-369.json",
+          "bounds": [
+            28,
+            -92.25,
+            28.25,
+            -92
+          ],
+          "count": 10
+        },
+        {
+          "path": "us-gulf/115_-374.json",
+          "bounds": [
+            28.75,
+            -93.5,
+            29,
+            -93.25
+          ],
+          "count": 10
+        },
+        {
+          "path": "us-gulf/116_-362.json",
+          "bounds": [
+            29,
+            -90.5,
+            29.25,
+            -90.25
+          ],
+          "count": 10
+        },
+        {
+          "path": "us-gulf/115_-370.json",
+          "bounds": [
+            28.75,
+            -92.5,
+            29,
+            -92.25
+          ],
+          "count": 9
+        },
+        {
+          "path": "us-gulf/112_-375.json",
+          "bounds": [
+            28,
+            -93.75,
+            28.25,
+            -93.5
+          ],
+          "count": 9
+        },
+        {
+          "path": "us-gulf/116_-379.json",
+          "bounds": [
+            29,
+            -94.75,
+            29.25,
+            -94.5
+          ],
+          "count": 9
+        },
+        {
+          "path": "us-gulf/112_-387.json",
+          "bounds": [
+            28,
+            -96.75,
+            28.25,
+            -96.5
+          ],
+          "count": 9
+        },
+        {
+          "path": "us-gulf/113_-372.json",
+          "bounds": [
+            28.25,
+            -93,
+            28.5,
+            -92.75
+          ],
+          "count": 9
+        },
+        {
+          "path": "us-gulf/116_-376.json",
+          "bounds": [
+            29,
+            -94,
+            29.25,
+            -93.75
+          ],
+          "count": 8
+        },
+        {
+          "path": "us-gulf/118_-372.json",
+          "bounds": [
+            29.5,
+            -93,
+            29.75,
+            -92.75
+          ],
+          "count": 8
+        },
+        {
+          "path": "us-gulf/112_-363.json",
+          "bounds": [
+            28,
+            -90.75,
+            28.25,
+            -90.5
+          ],
+          "count": 8
+        },
+        {
+          "path": "us-gulf/115_-382.json",
+          "bounds": [
+            28.75,
+            -95.5,
+            29,
+            -95.25
+          ],
+          "count": 8
+        },
+        {
+          "path": "us-gulf/113_-370.json",
+          "bounds": [
+            28.25,
+            -92.5,
+            28.5,
+            -92.25
+          ],
+          "count": 7
+        },
+        {
+          "path": "us-gulf/113_-375.json",
+          "bounds": [
+            28.25,
+            -93.75,
+            28.5,
+            -93.5
+          ],
+          "count": 7
+        },
+        {
+          "path": "us-gulf/112_-383.json",
+          "bounds": [
+            28,
+            -95.75,
+            28.25,
+            -95.5
+          ],
+          "count": 7
+        },
+        {
+          "path": "us-gulf/114_-372.json",
+          "bounds": [
+            28.5,
+            -93,
+            28.75,
+            -92.75
+          ],
+          "count": 7
+        },
+        {
+          "path": "us-gulf/116_-369.json",
+          "bounds": [
+            29,
+            -92.25,
+            29.25,
+            -92
+          ],
+          "count": 7
+        },
+        {
+          "path": "us-gulf/113_-361.json",
+          "bounds": [
+            28.25,
+            -90.25,
+            28.5,
+            -90
+          ],
+          "count": 7
+        },
+        {
+          "path": "us-gulf/116_-371.json",
+          "bounds": [
+            29,
+            -92.75,
+            29.25,
+            -92.5
+          ],
+          "count": 7
+        },
+        {
+          "path": "us-gulf/116_-377.json",
+          "bounds": [
+            29,
+            -94.25,
+            29.25,
+            -94
+          ],
+          "count": 7
+        },
+        {
+          "path": "us-gulf/118_-360.json",
+          "bounds": [
+            29.5,
+            -90,
+            29.75,
+            -89.75
+          ],
+          "count": 7
+        },
+        {
+          "path": "us-gulf/114_-359.json",
+          "bounds": [
+            28.5,
+            -89.75,
+            28.75,
+            -89.5
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/112_-378.json",
+          "bounds": [
+            28,
+            -94.5,
+            28.25,
+            -94.25
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/112_-370.json",
+          "bounds": [
+            28,
+            -92.5,
+            28.25,
+            -92.25
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/113_-374.json",
+          "bounds": [
+            28.25,
+            -93.5,
+            28.5,
+            -93.25
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/117_-378.json",
+          "bounds": [
+            29.25,
+            -94.5,
+            29.5,
+            -94.25
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/112_-365.json",
+          "bounds": [
+            28,
+            -91.25,
+            28.25,
+            -91
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/111_-378.json",
+          "bounds": [
+            27.75,
+            -94.5,
+            28,
+            -94.25
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/115_-371.json",
+          "bounds": [
+            28.75,
+            -92.75,
+            29,
+            -92.5
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/111_-375.json",
+          "bounds": [
+            27.75,
+            -93.75,
+            28,
+            -93.5
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/113_-376.json",
+          "bounds": [
+            28.25,
+            -94,
+            28.5,
+            -93.75
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/114_-360.json",
+          "bounds": [
+            28.5,
+            -90,
+            28.75,
+            -89.75
+          ],
+          "count": 6
+        },
+        {
+          "path": "us-gulf/116_-363.json",
+          "bounds": [
+            29,
+            -90.75,
+            29.25,
+            -90.5
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/111_-368.json",
+          "bounds": [
+            27.75,
+            -92,
+            28,
+            -91.75
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/111_-385.json",
+          "bounds": [
+            27.75,
+            -96.25,
+            28,
+            -96
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/113_-377.json",
+          "bounds": [
+            28.25,
+            -94.25,
+            28.5,
+            -94
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/112_-376.json",
+          "bounds": [
+            28,
+            -94,
+            28.25,
+            -93.75
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/112_-364.json",
+          "bounds": [
+            28,
+            -91,
+            28.25,
+            -90.75
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/113_-363.json",
+          "bounds": [
+            28.25,
+            -90.75,
+            28.5,
+            -90.5
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/111_-374.json",
+          "bounds": [
+            27.75,
+            -93.5,
+            28,
+            -93.25
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/113_-371.json",
+          "bounds": [
+            28.25,
+            -92.75,
+            28.5,
+            -92.5
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/114_-382.json",
+          "bounds": [
+            28.5,
+            -95.5,
+            28.75,
+            -95.25
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/112_-368.json",
+          "bounds": [
+            28,
+            -92,
+            28.25,
+            -91.75
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/112_-374.json",
+          "bounds": [
+            28,
+            -93.5,
+            28.25,
+            -93.25
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/116_-374.json",
+          "bounds": [
+            29,
+            -93.5,
+            29.25,
+            -93.25
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/115_-383.json",
+          "bounds": [
+            28.75,
+            -95.75,
+            29,
+            -95.5
+          ],
+          "count": 5
+        },
+        {
+          "path": "us-gulf/116_-372.json",
+          "bounds": [
+            29,
+            -93,
+            29.25,
+            -92.75
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/112_-366.json",
+          "bounds": [
+            28,
+            -91.5,
+            28.25,
+            -91.25
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/114_-373.json",
+          "bounds": [
+            28.5,
+            -93.25,
+            28.75,
+            -93
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/115_-373.json",
+          "bounds": [
+            28.75,
+            -93.25,
+            29,
+            -93
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/117_-366.json",
+          "bounds": [
+            29.25,
+            -91.5,
+            29.5,
+            -91.25
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/114_-380.json",
+          "bounds": [
+            28.5,
+            -95,
+            28.75,
+            -94.75
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/111_-373.json",
+          "bounds": [
+            27.75,
+            -93.25,
+            28,
+            -93
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/116_-370.json",
+          "bounds": [
+            29,
+            -92.5,
+            29.25,
+            -92.25
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/111_-387.json",
+          "bounds": [
+            27.75,
+            -96.75,
+            28,
+            -96.5
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/111_-386.json",
+          "bounds": [
+            27.75,
+            -96.5,
+            28,
+            -96.25
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/116_-373.json",
+          "bounds": [
+            29,
+            -93.25,
+            29.25,
+            -93
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/112_-361.json",
+          "bounds": [
+            28,
+            -90.25,
+            28.25,
+            -90
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/115_-385.json",
+          "bounds": [
+            28.75,
+            -96.25,
+            29,
+            -96
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/114_-384.json",
+          "bounds": [
+            28.5,
+            -96,
+            28.75,
+            -95.75
+          ],
+          "count": 4
+        },
+        {
+          "path": "us-gulf/117_-364.json",
+          "bounds": [
+            29.25,
+            -91,
+            29.5,
+            -90.75
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/117_-363.json",
+          "bounds": [
+            29.25,
+            -90.75,
+            29.5,
+            -90.5
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/111_-367.json",
+          "bounds": [
+            27.75,
+            -91.75,
+            28,
+            -91.5
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/115_-358.json",
+          "bounds": [
+            28.75,
+            -89.5,
+            29,
+            -89.25
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/113_-383.json",
+          "bounds": [
+            28.25,
+            -95.75,
+            28.5,
+            -95.5
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/112_-377.json",
+          "bounds": [
+            28,
+            -94.25,
+            28.25,
+            -94
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/114_-371.json",
+          "bounds": [
+            28.5,
+            -92.75,
+            28.75,
+            -92.5
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/115_-372.json",
+          "bounds": [
+            28.75,
+            -93,
+            29,
+            -92.75
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/116_-380.json",
+          "bounds": [
+            29,
+            -95,
+            29.25,
+            -94.75
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/108_-388.json",
+          "bounds": [
+            27,
+            -97,
+            27.25,
+            -96.75
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/113_-384.json",
+          "bounds": [
+            28.25,
+            -96,
+            28.5,
+            -95.75
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/112_-362.json",
+          "bounds": [
+            28,
+            -90.5,
+            28.25,
+            -90.25
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/118_-381.json",
+          "bounds": [
+            29.5,
+            -95.25,
+            29.75,
+            -95
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/117_-358.json",
+          "bounds": [
+            29.25,
+            -89.5,
+            29.5,
+            -89.25
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/118_-359.json",
+          "bounds": [
+            29.5,
+            -89.75,
+            29.75,
+            -89.5
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/113_-387.json",
+          "bounds": [
+            28.25,
+            -96.75,
+            28.5,
+            -96.5
+          ],
+          "count": 3
+        },
+        {
+          "path": "us-gulf/112_-384.json",
+          "bounds": [
+            28,
+            -96,
+            28.25,
+            -95.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/111_-364.json",
+          "bounds": [
+            27.75,
+            -91,
+            28,
+            -90.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/111_-380.json",
+          "bounds": [
+            27.75,
+            -95,
+            28,
+            -94.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/111_-377.json",
+          "bounds": [
+            27.75,
+            -94.25,
+            28,
+            -94
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/116_-375.json",
+          "bounds": [
+            29,
+            -93.75,
+            29.25,
+            -93.5
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/111_-379.json",
+          "bounds": [
+            27.75,
+            -94.75,
+            28,
+            -94.5
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/110_-362.json",
+          "bounds": [
+            27.5,
+            -90.5,
+            27.75,
+            -90.25
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/110_-385.json",
+          "bounds": [
+            27.5,
+            -96.25,
+            27.75,
+            -96
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/114_-374.json",
+          "bounds": [
+            28.5,
+            -93.5,
+            28.75,
+            -93.25
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/111_-363.json",
+          "bounds": [
+            27.75,
+            -90.75,
+            28,
+            -90.5
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/107_-388.json",
+          "bounds": [
+            26.75,
+            -97,
+            27,
+            -96.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/118_-369.json",
+          "bounds": [
+            29.5,
+            -92.25,
+            29.75,
+            -92
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/111_-372.json",
+          "bounds": [
+            27.75,
+            -93,
+            28,
+            -92.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/111_-384.json",
+          "bounds": [
+            27.75,
+            -96,
+            28,
+            -95.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/109_-387.json",
+          "bounds": [
+            27.25,
+            -96.75,
+            27.5,
+            -96.5
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/109_-363.json",
+          "bounds": [
+            27.25,
+            -90.75,
+            27.5,
+            -90.5
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/111_-388.json",
+          "bounds": [
+            27.75,
+            -97,
+            28,
+            -96.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/109_-361.json",
+          "bounds": [
+            27.25,
+            -90.25,
+            27.5,
+            -90
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/118_-376.json",
+          "bounds": [
+            29.5,
+            -94,
+            29.75,
+            -93.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/115_-379.json",
+          "bounds": [
+            28.75,
+            -94.75,
+            29,
+            -94.5
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/118_-377.json",
+          "bounds": [
+            29.5,
+            -94.25,
+            29.75,
+            -94
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/111_-371.json",
+          "bounds": [
+            27.75,
+            -92.75,
+            28,
+            -92.5
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/114_-358.json",
+          "bounds": [
+            28.5,
+            -89.5,
+            28.75,
+            -89.25
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/115_-380.json",
+          "bounds": [
+            28.75,
+            -95,
+            29,
+            -94.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/104_-388.json",
+          "bounds": [
+            26,
+            -97,
+            26.25,
+            -96.75
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/117_-361.json",
+          "bounds": [
+            29.25,
+            -90.25,
+            29.5,
+            -90
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/113_-386.json",
+          "bounds": [
+            28.25,
+            -96.5,
+            28.5,
+            -96.25
+          ],
+          "count": 2
+        },
+        {
+          "path": "us-gulf/108_-369.json",
+          "bounds": [
+            27,
+            -92.25,
+            27.25,
+            -92
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/110_-386.json",
+          "bounds": [
+            27.5,
+            -96.5,
+            27.75,
+            -96.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/112_-373.json",
+          "bounds": [
+            28,
+            -93.25,
+            28.25,
+            -93
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/109_-378.json",
+          "bounds": [
+            27.25,
+            -94.5,
+            27.5,
+            -94.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/110_-384.json",
+          "bounds": [
+            27.5,
+            -96,
+            27.75,
+            -95.75
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/110_-368.json",
+          "bounds": [
+            27.5,
+            -92,
+            27.75,
+            -91.75
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/104_-366.json",
+          "bounds": [
+            26,
+            -91.5,
+            26.25,
+            -91.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/112_-379.json",
+          "bounds": [
+            28,
+            -94.75,
+            28.25,
+            -94.5
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/118_-375.json",
+          "bounds": [
+            29.5,
+            -93.75,
+            29.75,
+            -93.5
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/111_-365.json",
+          "bounds": [
+            27.75,
+            -91.25,
+            28,
+            -91
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/112_-380.json",
+          "bounds": [
+            28,
+            -95,
+            28.25,
+            -94.75
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/107_-379.json",
+          "bounds": [
+            26.75,
+            -94.75,
+            27,
+            -94.5
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/111_-362.json",
+          "bounds": [
+            27.75,
+            -90.5,
+            28,
+            -90.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/115_-381.json",
+          "bounds": [
+            28.75,
+            -95.25,
+            29,
+            -95
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/105_-388.json",
+          "bounds": [
+            26.25,
+            -97,
+            26.5,
+            -96.75
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/107_-389.json",
+          "bounds": [
+            26.75,
+            -97.25,
+            27,
+            -97
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/109_-375.json",
+          "bounds": [
+            27.25,
+            -93.75,
+            27.5,
+            -93.5
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/114_-381.json",
+          "bounds": [
+            28.5,
+            -95.25,
+            28.75,
+            -95
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/113_-358.json",
+          "bounds": [
+            28.25,
+            -89.5,
+            28.5,
+            -89.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/104_-380.json",
+          "bounds": [
+            26,
+            -95,
+            26.25,
+            -94.75
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/109_-379.json",
+          "bounds": [
+            27.25,
+            -94.75,
+            27.5,
+            -94.5
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/106_-363.json",
+          "bounds": [
+            26.5,
+            -90.75,
+            26.75,
+            -90.5
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/110_-365.json",
+          "bounds": [
+            27.5,
+            -91.25,
+            27.75,
+            -91
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/108_-362.json",
+          "bounds": [
+            27,
+            -90.5,
+            27.25,
+            -90.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/104_-369.json",
+          "bounds": [
+            26,
+            -92.25,
+            26.25,
+            -92
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/108_-361.json",
+          "bounds": [
+            27,
+            -90.25,
+            27.25,
+            -90
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/110_-370.json",
+          "bounds": [
+            27.5,
+            -92.5,
+            27.75,
+            -92.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/109_-364.json",
+          "bounds": [
+            27.25,
+            -91,
+            27.5,
+            -90.75
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/109_-360.json",
+          "bounds": [
+            27.25,
+            -90,
+            27.5,
+            -89.75
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/113_-385.json",
+          "bounds": [
+            28.25,
+            -96.25,
+            28.5,
+            -96
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/114_-386.json",
+          "bounds": [
+            28.5,
+            -96.5,
+            28.75,
+            -96.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/103_-389.json",
+          "bounds": [
+            25.75,
+            -97.25,
+            26,
+            -97
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/118_-362.json",
+          "bounds": [
+            29.5,
+            -90.5,
+            29.75,
+            -90.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/118_-383.json",
+          "bounds": [
+            29.5,
+            -95.75,
+            29.75,
+            -95.5
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/116_-382.json",
+          "bounds": [
+            29,
+            -95.5,
+            29.25,
+            -95.25
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/116_-381.json",
+          "bounds": [
+            29,
+            -95.25,
+            29.25,
+            -95
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/114_-385.json",
+          "bounds": [
+            28.5,
+            -96.25,
+            28.75,
+            -96
+          ],
+          "count": 1
+        },
+        {
+          "path": "us-gulf/114_-387.json",
+          "bounds": [
+            28.5,
+            -96.75,
+            28.75,
+            -96.5
+          ],
+          "count": 1
+        }
+      ],
+      "categoryCounts": {
+        "lateral_other": 5,
+        "gate": 23,
+        "platform": 1149,
+        "oil_rig": 838,
+        "wind_turbine": 197,
+        "marina": 45,
+        "lighthouse": 3,
+        "facility": 42,
+        "mooring": 10,
+        "lateral_port": 24,
+        "lateral_starboard": 15,
+        "wreck": 5,
+        "landmark": 1,
+        "pile_unlit": 151,
+        "light": 3,
+        "wind_farm": 4,
+        "hazard": 4,
+        "major_light": 1
       }
     }
   ],
@@ -324,7 +2390,7 @@
       "licence": "CC0 1.0 (NOAA Coast Survey data; verify third-party feature provenance)",
       "redistribution": "allowed",
       "enabled": true,
-      "notes": "One chart-feature wreck in the New York Harbor query bounds, retained as a separate source feature. NOAA states ENC Direct to GIS is not certified for navigation; use current official ENCs for navigation. Retrieval snapshot: data-raw/noaa-ny-harbor-wrecks.geojson."
+      "notes": "Aids to navigation (buoys, beacons, lights with sector bearings, landmarks, platforms, piles) are built into a viewport-sharded dataset (public/noaa-enc-marks/) from the same service; see scripts/build-noaa-enc-marks.mjs. One chart-feature wreck in the New York Harbor query bounds is retained as a separate source feature. NOAA states ENC Direct to GIS is not certified for navigation; use current official ENCs for navigation. Retrieval snapshot: data-raw/noaa-ny-harbor-wrecks.geojson."
     },
     {
       "id": "emodnet-heritage",
@@ -459,8 +2525,8 @@
     }
   ],
   "stats": {
-    "rawRecords": 3696,
-    "uniqueAids": 3282,
-    "duplicatesRemoved": 194
+    "rawRecords": 15102,
+    "uniqueAids": 5802,
+    "duplicatesRemoved": 369
   }
 }

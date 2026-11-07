@@ -185,6 +185,13 @@
       "bounds": [40.45, -74.3, 40.95, -73.7],
       "snapshot": "data-raw/ny.json",
       "sources": ["osm", "noaa-enc"]
+    },
+    {
+      "id": "us-gulf",
+      "name": "US Gulf of Mexico offshore",
+      "bounds": [25.8, -97.2, 29.6, -89.4],
+      "snapshot": "data-raw/us-gulf.json",
+      "sources": ["osm"]
     }
   ]
 }

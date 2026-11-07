@@ -4,6 +4,9 @@
  *
  *   node scripts/build-navaid-db.mjs            # rebuild from data-raw
  *   node scripts/build-navaid-db.mjs --refresh  # fetch fresh OSM data first
+ *   node scripts/build-navaid-db.mjs --refresh --fetch-only --only=us-gulf
+ *                                               # refresh one region's snapshot
+ *                                               # without rebuilding the archive
  *
  * Output:
  *   public/navaid-db/manifest.json   version, regions, shard index, sources
@@ -31,6 +34,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const registry = JSON.parse(readFileSync(resolve(root, 'src/data/navaidSources.json'), 'utf8'));
 const outDir = resolve(root, 'public/navaid-db');
 const refresh = process.argv.includes('--refresh');
+const fetchOnly = process.argv.includes('--fetch-only');
+// A region can be snapshotted on its own, so adding one does not cost a fresh
+// Overpass pull for every other region.
+const only = process.argv.find((argument) => argument.startsWith('--only='))?.slice('--only='.length) ?? null;
+const regions = only ? registry.regions.filter((region) => region.id === only) : registry.regions;
 const MIRRORS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.openstreetmap.fr/api/interpreter',
@@ -176,7 +184,9 @@ async function main() {
   let totalDuplicates = 0;
   const usedSources = new Set();
 
-  for (const region of registry.regions) {
+  if (regions.length === 0) throw new Error(`no region matched --only=${only}`);
+
+  for (const region of regions) {
     let snapshot;
     if (refresh) {
       console.log(`[db] fetching ${region.id} from Overpass…`);
@@ -262,6 +272,11 @@ async function main() {
     );
   }
 
+  if (fetchOnly) {
+    console.log(`[db] snapshots refreshed for ${regions.map((region) => region.id).join(', ')}; archive left untouched`);
+    return;
+  }
+
   if (totalUnique === 0) throw new Error('refusing to publish an empty database');
 
   const generatedAt = new Date().toISOString();
@@ -296,7 +311,12 @@ async function main() {
   writeFileSync(resolve(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
   // Seed extract: the highest-priority aids charted instantly before shards load.
-  const solent = built.find((region) => region.id === 'solent') ?? built[0];
+  // A partial build has no Solent to seed from, so it leaves the seed alone.
+  const solent = built.find((region) => region.id === 'solent');
+  if (!solent) {
+    console.log(`[db] wrote ${totalUnique} aids across ${built.length} regions; version ${manifest.version}; seed unchanged`);
+    return;
+  }
   const all = [];
   for (const shard of solent.shards) {
     const payload = JSON.parse(readFileSync(resolve(outDir, shard.path), 'utf8'));

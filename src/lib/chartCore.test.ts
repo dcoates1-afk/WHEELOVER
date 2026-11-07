@@ -1318,6 +1318,59 @@ describe('dedupe', () => {
 });
 
 describe('cross-source merge', () => {
+  it('folds an unnamed OSM platform onto the charted platform it stands on', () => {
+    // The real pair: ENC F-W OIL-102-9 and OSM's unnamed Prime Offshore node
+    // 46 m away. A platform deck is tens of metres across, so the two pins
+    // describe one structure.
+    const osm = mark({ id: 'osm:node/10695953984', category: 'platform', lat: 26.476235, lon: -96.854479, name: null, source: 'osm' });
+    const charted = mark({ id: 'noaa-enc:Offshore_Platform:415748', category: 'oil_rig', lat: 26.47665, lon: -96.854479, name: 'F-W OIL-102-9', source: 'noaa-enc' });
+    const { navaids } = mergeNavaidSources([osm, charted]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].name).toBe('F-W OIL-102-9');
+    expect(navaids[0].sources).toEqual(expect.arrayContaining(['osm', 'noaa-enc']));
+  });
+
+  it('keeps a named OSM platform apart from a charted one', () => {
+    const named = mark({ id: 'osm:node/2', category: 'platform', lat: 26.476235, lon: -96.854479, name: 'Prime Offshore platform', source: 'osm' });
+    const charted = mark({ id: 'noaa-enc:Offshore_Platform:415748', category: 'oil_rig', lat: 26.47665, lon: -96.854479, name: 'F-W OIL-102-9', source: 'noaa-enc' });
+    expect((mergeNavaidSources([named, charted]) as { navaids: Navaid[] }).navaids).toHaveLength(2);
+  });
+
+  it('keeps two charted platforms apart even when they sit inside one footprint', () => {
+    const a = mark({ id: 'noaa-enc:Offshore_Platform:1', category: 'oil_rig', lat: 26.476235, lon: -96.854479, name: 'Wellhead 102-9', source: 'noaa-enc' });
+    const b = mark({ id: 'noaa-enc:Offshore_Platform:2', category: 'platform', lat: 26.47665, lon: -96.854479, name: 'Production 102-9', source: 'noaa-enc' });
+    expect((mergeNavaidSources([a, b]) as { navaids: Navaid[] }).navaids).toHaveLength(2);
+  });
+
+  it('takes production evidence from the OSM pin it absorbs', () => {
+    const osm = mark({ id: 'osm:node/7', category: 'oil_rig', lat: 26.476235, lon: -96.854479, name: null, source: 'osm' });
+    const charted = mark({ id: 'noaa-enc:Offshore_Platform:415748', category: 'platform', lat: 26.47665, lon: -96.854479, name: 'F-W OIL-102-9', source: 'noaa-enc' });
+    const out = (mergeNavaidSources([osm, charted]) as { navaids: Navaid[] }).navaids;
+    expect(out).toHaveLength(1);
+    expect(out[0].category).toBe('oil_rig');
+    expect(out[0].sources).toEqual(['noaa-enc', 'osm']);
+  });
+
+  it('keeps two OSM pins and two charted platforms when the match is ambiguous', () => {
+    // Two charted platforms inside one footprint, or two OSM pins over one
+    // chart, are evidence of two structures — never pick a winner.
+    const osmA = mark({ id: 'osm:node/4', category: 'platform', lat: 26.476235, lon: -96.854479, name: null, source: 'osm' });
+    const osmB = mark({ id: 'osm:node/5', category: 'platform', lat: 26.4763, lon: -96.854479, name: null, source: 'osm' });
+    const charted = mark({ id: 'noaa-enc:Offshore_Platform:415748', category: 'oil_rig', lat: 26.47665, lon: -96.854479, name: 'F-W OIL-102-9', source: 'noaa-enc' });
+    expect((mergeNavaidSources([osmA, osmB, charted]) as { navaids: Navaid[] }).navaids).toHaveLength(3);
+
+    const chartedA = mark({ id: 'noaa-enc:Offshore_Platform:10', category: 'oil_rig', lat: 26.4764, lon: -96.854479, name: 'Rig A', source: 'noaa-enc' });
+    const chartedB = mark({ id: 'noaa-enc:Offshore_Platform:11', category: 'platform', lat: 26.47665, lon: -96.854479, name: 'Rig B', source: 'noaa-enc' });
+    const osmC = mark({ id: 'osm:node/6', category: 'platform', lat: 26.476235, lon: -96.854479, name: null, source: 'osm' });
+    expect((mergeNavaidSources([osmC, chartedA, chartedB]) as { navaids: Navaid[] }).navaids).toHaveLength(3);
+  });
+
+  it('leaves an unnamed OSM platform beyond the footprint radius alone', () => {
+    const osm = mark({ id: 'osm:node/3', category: 'platform', lat: 26.4770, lon: -96.854479, name: null, source: 'osm' });
+    const charted = mark({ id: 'noaa-enc:Offshore_Platform:415748', category: 'oil_rig', lat: 26.476235, lon: -96.854479, name: 'F-W OIL-102-9', source: 'noaa-enc' });
+    expect((mergeNavaidSources([osm, charted]) as { navaids: Navaid[] }).navaids).toHaveLength(2);
+  });
+
   it('keeps the lighthouse class when an official lighthouse merges with an OSM light', () => {
     const osm = mark({ id: 'osm:node/1', category: 'light', lat: 50.7, lon: -1.2, name: 'Cockspur Light', light: null, source: 'osm' });
     const official = mark({ id: 'uscg:1', category: 'lighthouse', lat: 50.7005, lon: -1.2, name: 'Cockspur Light', light: 'Fl W 6s', lightCharacter: 'Fl', source: 'uscg' });

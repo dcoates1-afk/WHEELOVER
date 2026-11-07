@@ -191,7 +191,7 @@ export function dedupeNavaids(
 ): { navaids: Navaid[]; removed: number };
 export function mergeNavaidSources(
   items: Navaid[],
-  options?: { nameDistanceM?: number; familyDistanceM?: number },
+  options?: { nameDistanceM?: number; familyDistanceM?: number; platformTwinM?: number },
 ): { navaids: Navaid[]; removed: number };
 export function cellKey(lat: number, lon: number, size?: number): string;
 export function cellBounds(key: string, size?: number): [number, number, number, number];

@@ -1052,6 +1052,11 @@ export function normalizeElement(element, regionId = null, source = 'osm') {
   };
 }
 
+/** Categories that describe a fixed offshore structure rather than an aid. */
+function isPlatformStructure(category) {
+  return category === 'oil_rig' || category === 'platform';
+}
+
 function familyOf(category) {
   if (category.startsWith('lateral')) return 'lateral';
   if (category.startsWith('preferred_channel')) return category;
@@ -1712,6 +1717,16 @@ const NAMELESS_TWIN_M = 25;
 const PILE_LATERAL_M = 15;
 
 /**
+ * An unnamed OSM platform this close to a charted platform is that structure
+ * mapped twice: a production platform's deck is tens of metres across, and a
+ * mapper pins whichever corner they surveyed (the Prime Offshore node sits
+ * 46 m from the charted F-W OIL-102-9 rig). The radius is a footprint, not a
+ * neighbourhood: it only ever joins an OSM record to a charted one, only when
+ * the OSM record carries no name of its own, and never two charted platforms.
+ */
+const PLATFORM_TWIN_M = 50;
+
+/**
  * Shapes that name a fixed structure rather than a floating mark. A lateral
  * record shaped as one of these is the structure the official list lights,
  * where a can or cone beside a pile light is a real second mark.
@@ -1748,6 +1763,7 @@ const STRUCTURE_SHAPES = new Set(['pile', 'pillar', 'pole', 'stake', 'tower']);
 export function mergeNavaidSources(items, options = {}) {
   const nameDistanceM = options.nameDistanceM ?? 250;
   const familyDistanceM = options.familyDistanceM ?? 50;
+  const platformTwinM = options.platformTwinM ?? PLATFORM_TWIN_M;
   const accepted = [];
   const groups = [];
   const grid = new Map();
@@ -2032,7 +2048,73 @@ export function mergeNavaidSources(items, options = {}) {
     return merged;
   });
 
-  return { navaids, removed: items.length - navaids.length };
+  // An unnamed OSM platform folds onto the one charted platform it stands on.
+  // The join is one-to-one on both sides: a chart holding two platforms inside
+  // one footprint keeps both, and a chart carrying two OSM pins over it keeps
+  // both pins, because that ambiguity is the evidence proximity alone is not
+  // enough. Measured on four Gulf boxes the pairwise version of this rule
+  // folded 148 OSM pins but let 19 charted platforms absorb two of them at
+  // once; the one-to-one guard gives those back.
+  let final = navaids;
+  if (platformTwinM > 0) {
+    const chartedIndexes = [];
+    navaids.forEach((m, index) => {
+      if (isPlatformStructure(m.category) &&
+        OFFICIAL_NAVAID_SOURCES.has(String(m.source ?? '').toLowerCase())) chartedIndexes.push(index);
+    });
+    const absorbed = new Map();
+    const dropped = new Set();
+    for (const [osmIndex, osm] of navaids.entries()) {
+      if (osm.source !== 'osm' || !isPlatformStructure(osm.category) || normName(osm.name) !== '') continue;
+      const near = chartedIndexes.filter((ci) =>
+        distanceMeters(osm.lat, osm.lon, navaids[ci].lat, navaids[ci].lon) <= platformTwinM);
+      if (near.length !== 1) continue;
+      const charted = navaids[near[0]];
+      if (structureColoursConflict(osm, charted)) continue;
+      // A second OSM pin on the same charted platform means two mapped
+      // structures over one charted one: keep both pins rather than pick.
+      const rival = navaids.some((m, i) => i !== osmIndex && m.source === 'osm' &&
+        isPlatformStructure(m.category) &&
+        distanceMeters(m.lat, m.lon, charted.lat, charted.lon) <= platformTwinM);
+      if (rival) continue;
+      const list = absorbed.get(near[0]) ?? [];
+      list.push(osmIndex);
+      absorbed.set(near[0], list);
+      dropped.add(osmIndex);
+    }
+    if (dropped.size > 0) {
+      for (const [chartedIndex, osmIndexes] of absorbed) {
+        const charted = { ...navaids[chartedIndex] };
+        const sources = new Set([...(charted.sources ?? []), charted.source]);
+        for (const index of osmIndexes) {
+          const osm = navaids[index];
+          for (const source of [...(osm.sources ?? []), osm.source]) if (source) sources.add(source);
+          // The charted record keeps its position, name and class; the OSM pin
+          // fills only what the chart left blank (an operator, a note).
+          for (const [key, value] of Object.entries(osm)) {
+            if (POSITION_FIELDS.has(key) || LIGHT_FIELDS.includes(key) ||
+              key === 'category' || key === 'priority' || key === 'sources') continue;
+            const current = charted[key];
+            if ((current === null || current === undefined || current === '') &&
+              value !== null && value !== undefined && value !== '') charted[key] = value;
+          }
+        }
+        // A second source reporting production fills in what a generic
+        // "platform" chart symbol leaves out; it never downgrades a charted
+        // type, so an oil rig stays an oil rig either way.
+        if (charted.category === 'platform' &&
+          osmIndexes.some((index) => navaids[index].category === 'oil_rig')) {
+          charted.category = 'oil_rig';
+          charted.priority = PRIORITY.oil_rig;
+        }
+        charted.sources = [...sources];
+        navaids[chartedIndex] = charted;
+      }
+      final = navaids.filter((m, index) => !dropped.has(index));
+    }
+  }
+
+  return { navaids: final, removed: items.length - final.length };
 }
 
 export function cellKey(lat, lon, size = DEFAULT_CELL_SIZE) {

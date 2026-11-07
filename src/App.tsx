@@ -139,6 +139,12 @@ interface ViewState {
 interface DbReport {
   manifest: NavaidManifest | null;
   checkedAt: number | null;
+  /**
+   * The stored report has been read and any deployment refresh has finished.
+   * Until then the chart does not know whether the archive covers the view, so
+   * a mark load would guess.
+   */
+  ready: boolean;
 }
 
 function safeStorage(): Storage | null {
@@ -291,7 +297,7 @@ export default function App() {
   const [chartFeatures, setChartFeatures] = useState<ChartFeature[]>([]);
   const [protectedAreaFeatures, setProtectedAreaFeatures] = useState<ProtectedAreaFeature[]>([]);
   const [markSource, setMarkSource] = useState<{ live: boolean; cached: boolean }>({ live: false, cached: true });
-  const [db, setDb] = useState<DbReport>({ manifest: null, checkedAt: null });
+  const [db, setDb] = useState<DbReport>({ manifest: null, checkedAt: null, ready: false });
   const [checking, setChecking] = useState(false);
   const [checkMessage, setCheckMessage] = useState<string | null>(null);
   const [chartCache, setChartCache] = useState<{ tiles: number; bytes: number } | null>(null);
@@ -555,11 +561,19 @@ export default function App() {
   // Manifest + weekly revalidation, once per session.
   useEffect(() => {
     let cancelled = false;
+    // A database layer that never answers (a wedged IndexedDB, say) must not
+    // leave the chart with no marks at all: after a few seconds the view loads
+    // as if there were no archive and falls back to the live query.
+    const fallback = setTimeout(() => {
+      if (!cancelled) setDb((current) => (current.ready ? current : { ...current, ready: true }));
+    }, 4000);
     void navaidDatabase.init().then((report) => {
       if (cancelled) return;
+      clearTimeout(fallback);
       setDb({
         manifest: report.manifest,
         checkedAt: report.checked ? Date.now() : navaidDatabase.getCheckedAt(),
+        ready: true,
       });
       if (!report.manifest) {
         void import('./data/solentNavaids.json').then(({ default: seedExtract }) => {
@@ -569,12 +583,17 @@ export default function App() {
     });
     return () => {
       cancelled = true;
+      clearTimeout(fallback);
     };
   }, []);
 
   // Load marks for the current view: built shards first, live query otherwise.
   const requestId = useRef(0);
   useEffect(() => {
+    // Wait for the archive report. Without it the view cannot tell whether the
+    // shards cover it, and a load that lands while a new deployment is being
+    // read would ask Overpass for marks the refreshed archive already holds.
+    if (!db.ready) return;
     const id = ++requestId.current;
     let cancelled = false;
     const manifest = db.manifest;
@@ -616,7 +635,7 @@ export default function App() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [view, db.manifest, reloadKey]);
+  }, [view, db.manifest, db.ready, reloadKey]);
 
   // CCG lights are a 4 MB Canadian supplement. It loads the first time the view
   // reaches Canadian waters and is cached for the session; anywhere else it
@@ -967,6 +986,7 @@ export default function App() {
     setDb({
       manifest: navaidDatabase.getManifest(),
       checkedAt: navaidDatabase.getCheckedAt(),
+      ready: true,
     });
     if (result.updated) setReloadKey((key) => key + 1);
     const dbNote = result.updated

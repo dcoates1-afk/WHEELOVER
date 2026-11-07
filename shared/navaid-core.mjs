@@ -1661,6 +1661,16 @@ const SAME_SOURCE_NAME_M = 50;
 const SAME_SOURCE_CORE_M = 30;
 
 /**
+ * A named aid and a nameless record of its family this close are one aid: a
+ * mapper pins the buoy but writes no name, so no name-based rule can see that
+ * it is the same mark the light list names (Lee Rock's V25 arrives both named
+ * from the list and nameless from OSM, 14 m apart). The radius stays small
+ * because two neighbouring aids of one family may sit closer than the wide
+ * rules; colour, light and range-role disagreements still refuse the pair.
+ */
+const NAMELESS_TWIN_M = 25;
+
+/**
  * Cross-source merge for records describing the same physical aid, run in
  * addition to the 40 m dedupeNavaids pass. Match rules: same normalised
  * name within 250 m with a compatible light (equal, or one side unlit);
@@ -1669,7 +1679,9 @@ const SAME_SOURCE_CORE_M = 30;
  * and pattern, whatever the names say (a stated range role must agree);
  * the same designator token within 250 m with a compatible light and no colour
  * conflict; same family across sources within 50 m with an equal light
- * character; wind farms by overlapping area. Never merges across families
+ * character; a named aid and a nameless record of its family within 25 m
+ * with no colour, light or range-role disagreement; wind farms by
+ * overlapping area. Never merges across families
  * on position alone, and wrecks merge only on the same name. The family
  * radius is deliberately tight: neighbouring channel marks often share
  * one light signature, and a wider radius swallows them into one mark.
@@ -1778,6 +1790,23 @@ export function mergeNavaidSources(items, options = {}) {
     const aCore = nameCore(item.name);
     const bCore = nameCore(other.name);
     if (item.source !== other.source && aCore && bCore && aCore === bCore && metres <= nameDistanceM &&
+      lightsCompatible(item, other) &&
+      !lightColoursConflict(item, other) &&
+      !structureColoursConflict(item, other) &&
+      !transitRoleConflict(item, other)) {
+      return true;
+    }
+    // One named aid, one nameless twin: the same mark can arrive named from
+    // an official list and bare from OSM, close enough to be one structure
+    // but with nothing in common to compare by name. Same family, colours
+    // that do not disagree, lights that could belong to one aid, and no
+    // stated range role in conflict — that is one aid. Cross-source only:
+    // two nameless records from one source a few metres apart are a pair of
+    // real marks, not a duplicate.
+    const named = normName(item.name) !== '';
+    const otherNamed = normName(other.name) !== '';
+    if (item.source !== other.source && named !== otherNamed && metres <= NAMELESS_TWIN_M &&
+      familyOf(item.category) === familyOf(other.category) &&
       lightsCompatible(item, other) &&
       !lightColoursConflict(item, other) &&
       !structureColoursConflict(item, other) &&

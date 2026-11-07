@@ -1731,6 +1731,65 @@ describe('minor light signature merge', () => {
     expect(navaids[0].id).toBe('osm:node/23');
   });
 
+  it('folds a nameless OSM twin into the named aid it maps', () => {
+    // Real records: the light list and the ENC both name Lee Rock's V25 (green
+    // pillar, Fl G 4s); OSM pins the same buoy 14 m away with no name, no
+    // light and no description, so no name-based rule could see the pair.
+    const osm = mark({
+      id: 'osm:node/3158857988', category: 'lateral_other', name: null, colour: 'green',
+      shape: 'can', lat: 48.4182914, lon: -123.2884069,
+    });
+    const ccg = mark({
+      id: 'ccg:pac:212.7', category: 'lateral_other', name: 'Lee Rock light buoy V25',
+      light: 'Fl G 4s', lightCharacter: 'Fl', lightColour: 'G', colour: 'green', shape: 'pillar',
+      lat: 48.4184167, lon: -123.28825, source: 'ccg',
+    });
+    const enc = mark({
+      id: 'noaa-enc:Buoy_Lateral:249801', category: 'lateral_port', name: 'Lee Rock light buoy V25',
+      light: 'Fl G 4s', lightCharacter: 'Fl', lightColour: 'green', colour: 'green', shape: 'pillar',
+      lat: 48.4184167, lon: -123.28825, source: 'noaa-enc',
+    });
+    const { navaids } = mergeNavaidSources([osm, ccg, enc]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].id).toBe('osm:node/3158857988');
+    expect(navaids[0].name).toBe('Lee Rock light buoy V25');
+    expect(navaids[0].light).toBe('Fl G 4s');
+    expect(navaids[0].sources).toEqual(['osm', 'ccg', 'noaa-enc']);
+  });
+
+  it('does not fold a nameless record beyond 25 m', () => {
+    const osm = mark({ category: 'lateral_other', name: null, colour: 'green', lat: 48.4182, lon: -123.2884 });
+    const official = mark({
+      category: 'lateral_other', name: 'Lee Rock light buoy V25', light: 'Fl G 4s',
+      colour: 'green', lat: 48.4185, lon: -123.2884, source: 'ccg',
+    });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not fold a nameless record whose colour disagrees with the named aid', () => {
+    const osm = mark({ category: 'lateral_other', name: null, colour: 'green', lat: 48.4182, lon: -123.2884 });
+    const official = mark({
+      category: 'lateral_starboard', name: 'Lee Rock light buoy V25', light: 'Fl R 4s',
+      lightColour: 'R', colour: 'red', lat: 48.41829, lon: -123.2884, source: 'ccg',
+    });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('does not fold a nameless twin from the same source', () => {
+    const named = mark({
+      id: 'osm:node/1', category: 'lateral_other', name: 'Lee Rock light buoy V25',
+      light: 'Fl G 4s', colour: 'green', lat: 48.4182, lon: -123.2884,
+    });
+    const bare = mark({
+      id: 'osm:node/2', category: 'lateral_other', name: null, colour: 'green',
+      lat: 48.41829, lon: -123.2884,
+    });
+    const { navaids } = mergeNavaidSources([named, bare]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
   it('combines a south cardinal recorded under a longer official name', () => {
     const osm = mark({ id: 'osm:node/31', category: 'cardinal_south', name: 'Mout Reef South Cardinal Buoy', light: 'Q(3) 10s', lightCharacter: 'Q(3)', lightColour: 'white', lat: 48.43, lon: -123.31 });
     const official = mark({ id: 'ccg:pac:301', category: 'cardinal_south', name: 'Mout Reef', light: 'Q(3) 10s', lightCharacter: 'Q(3)', lightColour: 'W', lat: 48.4306, lon: -123.31, source: 'ccg' });

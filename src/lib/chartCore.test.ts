@@ -1790,6 +1790,68 @@ describe('minor light signature merge', () => {
     expect(navaids).toHaveLength(2);
   });
 
+  it('folds a lateral mark onto the lighted pile it stands on', () => {
+    // Real pair from the US inland rivers: the list files "SG on skeleton tower
+    // on piles" as a lighted pile; OSM charts the same light as the lateral
+    // mark it identifies, 6 m away, with the same character and colour.
+    // OSM records the whole character in `light` with no separate field, as
+    // the archive does; the comparison must parse it rather than compare raw.
+    const osm = mark({
+      id: 'osm:node/9001', category: 'lateral_port', name: null, colour: 'green', shape: 'cylinder',
+      light: 'Iso green 6s', lat: 29.36091, lon: -89.44747,
+    });
+    const official = mark({
+      id: 'uscg:05:12000', category: 'pile_lit', name: 'Fort Jackson Light 19',
+      light: 'Iso G 6s', lightCharacter: 'Iso', lightColour: 'G', colour: 'green',
+      lat: 29.36091, lon: -89.44747, source: 'uscg',
+    });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].id).toBe('osm:node/9001');
+    expect(navaids[0].name).toBe('Fort Jackson Light 19');
+    expect(navaids[0].light).toBe('Iso G 6s');
+    expect(navaids[0].sources).toEqual(['osm', 'uscg']);
+  });
+
+  it('keeps a lateral mark and a lighted pile apart beyond 15 m', () => {
+    const osm = mark({
+      category: 'lateral_port', name: null, colour: 'green',
+      light: 'Iso green 6s', lightColour: 'green', lat: 29.3609, lon: -89.4475,
+    });
+    const official = mark({
+      id: 'uscg:05:1', category: 'pile_lit', name: 'Fort Jackson Light 19', light: 'Iso G 6s',
+      colour: 'green', lat: 29.3611, lon: -89.4475, source: 'uscg',
+    });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('keeps a lateral mark and a lighted pile apart on different light characters', () => {
+    const osm = mark({
+      category: 'lateral_port', name: null, colour: 'green',
+      light: 'Fl green 4s', lightColour: 'green', lat: 29.3609, lon: -89.4475,
+    });
+    const official = mark({
+      category: 'pile_lit', name: 'Fort Jackson Light 19', light: 'Iso G 6s',
+      colour: 'green', lat: 29.36091, lon: -89.4475, source: 'uscg',
+    });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('keeps same-source lateral marks and piles apart', () => {
+    const lateral = mark({
+      id: 'osm:node/9002', category: 'lateral_port', name: 'Green 1', light: 'Iso green 6s',
+      colour: 'green', lat: 29.3609, lon: -89.4475,
+    });
+    const pile = mark({
+      id: 'osm:node/9003', category: 'pile_lit', name: 'Pile 1', light: 'Iso green 6s',
+      colour: 'green', lat: 29.36091, lon: -89.4475,
+    });
+    const { navaids } = mergeNavaidSources([lateral, pile]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
   it('combines a south cardinal recorded under a longer official name', () => {
     const osm = mark({ id: 'osm:node/31', category: 'cardinal_south', name: 'Mout Reef South Cardinal Buoy', light: 'Q(3) 10s', lightCharacter: 'Q(3)', lightColour: 'white', lat: 48.43, lon: -123.31 });
     const official = mark({ id: 'ccg:pac:301', category: 'cardinal_south', name: 'Mout Reef', light: 'Q(3) 10s', lightCharacter: 'Q(3)', lightColour: 'W', lat: 48.4306, lon: -123.31, source: 'ccg' });

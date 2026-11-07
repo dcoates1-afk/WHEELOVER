@@ -1671,6 +1671,14 @@ const SAME_SOURCE_CORE_M = 30;
 const NAMELESS_TWIN_M = 25;
 
 /**
+ * A lighted pile and a lateral mark this close, with the same light character,
+ * are one aid: the inland-river lights stand on piles, and OSM charts them as
+ * the lateral mark they identify. Both sides must carry the same character,
+ * so a buoy that merely lies near a pile light never folds into it.
+ */
+const PILE_LATERAL_M = 15;
+
+/**
  * Cross-source merge for records describing the same physical aid, run in
  * addition to the 40 m dedupeNavaids pass. Match rules: same normalised
  * name within 250 m with a compatible light (equal, or one side unlit);
@@ -1680,7 +1688,8 @@ const NAMELESS_TWIN_M = 25;
  * the same designator token within 250 m with a compatible light and no colour
  * conflict; same family across sources within 50 m with an equal light
  * character; a named aid and a nameless record of its family within 25 m
- * with no colour, light or range-role disagreement; wind farms by
+ * with no colour, light or range-role disagreement; a lateral mark and a
+ * lighted pile within 15 m on the same light character; wind farms by
  * overlapping area. Never merges across families
  * on position alone, and wrecks merge only on the same name. The family
  * radius is deliberately tight: neighbouring channel marks often share
@@ -1812,6 +1821,27 @@ export function mergeNavaidSources(items, options = {}) {
       !structureColoursConflict(item, other) &&
       !transitRoleConflict(item, other)) {
       return true;
+    }
+    // A lit pile and a lateral mark at the same spot are one aid: on the US
+    // inland rivers the light stands on a skeleton tower on piles ("SG on
+    // skeleton tower on piles"), which the official list files as a lighted
+    // pile and OSM maps as the lateral mark it marks, so the two families
+    // never met and the aid drew twice. The light character must match on
+    // both sides — a buoy lying near a pile usually differs — and the radius
+    // stays tight for the same reason.
+    const pileSide = [item, other].find((m) => familyOf(m.category) === 'pile');
+    const lateralSide = pileSide
+      ? [item, other].find((m) => m !== pileSide && familyOf(m.category) === 'lateral')
+      : undefined;
+    if (pileSide && lateralSide && item.source !== other.source && metres <= PILE_LATERAL_M) {
+      // Compare parsed signatures, not raw fields: OSM writes the whole
+      // "Iso green 6s" in `light` with no separate character, while the list
+      // splits character, colour and period across its columns.
+      if (lightSignaturesMatch(pileSide, lateralSide) &&
+        !lateralColourConflict(lateralSide, pileSide) &&
+        !structureColoursConflict(lateralSide, pileSide) &&
+        !lightColoursConflict(lateralSide, pileSide) &&
+        !transitRoleConflict(lateralSide, pileSide)) return true;
     }
     // One aid, one chart: mappers name the light and the buoy it stands on by
     // different conventions, so the same mark can arrive twice from a single

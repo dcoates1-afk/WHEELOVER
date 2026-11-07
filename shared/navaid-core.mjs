@@ -1679,6 +1679,13 @@ const NAMELESS_TWIN_M = 25;
 const PILE_LATERAL_M = 15;
 
 /**
+ * Shapes that name a fixed structure rather than a floating mark. A lateral
+ * record shaped as one of these is the structure the official list lights,
+ * where a can or cone beside a pile light is a real second mark.
+ */
+const STRUCTURE_SHAPES = new Set(['pile', 'pillar', 'pole', 'stake', 'tower']);
+
+/**
  * Cross-source merge for records describing the same physical aid, run in
  * addition to the 40 m dedupeNavaids pass. Match rules: same normalised
  * name within 250 m with a compatible light (equal, or one side unlit);
@@ -1689,8 +1696,9 @@ const PILE_LATERAL_M = 15;
  * conflict; same family across sources within 50 m with an equal light
  * character; a named aid and a nameless record of its family within 25 m
  * with no colour, light or range-role disagreement; a lateral mark and a
- * lighted pile within 15 m on the same light character; wind farms by
- * overlapping area. Never merges across families
+ * lighted pile within 15 m on the same light character, or on a matching
+ * colour when the chart names the pile as its shape and carries no light;
+ * wind farms by overlapping area. Never merges across families
  * on position alone, and wrecks merge only on the same name. The family
  * radius is deliberately tight: neighbouring channel marks often share
  * one light signature, and a wider radius swallows them into one mark.
@@ -1842,6 +1850,20 @@ export function mergeNavaidSources(items, options = {}) {
         !structureColoursConflict(lateralSide, pileSide) &&
         !lightColoursConflict(lateralSide, pileSide) &&
         !transitRoleConflict(lateralSide, pileSide)) return true;
+      // The mapper charted the structure but not its light: a pile-shaped
+      // lateral mark in the pile's own colour, at the pile's spot, is that
+      // structure (St Lucie River Light 23A and 50-odd kin, 1-5 m apart).
+      // A buoy shape is a real second mark beside the pile, a missing or
+      // different colour is no evidence at all, and a stated light string is
+      // left to the signature test above, so this never overrides a light the
+      // chart already carries.
+      if (!normLightCharacter(lateralSide)) {
+        const lateralColours = structureColourSet(lateralSide);
+        const pileColours = structureColourSet(pileSide);
+        const sameColour = lateralColours.size > 0 && lateralColours.size === pileColours.size &&
+          [...lateralColours].every((colour) => pileColours.has(colour));
+        if (sameColour && STRUCTURE_SHAPES.has(String(lateralSide.shape ?? '').toLowerCase())) return true;
+      }
     }
     // One aid, one chart: mappers name the light and the buoy it stands on by
     // different conventions, so the same mark can arrive twice from a single

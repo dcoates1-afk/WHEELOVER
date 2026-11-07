@@ -1852,6 +1852,66 @@ describe('minor light signature merge', () => {
     expect(navaids).toHaveLength(2);
   });
 
+  it('folds a pile-shaped lateral mark onto its lit pile when the chart names no light', () => {
+    // Real chain from the St Lucie River: OSM charts the pile as the lateral
+    // mark it carries, in the same colour, but records no light at all.
+    const osm = mark({
+      id: 'osm:node/9101', category: 'lateral_other', name: null, colour: 'green', shape: 'pile',
+      lat: 27.2075, lon: -80.2563,
+    });
+    const official = mark({
+      id: 'uscg:04:1', category: 'pile_lit', name: 'St Lucie River Light 23A', light: 'Fl G 4s',
+      lightCharacter: 'Fl', lightColour: 'G', colour: 'green', lat: 27.2075, lon: -80.2563, source: 'uscg',
+    });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(1);
+    expect(navaids[0].id).toBe('osm:node/9101');
+    expect(navaids[0].name).toBe('St Lucie River Light 23A');
+    expect(navaids[0].light).toBe('Fl G 4s');
+    expect(navaids[0].sources).toEqual(['osm', 'uscg']);
+  });
+
+  it('keeps a buoy-shaped lateral mark apart from a lit pile', () => {
+    // A green can 3 m from a green pile light is a buoy lying beside the pile,
+    // not the pile itself.
+    const osm = mark({
+      category: 'lateral_other', name: null, colour: 'green', shape: 'can', lat: 27.2075, lon: -80.2563,
+    });
+    const official = mark({
+      category: 'pile_lit', name: 'St Lucie River Light 23A', light: 'Fl G 4s', colour: 'green',
+      lat: 27.20753, lon: -80.2563, source: 'uscg',
+    });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('keeps a pile-shaped lateral mark apart when its colour excludes the pile', () => {
+    const osm = mark({
+      category: 'lateral_other', name: null, colour: 'green', shape: 'pile', lat: 27.2075, lon: -80.2563,
+    });
+    const official = mark({
+      category: 'pile_lit', name: 'St Lucie River Light 23A', light: 'Fl R 4s', lightColour: 'R',
+      colour: 'red', lat: 27.2075, lon: -80.2563, source: 'uscg',
+    });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
+  it('keeps a charted light that disagrees with the pile light apart', () => {
+    // The chart already states a light, so the signature rule governs: a
+    // mismatched character means these are not the same light.
+    const osm = mark({
+      category: 'lateral_other', name: null, colour: 'green', shape: 'pile', light: 'Fl green 4s',
+      lat: 27.2075, lon: -80.2563,
+    });
+    const official = mark({
+      category: 'pile_lit', name: 'St Lucie River Light 23A', light: 'Iso G 6s', lightCharacter: 'Iso',
+      colour: 'green', lat: 27.2075, lon: -80.2563, source: 'uscg',
+    });
+    const { navaids } = mergeNavaidSources([osm, official]) as { navaids: Navaid[]; removed: number };
+    expect(navaids).toHaveLength(2);
+  });
+
   it('combines a south cardinal recorded under a longer official name', () => {
     const osm = mark({ id: 'osm:node/31', category: 'cardinal_south', name: 'Mout Reef South Cardinal Buoy', light: 'Q(3) 10s', lightCharacter: 'Q(3)', lightColour: 'white', lat: 48.43, lon: -123.31 });
     const official = mark({ id: 'ccg:pac:301', category: 'cardinal_south', name: 'Mout Reef', light: 'Q(3) 10s', lightCharacter: 'Q(3)', lightColour: 'W', lat: 48.4306, lon: -123.31, source: 'ccg' });

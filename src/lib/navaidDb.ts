@@ -1,7 +1,10 @@
 import type { Navaid } from './navaidTypes';
 import seedExtract from '../data/solentNavaids.json';
+import { servedCommit } from './buildWatch';
 
 export const MANIFEST_URL = '/navaid-db/manifest.json';
+/** The deployment's own stamp, a few dozen bytes beside the 51 kB manifest. */
+const BUILD_INFO_URL = `${import.meta.env.BASE_URL}build-info.json`;
 export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export const MAX_SHARDS_PER_LOAD = 14;
 const DB_NAME = 'marnav-navaids';
@@ -95,12 +98,34 @@ export function validateManifest(value: unknown): NavaidManifest | null {
 }
 
 /**
- * A weekly no-store manifest check is only worth a request when the stored
- * stamp is missing or at least a week old.
+ * The weekly floor under the manifest check. It is a fallback now, not the
+ * schedule: a build with a deployment stamp rereads the manifest whenever that
+ * stamp changes, and this only covers the builds that carry nothing to compare
+ * against — development, or a stamp fetch that failed. See manifestNeedsCheck.
  */
 export function shouldRevalidate(checkedAt: number | null, now: number = Date.now(), maxAgeMs: number = WEEK_MS): boolean {
   if (checkedAt === null || !Number.isFinite(checkedAt)) return true;
   return now - checkedAt >= maxAgeMs;
+}
+
+/**
+ * Whether this load should reread the manifest.
+ *
+ * A deployment naming a different commit than the one the stored copy came
+ * from is reason enough on its own: a new build can ship a new region, and
+ * waiting out the weekly window would hide it for up to a week. An unknown
+ * deployment never forces a read — a 404 mid-deploy or a build with no stamp
+ * is a doubt, not news — so those loads fall back to the weekly check.
+ */
+export function manifestNeedsCheck(input: {
+  checkedAt: number | null;
+  storedDeploy: string | null;
+  servedDeploy: string | null;
+  now?: number;
+}): boolean {
+  const { checkedAt, storedDeploy, servedDeploy, now = Date.now() } = input;
+  if (servedDeploy !== null && servedDeploy !== storedDeploy) return true;
+  return shouldRevalidate(checkedAt, now);
 }
 
 export function boundsIntersect(a: Bounds, b: Bounds): boolean {
@@ -207,6 +232,8 @@ function idbDelete(db: IDBDatabase, store: string, key: string): Promise<void> {
 interface StoredManifest {
   manifest: NavaidManifest;
   checkedAt: number;
+  /** The deployment commit the stored copy was read under, when one was known. */
+  deploy?: string | null;
 }
 
 export interface InitReport {
@@ -220,6 +247,8 @@ export class NavaidDatabase {
   private dbPromise: Promise<IDBDatabase | null> | null = null;
   private manifest: NavaidManifest | null = null;
   private checkedAt: number | null = null;
+  private deployCommit: string | null = null;
+  private deployLookup: Promise<string | null> | null = null;
   private memory = new Map<string, Navaid[]>();
   private inFlight = new Map<string, Promise<Navaid[]>>();
 
@@ -238,6 +267,27 @@ export class NavaidDatabase {
     return this.checkedAt;
   }
 
+  /**
+   * The commit the deployment answers with, looked up once per session.
+   * Null when there is nothing to read, which is the normal case in development.
+   */
+  private deployStamp(): Promise<string | null> {
+    this.deployLookup ??= (async () => {
+      try {
+        const response = await fetch(BUILD_INFO_URL, {
+          cache: 'no-store',
+          headers: { accept: 'application/json' },
+        });
+        if (!response.ok) return null;
+        return servedCommit(await response.json());
+      } catch {
+        // Offline, aborted, or not JSON: fall back to the weekly check.
+        return null;
+      }
+    })();
+    return this.deployLookup;
+  }
+
   seed(): Navaid[] {
     return (seedExtract as SeedExtract).navaids;
   }
@@ -248,13 +298,21 @@ export class NavaidDatabase {
     if (stored && validateManifest(stored.manifest)) {
       this.manifest = stored.manifest;
       this.checkedAt = stored.checkedAt;
+      this.deployCommit = stored.deploy ?? null;
     }
     const checked = await this.ensureFresh(false);
     return { manifest: this.manifest, checked: checked.checked, updated: checked.updated };
   }
 
   async ensureFresh(force: boolean): Promise<{ checked: boolean; updated: boolean }> {
-    const due = force || shouldRevalidate(this.checkedAt);
+    // A manual check is also a fresh look at which deployment is answering.
+    if (force) this.deployLookup = null;
+    const servedDeploy = await this.deployStamp();
+    const due = force || manifestNeedsCheck({
+      checkedAt: this.checkedAt,
+      storedDeploy: this.deployCommit,
+      servedDeploy,
+    });
     if (!due) return { checked: false, updated: false };
     try {
       const response = await fetch(MANIFEST_URL, { cache: 'no-store' });
@@ -265,9 +323,16 @@ export class NavaidDatabase {
       const updated = previousVersion !== candidate.version;
       this.manifest = candidate;
       this.checkedAt = Date.now();
+      // Stamped only once the manifest has been read, so a refresh that failed
+      // is retried on the next load instead of waiting out the weekly window.
+      this.deployCommit = servedDeploy ?? this.deployCommit;
       const db = await this.database();
       if (db) {
-        await idbPut(db, 'meta', 'manifest', { manifest: candidate, checkedAt: this.checkedAt });
+        await idbPut(db, 'meta', 'manifest', {
+          manifest: candidate,
+          checkedAt: this.checkedAt,
+          deploy: this.deployCommit,
+        });
         if (updated && previousVersion) {
           const keys = await idbKeys(db, 'shards');
           for (const key of keys) {

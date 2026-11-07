@@ -367,6 +367,21 @@ function oilRigSvg() {
 }
 
 /**
+ * Offshore platform: a bare deck on two legs, no derrick and no flare boom,
+ * in a cooler grey than the rig. Research, observation and accommodation
+ * platforms draw as this so they are never mistaken for an oil well.
+ */
+function platformSvg() {
+  const legs = [11, 21].map((x) => `
+    <line x1="${x}" y1="14" x2="${x}" y2="26" stroke="#04141f" stroke-width="3.2" stroke-linecap="round"/>
+    <line x1="${x}" y1="14" x2="${x}" y2="26" stroke="#9fb4c0" stroke-width="1.8" stroke-linecap="round"/>`).join('');
+  return `${legs}
+    <rect x="6" y="9" width="20" height="5" rx="1" fill="#9fb4c0" stroke="#04141f" stroke-width="1.4"/>
+    <path d="M10 14 L16 20 L22 14" fill="none" stroke="#9fb4c0" stroke-width="1.3" stroke-linejoin="round"/>
+    <path d="M7 27.5 H25" stroke="#3dd6ff" stroke-width="1.4" stroke-linecap="round"/>`;
+}
+
+/**
  * Power pylon: a grey steel lattice tower with a wide top arm and a peak.
  * Every part of the tower is the same grey, so the mark reads on any
  * background; the dark halo under the open legs is only an edge, the way
@@ -592,6 +607,8 @@ export function symbolFor(category: NavaidCategory, region: 'A' | 'B', colour?: 
       return { svg: svgWrap(windFarmSvg()), label };
     case 'oil_rig':
       return { svg: svgWrap(oilRigSvg()), label };
+    case 'platform':
+      return { svg: svgWrap(platformSvg()), label };
     case 'pylon':
       return { svg: svgWrap(pylonSvg()), label };
     case 'pile':

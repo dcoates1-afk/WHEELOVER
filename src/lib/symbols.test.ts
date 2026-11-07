@@ -28,6 +28,15 @@ describe('offshore structure symbols', () => {
     expect(rig.svg).toContain('#c7d3da');
     expect(farm.svg).toContain('stroke-dasharray');
   });
+
+  it('draws a bare platform apart from the rig', () => {
+    const rig = symbolFor('oil_rig', 'A');
+    const platform = symbolFor('platform', 'A');
+    expect(platform.label).toBe('Offshore platform');
+    expect(platform.svg).not.toBe(rig.svg);
+    expect(platform.svg).toContain('#9fb4c0');
+    expect(platform.svg).not.toContain('#c7d3da');
+  });
 });
 
 describe('pylon symbol', () => {

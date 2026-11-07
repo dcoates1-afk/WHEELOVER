@@ -165,6 +165,30 @@ describe('other mark layers', () => {
       attrs: { CATOFP: 'production platform', OBJNAM: 'Fieldwood MO821', COLOUR: null, INFORM: null, SORDAT: null },
     });
     expect(platform?.category).toBe('oil_rig');
+    // CATOFP decides what the structure is. The layer also carries research
+    // platforms, and one of those drew as an oil rig off Trial Island.
+    const research = mapFeature({
+      layer: 'Offshore_Platform', band: 'enc_coastal', objectId: 32, lat: 48.3939, lon: -123.3085,
+      attrs: { CATOFP: 'observation/research platform', OBJNAM: null, COLOUR: '6', INFORM: null, SORDAT: null },
+    });
+    expect(research?.category).toBe('platform');
+    expect(research?.colour).toBe('yellow');
+    expect(research?.description).toBe('observation/research platform');
+    const blank = mapFeature({
+      layer: 'Offshore_Platform', band: 'enc_coastal', objectId: 33, lat: 28.0, lon: -90.0,
+      attrs: { CATOFP: ' ', OBJNAM: null, COLOUR: null, INFORM: null, SORDAT: null },
+    });
+    expect(blank?.category).toBe('platform');
+    const wind = mapFeature({
+      layer: 'Offshore_Platform', band: 'enc_coastal', objectId: 34, lat: 54.0, lon: 6.0,
+      attrs: { CATOFP: 'wind turbine', OBJNAM: null, COLOUR: null, INFORM: null, SORDAT: null },
+    });
+    expect(wind?.category).toBe('wind_turbine');
+    const mooring = mapFeature({
+      layer: 'Offshore_Platform', band: 'enc_coastal', objectId: 35, lat: 28.0, lon: -90.0,
+      attrs: { CATOFP: 'mooring tower', OBJNAM: null, COLOUR: null, INFORM: null, SORDAT: null },
+    });
+    expect(mooring?.category).toBe('mooring');
     const pile = mapFeature({
       layer: 'Pile', band: 'enc_harbour', objectId: 31, lat: 29.0, lon: -90.0,
       attrs: { CATPLE: 'post', OBJNAM: null, COLOUR: null, INFORM: null, SORDAT: null },

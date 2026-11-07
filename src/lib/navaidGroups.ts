@@ -94,7 +94,7 @@ export const NAVAID_GROUPS: NavaidGroup[] = [
     id: 'offshore',
     label: 'Offshore structures',
     symbol: 'wind_turbine',
-    categories: ['wind_farm', 'wind_turbine', 'oil_rig'],
+    categories: ['wind_farm', 'wind_turbine', 'oil_rig', 'platform'],
   },
   {
     id: 'structures',

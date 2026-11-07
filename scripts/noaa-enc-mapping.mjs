@@ -340,6 +340,23 @@ function finish(record, category, form) {
   return { ...record, category, form, priority: priorityFor(category) };
 }
 
+/**
+ * S-57 CATOFP words from ENC Direct -> app category. The Offshore_Platform
+ * layer is not a rig list: it also carries observation/research platforms,
+ * accommodation blocks, single-point mooring towers and artificial islands.
+ * Treating every one as an oil rig is what put an "Oil rig" card on the
+ * unnamed yellow research platform off Trial Island (CHS CA471223, record
+ * 415982, CATOFP "observation/research platform").
+ */
+export function offshorePlatformCategory(catofp) {
+  const text = (clean(catofp) ?? '').toLowerCase();
+  if (text.includes('wind')) return 'wind_turbine';
+  if (/production|derrick|\brig\b|drill|wellhead|loading platform|fpso/.test(text)) return 'oil_rig';
+  if (text.includes('mooring')) return 'mooring';
+  if (text.includes('artificial island')) return 'landmark';
+  return 'platform';
+}
+
 /** Map one ENC Direct feature to a Navaid record (or null when the feature is not a mark). */
 export function mapFeature({ layer, band, objectId, lat, lon, attrs }) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
@@ -430,9 +447,18 @@ export function mapFeature({ layer, band, objectId, lat, lon, attrs }) {
       );
     }
     case 'Offshore_Platform': {
-      const catofp = (clean(attrs.CATOFP) ?? '').toLowerCase();
-      const category = catofp.includes('wind') ? 'wind_turbine' : 'oil_rig';
-      return finish({ ...base, colour }, category, 'mark');
+      const catofp = clean(attrs.CATOFP);
+      return finish(
+        {
+          ...base,
+          colour,
+          // The CATOFP words are the chart's own statement of what the
+          // structure is; carry them so the card can say it.
+          description: base.description ?? (catofp === null ? null : catofp.toLowerCase()),
+        },
+        offshorePlatformCategory(catofp),
+        'mark',
+      );
     }
     case 'Pile':
       // Deliberately plain `pile` here: at map time a pile carries no

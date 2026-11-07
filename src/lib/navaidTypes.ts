@@ -38,6 +38,7 @@ export type NavaidCategory =
   | 'wind_turbine'
   | 'wind_farm'
   | 'oil_rig'
+  | 'platform'
   | 'pylon'
   | 'pile'
   | 'cable_overhead'

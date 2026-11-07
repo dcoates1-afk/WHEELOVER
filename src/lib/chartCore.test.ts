@@ -857,8 +857,19 @@ describe('classification', () => {
   it('classifies offshore structures', () => {
     expect(classifyTags({ power: 'generator', 'generator:source': 'wind' })?.category).toBe('wind_turbine');
     expect(classifyTags({ power: 'plant', 'plant:source': 'wind' })?.category).toBe('wind_farm');
-    expect(classifyTags({ 'man_made': 'offshore_platform' })?.category).toBe('oil_rig');
-    expect(classifyTags({ 'seamark:type': 'platform' })?.category).toBe('oil_rig');
+    // A bare platform tag is a platform, not an oil well: the same tags cover
+    // research and observation platforms, like the unnamed yellow one off
+    // Trial Island (CHS CA471223, ENC record 415982).
+    expect(classifyTags({ 'man_made': 'offshore_platform' })?.category).toBe('platform');
+    expect(classifyTags({ 'seamark:type': 'platform' })?.category).toBe('platform');
+    expect(classifyTags({ 'man_made': 'offshore_platform', name: 'Test Rig' })?.category).toBe('oil_rig');
+    expect(classifyTags({ 'man_made': 'petroleum_well' })?.category).toBe('oil_rig');
+    // OSM's production platforms in the Gulf carry substance=oil;gas.
+    expect(classifyTags({ 'man_made': 'offshore_platform', substance: 'oil;gas' })?.category).toBe('oil_rig');
+    expect(classifyTags({ 'man_made': 'offshore_platform', substance: 'wind' })?.category).toBe('platform');
+    expect(classifyTags({ 'seamark:type': 'platform', 'seamark:platform:category': 'production' })?.category).toBe('oil_rig');
+    expect(classifyTags({ 'seamark:type': 'platform', 'seamark:platform:category': 'observation' })?.category).toBe('platform');
+    expect(classifyTags({ 'seamark:type': 'platform', 'seamark:platform:category': 'mooring' })?.category).toBe('mooring');
     // An artificial island platform is a visible structure, not a rig:
     // Little Island in New York Harbor is a pier and a park.
     expect(classifyTags({ 'seamark:type': 'platform', 'seamark:platform:category': 'artificial_island' })?.category).toBe('landmark');

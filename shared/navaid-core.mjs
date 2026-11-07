@@ -78,6 +78,10 @@ const PRIORITY = {
   // Offshore structures: farm areas outrank rigs, rigs outrank single turbines.
   wind_farm: 70,
   oil_rig: 68,
+  // A platform whose tags or chart attributes do not say it is a production
+  // rig is still a structure, but it is not an oil well: it outranks a bare
+  // turbine only because it is a fixed installation.
+  platform: 66,
   wind_turbine: 62,
   // A power pylon is a tall steel structure like a turbine, but it stands
   // on land or in the shallows rather than offshore.
@@ -123,6 +127,7 @@ const MIN_ZOOM = {
   special_purpose: 14,
   landmark: 13,
   marina: 13,
+  platform: 13,
   pylon: 13,
   pile: 13,
   sector_beacon: 13,
@@ -151,6 +156,28 @@ export function ialaRegion(lat, lon) {
   if (lon >= -180 && lon <= -30) return 'B';
   if (lat >= 20 && lat <= 46 && lon >= 122 && lon <= 150) return 'B';
   return 'A';
+}
+
+/**
+ * Offshore structures are only oil rigs when the tags say so.
+ * man_made=offshore_platform and seamark:type=platform also cover research and
+ * observation platforms, accommodation blocks and mooring towers, and calling
+ * every one of those an oil rig put an "Oil rig" card on an unnamed yellow
+ * research platform off Trial Island (CHS chart CA471223, ENC record 415982).
+ */
+const PRODUCTION_PLATFORM_WORDS = /\b(production|oil|gas|rig|derrick|wellhead|drilling|fpu|fpso)\b/;
+export function offshorePlatformCategory(tags = {}) {
+  if (tags['man_made'] === 'petroleum_well') return 'oil_rig';
+  const category = (tags['seamark:platform:category'] || '').trim().toLowerCase();
+  if (category === 'mooring' || category === 'mooring_tower') return 'mooring';
+  // substance=oil;gas is how OSM maps a hydrocarbon platform (Gulf of Mexico
+  // platforms carry it with an operator); nothing else declares production.
+  if (/\b(oil|gas|petroleum)\b/.test((tags['substance'] || '').toLowerCase())) return 'oil_rig';
+  const evidence = [tags['seamark:platform:category'], tags.name, tags.description]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return PRODUCTION_PLATFORM_WORDS.test(evidence) ? 'oil_rig' : 'platform';
 }
 
 function firstTag(tags, keys) {
@@ -252,8 +279,13 @@ export function classifyTags(tags) {
     if (tags.power === 'plant' && tags['plant:source'] === 'wind') {
       return { ...base, category: 'wind_farm', priority: PRIORITY.wind_farm };
     }
-    if (tags['man_made'] === 'offshore_platform') {
+    // A mapped oil/gas well is production whatever its shape tags say.
+    if (tags['man_made'] === 'petroleum_well') {
       return { ...base, category: 'oil_rig', priority: PRIORITY.oil_rig };
+    }
+    if (tags['man_made'] === 'offshore_platform') {
+      const category = offshorePlatformCategory(tags);
+      return { ...base, category, priority: PRIORITY[category] };
     }
     // A typeless element whose light comes only from numbered sector
     // records is a sector light, not a generic minor light.
@@ -396,7 +428,8 @@ export function classifyTags(tags) {
     if ((tags['seamark:platform:category'] || '').trim() === 'artificial_island') {
       return { ...base, category: 'landmark', priority: PRIORITY.landmark };
     }
-    return { ...base, category: 'oil_rig', priority: PRIORITY.oil_rig };
+    const category = offshorePlatformCategory(tags);
+    return { ...base, category, priority: PRIORITY[category] };
   }
 
   // A power pylon is a charted structure in its own right, lit or not: a
@@ -2093,6 +2126,7 @@ export const CATEGORY_LABELS = {
   wind_turbine: 'Wind turbine',
   wind_farm: 'Wind farm',
   oil_rig: 'Oil rig',
+  platform: 'Offshore platform',
   pylon: 'Pylon',
   pile: 'Pile',
   cable_overhead: 'Overhead cable',
